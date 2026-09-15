@@ -80,6 +80,15 @@
     renderAnnouncements(user.role);
     renderStudentNeedsAttention(user, student);
     renderBylawsReminder(student);
+    renderProfileReminder(student);
+  }
+
+  function renderProfileReminder(student) {
+    const banner = document.getElementById("profileReminderBanner");
+    if (!banner) return;
+    const pct = global.USIAMS.students.profileCompletionPercent(student);
+    banner.classList.toggle("d-none", pct >= 100);
+    if (pct < 100) document.getElementById("profileReminderPct").textContent = `${pct}%`;
   }
 
   // Shows until the student either acknowledges the by-laws (permanent,

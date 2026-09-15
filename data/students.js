@@ -110,22 +110,57 @@
     return students;
   }
 
-  function getStudent(id) {
-    return global.USIAMS.data.students.find(s => s.id === id);
-  }
-  function getStudentByReg(regNumber) {
-    return global.USIAMS.data.students.find(s => s.regNumber === regNumber);
-  }
-  function studentsForProgramme(programmeId) {
-    return global.USIAMS.data.students.filter(s => s.programmeId === programmeId);
-  }
-  function studentsForDepartment(departmentId) {
-    return global.USIAMS.data.students.filter(s => s.departmentId === departmentId);
-  }
-
   global.USIAMS = global.USIAMS || {};
   global.USIAMS.data = global.USIAMS.data || {};
   global.USIAMS.data.students = applyDemoOverrides(buildStudents());
-  global.USIAMS.students = { getStudent, getStudentByReg, studentsForProgramme, studentsForDepartment, buildRegNumber };
+
+  // Single shared overlay for every add/edit/delete of a student record -
+  // js/students.js (admin CRUD) and the student self-service profile
+  // wizard both write through this, so an edit from either place is
+  // visible everywhere getStudent() is called (dashboard, finance,
+  // library, hostel, e-learning, admissions, ...), not just on the
+  // page that made the edit. See data/finance.js for the same fix
+  // applied earlier to payments/balances.
+  const overlay = global.USIAMS.storage.createOverlay("students", () => global.USIAMS.data.students);
+
+  function allStudents() { return overlay.getAll(); }
+  function getStudent(id) {
+    return allStudents().find(s => s.id === id);
+  }
+  function getStudentByReg(regNumber) {
+    return allStudents().find(s => s.regNumber === regNumber);
+  }
+  function studentsForProgramme(programmeId) {
+    return allStudents().filter(s => s.programmeId === programmeId);
+  }
+  function studentsForDepartment(departmentId) {
+    return allStudents().filter(s => s.departmentId === departmentId);
+  }
+  function addStudent(student) { return overlay.add(student); }
+  function updateStudent(id, patch) { return overlay.update(id, patch); }
+  function removeStudent(id) { return overlay.remove(id); }
+
+  // Profile self-service completion (see pages/profile-setup.html):
+  // a field counts as "filled" only if it's non-empty and not the "-"
+  // placeholder the admin Add Student form seeds for new records.
+  function isFilled(v) { return !!v && v !== "-"; }
+  function profileSteps(student) {
+    return [
+      { key: "personal", label: "Personal Details", done: isFilled(student.phone) && isFilled(student.address) && isFilled(student.dob) },
+      { key: "emergency", label: "Emergency Contact", done: !!student.emergencyContact && isFilled(student.emergencyContact.name) && isFilled(student.emergencyContact.phone) },
+      { key: "academic", label: "Academic Background", done: !!student.admission && isFilled(student.admission.previousSchool) && isFilled(student.admission.entryQualification) },
+      { key: "documents", label: "Document Upload", done: !!student.documentsSubmitted }
+    ];
+  }
+  function profileCompletionPercent(student) {
+    const steps = profileSteps(student);
+    return Math.round((steps.filter(s => s.done).length / steps.length) * 100);
+  }
+
+  global.USIAMS.students = {
+    getStudent, getStudentByReg, studentsForProgramme, studentsForDepartment, buildRegNumber,
+    allStudents, addStudent, updateStudent, removeStudent,
+    profileSteps, profileCompletionPercent
+  };
 
 })(window);
