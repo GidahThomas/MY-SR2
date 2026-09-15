@@ -236,6 +236,13 @@
   }
 
   global.USIAMS = global.USIAMS || {};
+  global.USIAMS.elearning = {
+    coursesForUser,
+    allMaterials: () => materialsOverlay.getAll(),
+    allAssignments: () => assignmentsOverlay.getAll(),
+    allSubmissions: () => submissionsOverlay.getAll(),
+    mySubmission
+  };
   global.USIAMS.elearningPage = { initPage };
 
 })(window);

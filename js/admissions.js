@@ -82,6 +82,7 @@
   function initPage() { render(); }
 
   global.USIAMS = global.USIAMS || {};
+  global.USIAMS.admissions = { allApplications: all };
   global.USIAMS.admissionsPage = { initPage };
 
 })(window);

@@ -73,6 +73,72 @@
       });
     }
 
+    if (global.USIAMS.library) {
+      const books = global.USIAMS.library.books().filter(b =>
+        b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q) || b.category.toLowerCase().includes(q)
+      ).slice(0, limit);
+      if (books.length) {
+        groups.push({
+          label: "Library",
+          items: books.map(b => ({ title: b.title, subtitle: `${b.author} - ${b.category}`, icon: "bi-journal-richtext", href: `pages/library.html` }))
+        });
+      }
+    }
+
+    if (global.USIAMS.hostel) {
+      const hostels = global.USIAMS.hostel.hostels().filter(h => h.name.toLowerCase().includes(q)).slice(0, limit);
+      if (hostels.length) {
+        groups.push({
+          label: "Hostel",
+          items: hostels.map(h => ({ title: h.name, subtitle: `${h.gender} Hall`, icon: "bi-houses", href: `pages/hostel.html` }))
+        });
+      }
+    }
+
+    // E-Learning results are limited to the user's own registered/teaching
+    // courses - showing materials for a course they can't select on the
+    // page itself would be a confusing dead end, not a genuine result.
+    // (coursesForUser() returns [] for roles with no courses of their own,
+    // e.g. admins with no departmentId - safe, just yields no results.)
+    if (global.USIAMS.elearning) {
+      const myCourseIds = global.USIAMS.elearning.coursesForUser(user).map(c => c.id);
+      const materials = global.USIAMS.elearning.allMaterials().filter(m =>
+        myCourseIds.includes(m.courseId) && m.title.toLowerCase().includes(q)
+      ).slice(0, limit);
+      const assignments = global.USIAMS.elearning.allAssignments().filter(a =>
+        myCourseIds.includes(a.courseId) && a.title.toLowerCase().includes(q)
+      ).slice(0, limit);
+      const elearningItems = [
+        ...materials.map(m => ({ title: m.title, subtitle: `${m.courseId} - ${m.type}`, icon: "bi-file-earmark-text", href: `pages/elearning.html` })),
+        ...assignments.map(a => ({ title: a.title, subtitle: `${a.courseId} - Assignment`, icon: "bi-clipboard-check", href: `pages/elearning.html` }))
+      ].slice(0, limit);
+      if (elearningItems.length) groups.push({ label: "E-Learning", items: elearningItems });
+    }
+
+    // Admissions applications are only searchable by the roles that can
+    // actually open pages/admissions.html - matching its requireAuth().
+    if (global.USIAMS.admissions && ["REGISTRATION_OFFICER", "UNIVERSITY_ADMIN", "SYSTEM_ADMIN"].includes(user.role)) {
+      const applications = global.USIAMS.admissions.allApplications().filter(a =>
+        a.fullName.toLowerCase().includes(q) || a.email.toLowerCase().includes(q) || a.id.toLowerCase().includes(q)
+      ).slice(0, limit);
+      if (applications.length) {
+        groups.push({
+          label: "Admissions",
+          items: applications.map(a => ({ title: a.fullName, subtitle: `${a.id} - ${a.status}`, icon: "bi-person-plus", href: `pages/admissions.html` }))
+        });
+      }
+    }
+
+    if (global.USIAMS.calendar) {
+      const events = global.USIAMS.calendar.allEvents().filter(e => e.title.toLowerCase().includes(q)).slice(0, limit);
+      if (events.length) {
+        groups.push({
+          label: "Academic Calendar",
+          items: events.map(e => ({ title: e.title, subtitle: e.type, icon: "bi-calendar3", href: `pages/calendar.html` }))
+        });
+      }
+    }
+
     return groups;
   }
 

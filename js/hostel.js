@@ -187,6 +187,7 @@
   }
 
   global.USIAMS = global.USIAMS || {};
+  global.USIAMS.hostel = { hostels, rooms, getHostel, getRoom, activeAllocationForStudent, allAllocations };
   global.USIAMS.hostelPage = { initPage };
 
 })(window);

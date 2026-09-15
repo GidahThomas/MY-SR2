@@ -170,6 +170,10 @@
   }
 
   global.USIAMS = global.USIAMS || {};
+  // Exposed separately from libraryPage so js/search.js and dashboard
+  // "needs attention" widgets can read live loan data without needing
+  // the page's own DOM to be mounted.
+  global.USIAMS.library = { books, getBook, effectiveStatus, availableCopies, loansForStudent, allLoans: () => loansOverlay.getAll() };
   global.USIAMS.libraryPage = { initPage };
 
 })(window);
