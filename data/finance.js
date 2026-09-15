@@ -1,7 +1,7 @@
 /* =========================================================
    USIAMS - data/finance.js
    Fee structure, invoices and demo payment history.
-   Simulated only - see js/finance.js for the "payment" flow,
+   Simulated only - see js/finance.page.js for the "payment" flow,
    which never talks to a real payment gateway.
    ========================================================= */
 (function (global) {
@@ -72,11 +72,13 @@
 
   const built = buildInvoicesAndPayments();
 
+  const paymentsOverlay = global.USIAMS.storage.createOverlay("payments", () => built.payments);
+
   function invoiceForStudent(studentId) {
     return global.USIAMS.data.invoices.find(i => i.studentId === studentId);
   }
   function paymentsForStudent(studentId) {
-    return global.USIAMS.data.payments.filter(p => p.studentId === studentId);
+    return paymentsOverlay.getAll().filter(p => p.studentId === studentId);
   }
   function balanceForStudent(studentId) {
     const invoice = invoiceForStudent(studentId);
@@ -84,11 +86,17 @@
     const paid = paymentsForStudent(studentId).reduce((s, p) => s + p.amount, 0);
     return { billed: invoice.amountBilled, paid, balance: invoice.amountBilled - paid };
   }
+  function allPayments() {
+    return paymentsOverlay.getAll();
+  }
+  function addPayment(payment) {
+    return paymentsOverlay.add(payment);
+  }
 
   global.USIAMS = global.USIAMS || {};
   global.USIAMS.data = global.USIAMS.data || {};
   global.USIAMS.data.invoices = built.invoices;
   global.USIAMS.data.payments = built.payments;
-  global.USIAMS.finance = { annualFeeFor, invoiceForStudent, paymentsForStudent, balanceForStudent };
+  global.USIAMS.finance = { annualFeeFor, invoiceForStudent, paymentsForStudent, balanceForStudent, allPayments, addPayment };
 
 })(window);

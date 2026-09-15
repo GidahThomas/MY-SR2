@@ -9,15 +9,7 @@
   "use strict";
 
   const { util, modal, toast, charts } = global.USIAMS;
-  const paymentsOverlay = global.USIAMS.storage.createOverlay("payments", () => global.USIAMS.data.payments);
-
-  function paymentsForStudent(studentId) { return paymentsOverlay.getAll().filter(p => p.studentId === studentId); }
-  function balanceForStudent(studentId) {
-    const invoice = global.USIAMS.finance.invoiceForStudent(studentId);
-    if (!invoice) return { billed: 0, paid: 0, balance: 0 };
-    const paid = paymentsForStudent(studentId).reduce((s, p) => s + p.amount, 0);
-    return { billed: invoice.amountBilled, paid, balance: invoice.amountBilled - paid };
-  }
+  const { paymentsForStudent, balanceForStudent } = global.USIAMS.finance;
 
   // ---------------------------------------------------------------------
   // STUDENT VIEW
@@ -111,7 +103,7 @@
       const amount = parseFloat(document.getElementById("paymentAmount").value);
       if (!amount || amount <= 0 || amount > balance.balance) { toast.show("error", "Invalid amount", "Please enter a valid amount not exceeding your balance."); return; }
       const invoice = global.USIAMS.finance.invoiceForStudent(student.id);
-      paymentsOverlay.add({
+      global.USIAMS.finance.addPayment({
         id: util.uid("PAY"), studentId: student.id, invoiceId: invoice.id, amount,
         date: new Date().toISOString().slice(0, 10), method: document.getElementById("paymentMethod").value,
         reference: `USI${student.id.slice(-4)}${Date.now().toString().slice(-6)}`, status: "Completed"
@@ -128,7 +120,7 @@
   function renderAdminView() {
     document.getElementById("financeSubtitle").textContent = "University-wide fee collection overview.";
     const invoices = global.USIAMS.data.invoices;
-    const payments = paymentsOverlay.getAll();
+    const payments = global.USIAMS.finance.allPayments();
     const totalBilled = invoices.reduce((s, i) => s + i.amountBilled, 0);
     const totalCollected = payments.reduce((s, p) => s + p.amount, 0);
 
