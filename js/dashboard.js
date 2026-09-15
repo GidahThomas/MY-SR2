@@ -172,16 +172,37 @@
   // UNIVERSITY / STAFF ADMIN DASHBOARD (shared shell for 10 staff roles)
   // ---------------------------------------------------------------------
   const ROLE_FOCUS = {
-    FINANCE_OFFICER: { subtitle: "Here is today's finance and fee collection overview.", quick: ["finance"] },
-    REGISTRATION_OFFICER: { subtitle: "Here is today's course registration overview.", quick: ["registration"] },
-    EXAMINATION_OFFICER: { subtitle: "Here is today's results and examinations overview.", quick: ["results"] }
+    FINANCE_OFFICER: { subtitle: "Here is today's finance and fee collection overview." },
+    REGISTRATION_OFFICER: { subtitle: "Here is today's course registration and admissions overview." },
+    EXAMINATION_OFFICER: { subtitle: "Here is today's results and examinations overview." },
+    LIBRARIAN: { subtitle: "Here is today's library catalog and loans overview." },
+    HOSTEL_OFFICER: { subtitle: "Here is today's hostel occupancy and allocations overview." }
   };
+
+  // Every tile's `roles` list is copied verbatim from that destination
+  // page's own requireAuth() call, so a role can never see a tile here
+  // that then 403s them - see js/navigation.js for the same discipline
+  // applied to the sidebar.
+  const QUICK_ACTIONS = [
+    { label: "Manage Students", icon: "bi-people", href: "students.html", roles: ["UNIVERSITY_ADMIN", "ACADEMIC_ADVISOR", "DEPARTMENT_ADMIN", "HEAD_OF_DEPARTMENT", "COLLEGE_ADMIN", "INSTITUTE_ADMIN", "SCHOOL_ADMIN", "EXAMINATION_OFFICER", "FINANCE_OFFICER", "REGISTRATION_OFFICER", "QUALITY_ASSURANCE_OFFICER", "SYSTEM_ADMIN", "LECTURER", "LIBRARIAN", "HOSTEL_OFFICER"] },
+    { label: "Manage Courses", icon: "bi-journal-bookmark", href: "courses.html", roles: ["UNIVERSITY_ADMIN", "ACADEMIC_ADVISOR", "DEPARTMENT_ADMIN", "HEAD_OF_DEPARTMENT", "COLLEGE_ADMIN", "INSTITUTE_ADMIN", "SCHOOL_ADMIN", "EXAMINATION_OFFICER", "FINANCE_OFFICER", "REGISTRATION_OFFICER", "QUALITY_ASSURANCE_OFFICER", "SYSTEM_ADMIN", "LECTURER", "LIBRARIAN", "HOSTEL_OFFICER"] },
+    { label: "Finance Overview", icon: "bi-cash-coin", href: "finance.html", roles: ["FINANCE_OFFICER", "UNIVERSITY_ADMIN", "COLLEGE_ADMIN", "INSTITUTE_ADMIN", "SCHOOL_ADMIN", "SYSTEM_ADMIN"] },
+    { label: "Admissions", icon: "bi-person-plus", href: "admissions.html", roles: ["REGISTRATION_OFFICER", "UNIVERSITY_ADMIN", "SYSTEM_ADMIN"] },
+    { label: "Library", icon: "bi-journal-richtext", href: "library.html", roles: ["LIBRARIAN", "UNIVERSITY_ADMIN", "SYSTEM_ADMIN"] },
+    { label: "Hostel", icon: "bi-houses", href: "hostel.html", roles: ["HOSTEL_OFFICER", "UNIVERSITY_ADMIN", "SYSTEM_ADMIN"] },
+    { label: "Generate Reports", icon: "bi-bar-chart-line", href: "reports.html", roles: ["UNIVERSITY_ADMIN", "ACADEMIC_ADVISOR", "DEPARTMENT_ADMIN", "HEAD_OF_DEPARTMENT", "COLLEGE_ADMIN", "INSTITUTE_ADMIN", "SCHOOL_ADMIN", "EXAMINATION_OFFICER", "FINANCE_OFFICER", "REGISTRATION_OFFICER", "QUALITY_ASSURANCE_OFFICER", "SYSTEM_ADMIN", "LECTURER", "LIBRARIAN", "HOSTEL_OFFICER"] },
+    { label: "Academic Calendar", icon: "bi-calendar3", href: "calendar.html", roles: null },
+    { label: "Audit Logs", icon: "bi-shield-lock", href: "audit-logs.html", roles: ["UNIVERSITY_ADMIN", "QUALITY_ASSURANCE_OFFICER", "SYSTEM_ADMIN", "EXAMINATION_OFFICER"] },
+    { label: "Administration", icon: "bi-gear-wide-connected", href: "administration.html", roles: ["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"] }
+  ];
 
   function renderAdminDashboard(user) {
     const students = global.USIAMS.data.students;
     const focus = ROLE_FOCUS[user.role];
     document.getElementById("welcomeName").textContent = `${greetingPrefix()}, ${user.name.split(" ")[0]}!`;
     document.getElementById("studentMetaLine").textContent = focus ? focus.subtitle : `${user.roleLabel} overview across the university.`;
+
+    cards.renderQuickActions("quickActionsGrid", QUICK_ACTIONS.filter(a => !a.roles || a.roles.includes(user.role)));
 
     const active = students.filter(s => s.status === "Active").length;
     const graduated = global.USIAMS.data.alumni.length;

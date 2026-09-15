@@ -21,10 +21,14 @@
 
   function quickAction({ label, icon, href, onclick }) {
     const { escapeHtml } = global.USIAMS.util;
-    if (onclick) {
-      return `<button type="button" class="quick-action-tile" onclick="${onclick}"><i class="bi ${icon}"></i><span>${escapeHtml(label)}</span></button>`;
-    }
-    return `<a href="${href}" class="quick-action-tile"><i class="bi ${icon}"></i><span>${escapeHtml(label)}</span></a>`;
+    // Wrapped in the same col-6/col-md-4/col-lg-2 grid column every
+    // hand-coded quick-actions row in /pages uses - .quick-action-tile
+    // is width:100% of its column, not a fixed-size flex item, so it
+    // needs that wrapper to lay out as a compact tile grid.
+    const inner = onclick
+      ? `<button type="button" class="quick-action-tile" onclick="${onclick}"><i class="bi ${icon}"></i><span>${escapeHtml(label)}</span></button>`
+      : `<a href="${href}" class="quick-action-tile"><i class="bi ${icon}"></i><span>${escapeHtml(label)}</span></a>`;
+    return `<div class="col-6 col-md-4 col-lg-2">${inner}</div>`;
   }
 
   function renderStatGrid(containerId, cards) {
