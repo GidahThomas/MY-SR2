@@ -1,0 +1,28 @@
+/* =========================================================
+   USIAMS - Print styles
+   Applies to results/transcript, invoice, receipt, reports
+   ========================================================= */
+
+@media print {
+  .app-sidebar, .app-navbar, .no-print, .table-toolbar, .pagination-bar,
+  .sidebar-backdrop, .usi-toast-container, .quick-action-tile, .page-header .no-print {
+    display: none !important;
+  }
+  .app-main { margin-left: 0 !important; }
+  .app-content { padding: 0 !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .usi-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+  .print-only { display: block !important; }
+  a[href]::after { content: none !important; }
+  .print-doc {
+    max-width: 800px; margin: 0 auto; padding: 1rem;
+  }
+  .print-doc .print-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid #000; padding-bottom: .75rem; margin-bottom: 1rem;
+  }
+  table.usi-table thead th { background: #eee !important; color: #000 !important; }
+  table.usi-table tbody td { color: #000 !important; }
+}
+
+.print-only { display: none; }

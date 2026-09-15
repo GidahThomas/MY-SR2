@@ -1,0 +1,148 @@
+/* =========================================================
+   USIAMS - Reusable component styles
+   Badges, tables, modals, toasts, forms, misc widgets
+   ========================================================= */
+
+/* Status badges */
+.status-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .28rem .65rem; border-radius: 999px; font-size: .72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .03em; white-space: nowrap;
+}
+.status-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status-active, .status-approved, .status-resolved, .status-verified, .status-eligible, .status-completed, .status-paid { background: var(--success-bg); color: var(--success); }
+.status-pending, .status-in_progress, .status-under_review, .status-open { background: var(--warning-bg); color: var(--warning); }
+.status-rejected, .status-inactive, .status-critical, .status-suspended, .status-not_eligible, .status-overdue { background: var(--danger-bg); color: var(--danger); }
+.status-escalated, .status-closed, .status-graduated, .status-info { background: var(--info-bg); color: var(--info); }
+.status-partial, .status-warning { background: var(--warning-bg); color: var(--warning); }
+
+.priority-low { background: var(--info-bg); color: var(--info); }
+.priority-medium { background: var(--warning-bg); color: var(--warning); }
+.priority-high { background: #fde3d8; color: #b0451c; }
+.priority-urgent { background: var(--danger-bg); color: var(--danger); }
+
+/* Data table */
+.usi-table-wrap { overflow-x: auto; }
+table.usi-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+table.usi-table thead th {
+  text-align: left; padding: .75rem 1rem; background: var(--surface-alt);
+  color: var(--text-muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em;
+  font-weight: 700; border-bottom: 1px solid var(--border); white-space: nowrap;
+  cursor: pointer; user-select: none;
+}
+table.usi-table thead th i { font-size: .7rem; margin-left: .25rem; opacity: .6; }
+table.usi-table tbody td { padding: .7rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.usi-table tbody tr:hover { background: var(--surface-alt); }
+table.usi-table tbody tr:last-child td { border-bottom: none; }
+
+.table-toolbar {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: 1rem;
+}
+.table-toolbar .search-box { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
+.table-toolbar .search-box i { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--text-soft); }
+.table-toolbar .search-box input { padding-left: 2.1rem; }
+
+.table-photo {
+  width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--surface-alt);
+}
+
+.pagination-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; flex-wrap: wrap; gap: .6rem; }
+.pagination-bar .page-info { font-size: .78rem; color: var(--text-muted); }
+
+/* Toasts */
+.usi-toast-container {
+  position: fixed; top: 1rem; right: 1rem; z-index: 2000;
+  display: flex; flex-direction: column; gap: .6rem; max-width: 340px;
+}
+.usi-toast {
+  background: var(--surface); border-left: 4px solid var(--info);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+  padding: .8rem 1rem; display: flex; gap: .65rem; align-items: flex-start;
+  animation: toast-in .2s ease;
+}
+.usi-toast.toast-success { border-left-color: var(--success); }
+.usi-toast.toast-error { border-left-color: var(--danger); }
+.usi-toast.toast-warning { border-left-color: var(--warning); }
+.usi-toast .toast-icon { font-size: 1.15rem; }
+.usi-toast.toast-success .toast-icon { color: var(--success); }
+.usi-toast.toast-error .toast-icon { color: var(--danger); }
+.usi-toast.toast-warning .toast-icon { color: var(--warning); }
+.usi-toast.toast-info .toast-icon { color: var(--info); }
+.usi-toast .toast-body { flex: 1; font-size: .82rem; }
+.usi-toast .toast-title { font-weight: 700; margin-bottom: .1rem; }
+.usi-toast .toast-close { background: none; border: none; color: var(--text-soft); font-size: .95rem; }
+@keyframes toast-in { from { opacity: 0; transform: translateX(12px);} to { opacity: 1; transform: translateX(0);} }
+
+/* Quick action tiles */
+.quick-action-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: .55rem;
+  padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);
+  background: var(--surface); width: 100%; text-align: left;
+}
+.quick-action-tile:hover { border-color: var(--usiams-blue-500); box-shadow: var(--shadow-md); text-decoration: none; }
+.quick-action-tile i { font-size: 1.3rem; color: var(--primary); }
+.quick-action-tile span { font-size: .82rem; font-weight: 600; color: var(--text); }
+
+/* Notification list */
+.notif-item { display: flex; gap: .75rem; padding: .85rem 1rem; border-bottom: 1px solid var(--border); }
+.notif-item:last-child { border-bottom: none; }
+.notif-item.unread { background: var(--primary-light); }
+.notif-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.notif-title { font-weight: 600; font-size: .85rem; }
+.notif-desc { font-size: .8rem; color: var(--text-muted); margin: .15rem 0; }
+.notif-time { font-size: .72rem; color: var(--text-soft); }
+
+/* Timetable grid */
+.timetable-grid { display: grid; grid-template-columns: 90px repeat(6, 1fr); gap: 6px; }
+.tt-head { font-size: .74rem; font-weight: 700; text-align: center; color: var(--text-muted); padding: .5rem 0; }
+.tt-time { font-size: .72rem; color: var(--text-soft); display: flex; align-items: flex-start; justify-content: flex-end; padding: .4rem .5rem 0 0; }
+.tt-cell { min-height: 74px; border-radius: var(--radius-sm); border: 1px dashed var(--border); padding: .3rem; }
+.tt-class {
+  border-radius: var(--radius-sm); padding: .4rem .5rem; font-size: .72rem; height: 100%;
+  background: var(--primary-light); color: var(--primary); border-left: 3px solid var(--primary);
+}
+.tt-class strong { display: block; font-size: .76rem; }
+.tt-class.conflict { background: var(--danger-bg); color: var(--danger); border-left-color: var(--danger); }
+
+/* Grading / QA flags */
+.flag-card { border-left: 4px solid var(--warning); }
+.flag-card.severity-high, .flag-card.severity-critical { border-left-color: var(--danger); }
+.flag-card.severity-low { border-left-color: var(--info); }
+
+/* QA read-only enforcement (frontend demonstration only - see js/qa.js
+   and js/auth.js for the accompanying comments on real backend RBAC). */
+.qa-readonly .write-action { display: none !important; }
+
+/* Access denied inline banner */
+.access-denied-banner {
+  display: flex; align-items: center; gap: .75rem;
+  background: var(--danger-bg); color: var(--danger);
+  border: 1px solid rgba(192,54,44,.25); border-radius: var(--radius-md);
+  padding: .9rem 1.1rem; font-size: .85rem; font-weight: 600; margin-bottom: 1rem;
+}
+
+/* Chart card height helper */
+.chart-box { position: relative; height: 260px; }
+.chart-box-sm { position: relative; height: 190px; }
+
+/* Document dropzone */
+.dropzone {
+  border: 2px dashed var(--border); border-radius: var(--radius-md);
+  padding: 1.6rem; text-align: center; color: var(--text-muted); cursor: pointer;
+}
+.dropzone:hover { border-color: var(--usiams-blue-500); color: var(--primary); }
+
+/* Checklist */
+.checklist-item { display: flex; align-items: center; gap: .75rem; padding: .7rem 0; border-bottom: 1px solid var(--border); }
+.checklist-item:last-child { border-bottom: none; }
+.checklist-item .check-icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* Login page inherited component bits */
+.system-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block; margin-right: .35rem; }
+
+.kv-list { margin: 0; }
+.kv-list dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-soft); font-weight: 700; margin-top: .7rem; }
+.kv-list dd { margin: .15rem 0 0; font-size: .88rem; }
+
+.password-toggle-wrap { position: relative; }
+.password-toggle-btn { position: absolute; right: .7rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-soft); }

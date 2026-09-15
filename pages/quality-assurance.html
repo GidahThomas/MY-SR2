@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quality Assurance - USIAMS</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/print.css">
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <aside class="app-sidebar" id="sidebarContainer"></aside>
+  <div class="app-main">
+    <header class="app-navbar" id="navbarContainer"></header>
+    <main class="app-content">
+
+      <div class="page-header">
+        <div><h1>Quality Assurance</h1><p>Data quality flags and academic quality indicators across the university.</p></div>
+      </div>
+
+      <div class="dash-grid-2col">
+        <div class="usi-card">
+          <div class="usi-card-header"><h3>GPA Distribution</h3></div>
+          <div class="usi-card-body"><div class="chart-box"><canvas id="qaGpaDistributionChart"></canvas></div></div>
+        </div>
+        <div class="usi-card">
+          <div class="usi-card-header"><h3>Quality Indicators</h3></div>
+          <div class="usi-card-body" id="qualityIndicatorsList"></div>
+        </div>
+      </div>
+
+      <div class="usi-card mb-3">
+        <div class="usi-card-header"><h3>Department Performance (Average GPA)</h3></div>
+        <div class="usi-card-body"><div class="chart-box"><canvas id="departmentPerformanceChart"></canvas></div></div>
+      </div>
+
+      <div class="usi-card">
+        <div class="usi-card-header">
+          <h3>Quality Flags</h3>
+          <div class="d-flex gap-2">
+            <select class="form-select form-select-sm" id="flagCategoryFilter"></select>
+            <select class="form-select form-select-sm" id="flagStatusFilter">
+              <option value="">All Statuses</option><option value="OPEN">Open</option><option value="UNDER_REVIEW">Under Review</option><option value="RESOLVED">Resolved</option>
+            </select>
+            <button class="btn btn-outline-secondary btn-sm" id="exportFlagsCsvBtn"><i class="bi bi-download me-1"></i>Export CSV</button>
+          </div>
+        </div>
+        <div class="usi-card-body" id="flagsList"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="../js/storage.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../components/toast.js"></script>
+<script src="../components/modal.js"></script>
+<script src="../data/grading-system.js"></script>
+<script src="../data/academic-structure.js"></script>
+<script src="../data/courses.js"></script>
+<script src="../data/users.js"></script>
+<script src="../data/students.js"></script>
+<script src="../data/results.js"></script>
+<script src="../data/registrations.js"></script>
+<script src="../data/finance.js"></script>
+<script src="../data/attendance.js"></script>
+<script src="../data/timetable.js"></script>
+<script src="../data/requests.js"></script>
+<script src="../data/complaints.js"></script>
+<script src="../data/notifications.js"></script>
+<script src="../data/documents.js"></script>
+<script src="../data/internship.js"></script>
+<script src="../data/graduation.js"></script>
+<script src="../data/alumni.js"></script>
+<script src="../data/qa-flags.js"></script>
+<script src="../data/audit-logs.js"></script>
+<script src="../js/gpa.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/search.js"></script>
+<script src="../js/notifications.js"></script>
+<script src="../js/qa.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../components/table.js"></script>
+<script src="../components/cards.js"></script>
+<script src="../components/sidebar.js"></script>
+<script src="../components/navbar.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/quality-assurance.js"></script>
+<script>
+  const user = USIAMS.auth.requireAuth(["UNIVERSITY_ADMIN","QUALITY_ASSURANCE_OFFICER","HEAD_OF_DEPARTMENT","COLLEGE_ADMIN","INSTITUTE_ADMIN","SCHOOL_ADMIN","SYSTEM_ADMIN"]);
+  if (user) {
+    USIAMS.app.mountShell(user);
+    USIAMS.qaPage.initPage(user);
+  }
+</script>
+</body>
+</html>

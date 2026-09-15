@@ -1,0 +1,48 @@
+/* =========================================================
+   USIAMS - Dashboard specific layout helpers
+   ========================================================= */
+
+.dash-grid-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.dash-grid-2col {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  align-items: start;
+}
+
+.dash-grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.dash-grid-charts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.system-health-row { display: flex; align-items: center; justify-content: space-between; padding: .6rem 0; border-bottom: 1px solid var(--border); }
+.system-health-row:last-child { border-bottom: none; }
+.system-health-row .health-name { font-size: .85rem; font-weight: 600; display: flex; align-items: center; gap: .5rem; }
+
+.activity-item { display: flex; gap: .7rem; padding: .7rem 0; border-bottom: 1px solid var(--border); }
+.activity-item:last-child { border-bottom: none; }
+.activity-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .95rem; }
+
+.quality-indicator-row { display: flex; align-items: center; justify-content: space-between; padding: .65rem 0; border-bottom: 1px solid var(--border); }
+.quality-indicator-row:last-child { border-bottom: none; }
+
+.profile-hero {
+  display: flex; align-items: center; gap: 1.25rem; padding: 1.5rem;
+}
+.profile-hero .avatar-circle { width: 72px; height: 72px; font-size: 1.5rem; }
