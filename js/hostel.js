@@ -14,6 +14,9 @@
   function rooms() { return global.USIAMS.data.seedRooms; }
   function getHostel(id) { return hostels().find(h => h.id === id); }
   function getRoom(id) { return rooms().find(r => r.id === id); }
+  // Room numbers repeat across blocks, so the block always has to be
+  // shown alongside the room number to uniquely identify a room.
+  function roomLabel(room) { return `Block ${room.block} - Room ${room.roomNumber}`; }
   function allAllocations() { return allocationsOverlay.getAll(); }
 
   function occupantsOfRoom(roomId) {
@@ -69,7 +72,7 @@
     container.innerHTML = `
       <div class="usi-card">
         <div class="usi-card-header">
-          <div><h3>${hostel ? util.escapeHtml(hostel.name) : "Accommodation Request"}</h3>${room ? `<div class="text-muted-usi" style="font-size:.78rem;">Room ${util.escapeHtml(room.roomNumber)}</div>` : ""}</div>
+          <div><h3>${hostel ? util.escapeHtml(hostel.name) : "Accommodation Request"}</h3>${room ? `<div class="text-muted-usi" style="font-size:.78rem;">${util.escapeHtml(roomLabel(room))}</div>` : ""}</div>
           <span class="status-badge status-${allocation.status.toLowerCase()}">${allocation.status}</span>
         </div>
         <div class="usi-card-body">
@@ -99,7 +102,7 @@
   function openAllocateModal(allocation) {
     const options = eligibleRoomsFor(allocation.studentId).map(r => {
       const hostel = getHostel(r.hostelId);
-      return `<option value="${r.id}">${util.escapeHtml(hostel.name)} - Room ${util.escapeHtml(r.roomNumber)} (${roomAvailableBeds(r)} beds free)</option>`;
+      return `<option value="${r.id}">${util.escapeHtml(hostel.name)} - ${util.escapeHtml(roomLabel(r))} (${roomAvailableBeds(r)} beds free)</option>`;
     }).join("");
     if (!options) { toast.show("error", "No rooms available", "There are no available rooms matching this student's hall gender."); return; }
     modal.renderInto(`
@@ -135,9 +138,10 @@
     const roomsTable = global.USIAMS.table.createDataTable({
       containerId: "roomsTableContainer",
       data: rooms(),
-      searchKeys: ["roomNumber"],
+      searchKeys: ["block", "roomNumber"],
       columns: [
         { key: "hostel", label: "Hall", render: r => util.escapeHtml(getHostel(r.hostelId)?.name || "-") },
+        { key: "block", label: "Block", sortable: true, render: r => `Block ${util.escapeHtml(r.block)}` },
         { key: "roomNumber", label: "Room", sortable: true },
         { key: "capacity", label: "Capacity", sortable: true },
         { key: "occupied", label: "Occupied", render: r => occupantsOfRoom(r.id).length },
@@ -152,7 +156,7 @@
       searchKeys: ["studentId"],
       columns: [
         { key: "student", label: "Student", render: a => { const s = global.USIAMS.students.getStudent(a.studentId); return s ? util.escapeHtml(`${s.fullName} (${s.regNumber})`) : a.studentId; } },
-        { key: "room", label: "Room", render: a => { const r = a.roomId ? getRoom(a.roomId) : null; return r ? `${util.escapeHtml(getHostel(r.hostelId).name)} - ${util.escapeHtml(r.roomNumber)}` : "-"; } },
+        { key: "room", label: "Room", render: a => { const r = a.roomId ? getRoom(a.roomId) : null; return r ? `${util.escapeHtml(getHostel(r.hostelId).name)} - ${util.escapeHtml(roomLabel(r))}` : "-"; } },
         { key: "requestedDate", label: "Requested", sortable: true, render: a => util.formatDate(a.requestedDate) },
         { key: "status", label: "Status", render: a => `<span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span>` }
       ],
@@ -187,7 +191,7 @@
   }
 
   global.USIAMS = global.USIAMS || {};
-  global.USIAMS.hostel = { hostels, rooms, getHostel, getRoom, activeAllocationForStudent, allAllocations };
+  global.USIAMS.hostel = { hostels, rooms, getHostel, getRoom, roomLabel, activeAllocationForStudent, allAllocations };
   global.USIAMS.hostelPage = { initPage };
 
 })(window);

@@ -17,17 +17,26 @@
     { id: "HST-04", name: "Amani Hall", gender: "Female", feePerYear: 480000 }
   ];
 
+  // Each hall is physically organised into blocks (buildings/wings), and
+  // room numbers are only unique within a block - two different blocks
+  // can both have a "Room 101". A student's full address is therefore
+  // Hall + Block + Room, not just Hall + Room.
   const SEED_ROOMS = [
-    { id: "RM-0101", hostelId: "HST-01", roomNumber: "101", capacity: 4 },
-    { id: "RM-0102", hostelId: "HST-01", roomNumber: "102", capacity: 4 },
-    { id: "RM-0103", hostelId: "HST-01", roomNumber: "103", capacity: 4 },
-    { id: "RM-0201", hostelId: "HST-02", roomNumber: "201", capacity: 4 },
-    { id: "RM-0202", hostelId: "HST-02", roomNumber: "202", capacity: 4 },
-    { id: "RM-0301", hostelId: "HST-03", roomNumber: "301", capacity: 4 },
-    { id: "RM-0302", hostelId: "HST-03", roomNumber: "302", capacity: 4 },
-    { id: "RM-0303", hostelId: "HST-03", roomNumber: "303", capacity: 4 },
-    { id: "RM-0401", hostelId: "HST-04", roomNumber: "401", capacity: 4 },
-    { id: "RM-0402", hostelId: "HST-04", roomNumber: "402", capacity: 4 }
+    { id: "RM-0101", hostelId: "HST-01", block: "A", roomNumber: "101", capacity: 4 },
+    { id: "RM-0102", hostelId: "HST-01", block: "A", roomNumber: "102", capacity: 4 },
+    { id: "RM-0103", hostelId: "HST-01", block: "A", roomNumber: "103", capacity: 4 },
+    { id: "RM-0104", hostelId: "HST-01", block: "B", roomNumber: "101", capacity: 4 },
+    { id: "RM-0105", hostelId: "HST-01", block: "B", roomNumber: "102", capacity: 4 },
+    { id: "RM-0201", hostelId: "HST-02", block: "A", roomNumber: "101", capacity: 4 },
+    { id: "RM-0202", hostelId: "HST-02", block: "A", roomNumber: "102", capacity: 4 },
+    { id: "RM-0203", hostelId: "HST-02", block: "B", roomNumber: "101", capacity: 4 },
+    { id: "RM-0301", hostelId: "HST-03", block: "A", roomNumber: "101", capacity: 4 },
+    { id: "RM-0302", hostelId: "HST-03", block: "A", roomNumber: "102", capacity: 4 },
+    { id: "RM-0303", hostelId: "HST-03", block: "A", roomNumber: "103", capacity: 4 },
+    { id: "RM-0304", hostelId: "HST-03", block: "B", roomNumber: "101", capacity: 4 },
+    { id: "RM-0401", hostelId: "HST-04", block: "A", roomNumber: "101", capacity: 4 },
+    { id: "RM-0402", hostelId: "HST-04", block: "A", roomNumber: "102", capacity: 4 },
+    { id: "RM-0403", hostelId: "HST-04", block: "B", roomNumber: "101", capacity: 4 }
   ];
 
   const SEED_ALLOCATIONS = [
