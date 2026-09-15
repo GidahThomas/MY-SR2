@@ -10,10 +10,10 @@
   text-transform: uppercase; letter-spacing: .03em; white-space: nowrap;
 }
 .status-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.status-active, .status-approved, .status-resolved, .status-verified, .status-eligible, .status-completed, .status-paid { background: var(--success-bg); color: var(--success); }
-.status-pending, .status-in_progress, .status-under_review, .status-open { background: var(--warning-bg); color: var(--warning); }
+.status-active, .status-approved, .status-resolved, .status-verified, .status-eligible, .status-completed, .status-paid, .status-returned, .status-allocated, .status-graded, .status-accepted { background: var(--success-bg); color: var(--success); }
+.status-pending, .status-in_progress, .status-under_review, .status-open, .status-requested { background: var(--warning-bg); color: var(--warning); }
 .status-rejected, .status-inactive, .status-critical, .status-suspended, .status-not_eligible, .status-overdue { background: var(--danger-bg); color: var(--danger); }
-.status-escalated, .status-closed, .status-graduated, .status-info { background: var(--info-bg); color: var(--info); }
+.status-escalated, .status-closed, .status-graduated, .status-info, .status-borrowed, .status-vacated, .status-submitted { background: var(--info-bg); color: var(--info); }
 .status-partial, .status-warning { background: var(--warning-bg); color: var(--warning); }
 
 .priority-low { background: var(--info-bg); color: var(--info); }

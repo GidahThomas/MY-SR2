@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Course Management - USIAMS</title>
+<title>Admissions - USIAMS</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 <link rel="stylesheet" href="../css/style.css">
@@ -20,22 +20,15 @@
     <main class="app-content">
 
       <div class="page-header">
-        <div><h1>Course Management</h1><p>Maintain the university-wide course catalogue and prerequisites.</p></div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-outline-secondary" id="exportCsvBtn"><i class="bi bi-download me-1"></i>Export CSV</button>
-          <button class="btn btn-primary write-action" id="addCourseBtn" data-write-action style="background:var(--primary);border-color:var(--primary);"><i class="bi bi-plus-lg me-1"></i>Add Course</button>
-        </div>
+        <div><h1>Admissions</h1><p>Review applications submitted through the public admissions portal.</p></div>
       </div>
+
+      <div id="statGrid" class="dash-grid-stats mb-4"></div>
 
       <div class="usi-card">
         <div class="usi-card-body">
-          <div class="table-toolbar">
-            <div class="search-box"><i class="bi bi-search"></i><input type="search" class="form-control" id="courseSearchInput" placeholder="Search by code or title"></div>
-            <select class="form-select" id="filterDept" style="max-width:240px;"></select>
-            <select class="form-select" id="filterType" style="max-width:160px;"><option value="">All Types</option><option>Core</option><option>Elective</option></select>
-            <select class="form-select" id="filterSemester" style="max-width:160px;"><option value="">All Semesters</option><option value="1">Semester 1</option><option value="2">Semester 2</option></select>
-          </div>
-          <div id="coursesTableContainer"></div>
+          <div class="table-toolbar"><div class="search-box"><i class="bi bi-search"></i><input type="search" class="form-control" id="applicationsSearchInput" placeholder="Search by applicant name, email or ID"></div></div>
+          <div id="applicationsTableContainer"></div>
         </div>
       </div>
 
@@ -83,12 +76,12 @@
 <script src="../components/sidebar.js"></script>
 <script src="../components/navbar.js"></script>
 <script src="../js/app.js"></script>
-<script src="../js/courses.page.js"></script>
+<script src="../js/admissions.js"></script>
 <script>
-  const user = USIAMS.auth.requireAuth(["UNIVERSITY_ADMIN","ACADEMIC_ADVISOR","DEPARTMENT_ADMIN","HEAD_OF_DEPARTMENT","COLLEGE_ADMIN","INSTITUTE_ADMIN","SCHOOL_ADMIN","EXAMINATION_OFFICER","FINANCE_OFFICER","REGISTRATION_OFFICER","QUALITY_ASSURANCE_OFFICER","SYSTEM_ADMIN","LECTURER","LIBRARIAN","HOSTEL_OFFICER"]);
+  const user = USIAMS.auth.requireAuth(["REGISTRATION_OFFICER","UNIVERSITY_ADMIN","SYSTEM_ADMIN"]);
   if (user) {
     USIAMS.app.mountShell(user);
-    USIAMS.coursesPage.initPage(user);
+    USIAMS.admissionsPage.initPage(user);
   }
 </script>
 </body>

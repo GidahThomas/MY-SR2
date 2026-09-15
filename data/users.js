@@ -31,7 +31,9 @@
     FINANCE_OFFICER: "Finance Officer",
     REGISTRATION_OFFICER: "Registration Officer",
     QUALITY_ASSURANCE_OFFICER: "Quality Assurance Officer",
-    SYSTEM_ADMIN: "System Admin"
+    SYSTEM_ADMIN: "System Admin",
+    LIBRARIAN: "Librarian",
+    HOSTEL_OFFICER: "Hostel Officer"
   };
 
   // Demo login accounts - one per role, as required by the brief.
@@ -50,6 +52,8 @@
     { id: "USR-0012", username: "registration", password: "registration123", name: "Victoria Mgaya", email: "registration@usiams.ac.tz", role: "REGISTRATION_OFFICER", status: "Active", lastLogin: "2026-09-12T08:50:00" },
     { id: "USR-0013", username: "qa", password: "qa123", name: "Consolata Lyimo", email: "qa@usiams.ac.tz", role: "QUALITY_ASSURANCE_OFFICER", status: "Active", lastLogin: "2026-09-11T15:30:00" },
     { id: "USR-0014", username: "sysadmin", password: "sysadmin123", name: "Upendo Mallya", email: "sysadmin@usiams.ac.tz", role: "SYSTEM_ADMIN", status: "Active", lastLogin: "2026-09-13T06:45:00" },
+    { id: "USR-0019", username: "librarian", password: "librarian123", name: "Beatrice Mollel", email: "librarian@usiams.ac.tz", role: "LIBRARIAN", status: "Active", lastLogin: "2026-09-12T08:00:00" },
+    { id: "USR-0020", username: "hostel", password: "hostel123", name: "Raymond Kessy", email: "hostel@usiams.ac.tz", role: "HOSTEL_OFFICER", status: "Active", lastLogin: "2026-09-12T08:00:00" },
 
     // Additional directory users shown in Administration > Users for realism
     { id: "USR-0015", username: "jmassawe", password: "changeme123", name: "Dr. Imani Massawe", email: "imani.massawe@usiams.ac.tz", role: "LECTURER", departmentId: "DIS", status: "Active", lastLogin: "2026-09-08T09:00:00" },
