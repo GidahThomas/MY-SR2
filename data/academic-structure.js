@@ -51,7 +51,7 @@
     { id: "DMKT", code: "06", name: "Department of Business Administration and Management", unitId: "COBE", hod: "Dr. Happiness Komba" },
     { id: "DIS", code: "07", name: "Department of Information Systems and Technology", unitId: "CIVE", hod: "Dr. Imani Massawe" },
     { id: "DDS", code: "08", name: "Department of Development Studies", unitId: "IDS", hod: "Dr. Juma Shayo" },
-    { id: "DLAW", code: "09", name: "Department of Law", unitId: "SOL", hod: "Dr. Neema Kimaro" },
+    { id: "DLAW", code: "09", name: "Department of Public Law", unitId: "SOL", hod: "Dr. Neema Kimaro" },
     { id: "DEDU", code: "10", name: "Department of Educational Foundation and Continuing Education", unitId: "COED", hod: "Dr. Consolata Lyimo" },
 
     { id: "DCHEM", code: "11", name: "Department of Chemistry", unitId: "CNMS", hod: "Dr. Zawadi Ndosi" },
@@ -69,9 +69,13 @@
     { id: "DPEE", code: "23", name: "Department of Petroleum and Energy Engineering", unitId: "COESE", hod: "Dr. Beatrice Mollel" },
     { id: "DGEO", code: "24", name: "Department of Geology", unitId: "COESE", hod: "Dr. Raymond Kessy" },
     { id: "DEEM", code: "25", name: "Department of Environmental Engineering and Management", unitId: "COESE", hod: "Dr. Devotha Kayombo" },
-    { id: "DMED", code: "26", name: "Department of Medicine", unitId: "SOMD", hod: "Dr. Silas Mgaya" },
+    { id: "DMED", code: "26", name: "Department of Internal Medicine", unitId: "SOMD", hod: "Dr. Silas Mgaya" },
     { id: "DCNM", code: "27", name: "Department of Clinical Nursing and Midwifery", unitId: "SONPH", hod: "Dr. Winfrida Sanga" },
-    { id: "DPHCN", code: "28", name: "Department of Public Health Community Nursing", unitId: "SONPH", hod: "Dr. Pendo Mtui" }
+    { id: "DPHCN", code: "28", name: "Department of Public Health Community Nursing", unitId: "SONPH", hod: "Dr. Pendo Mtui" },
+
+    { id: "DPRIVLAW", code: "29", name: "Department of Private Law", unitId: "SOL", hod: "Dr. Faraja Ndumbaro" },
+    { id: "DBMS", code: "30", name: "Department of Biomedical Sciences", unitId: "SOMD", hod: "Dr. Kelvin Massawe" },
+    { id: "DOG", code: "31", name: "Department of Obstetrics and Gynecology", unitId: "SOMD", hod: "Dr. Lightness Chacha" }
   ];
 
   const PROGRAMMES = [
@@ -117,7 +121,14 @@
     { id: "BSCENV", name: "Bachelor of Science in Environmental Engineering and Management", code: "BSC-ENV", departmentId: "DEEM", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 7 },
     { id: "MD", name: "Doctor of Medicine (MD)", code: "MD", departmentId: "DMED", level: "Undergraduate", durationYears: 5, creditLimitPerSemester: 24, creditMinPerSemester: 12 },
     { id: "BSCNUR", name: "Bachelor of Science in Nursing", code: "BSC-NUR", departmentId: "DCNM", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 8 },
-    { id: "BSCPH", name: "Bachelor of Science in Public Health", code: "BSC-PH", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 8 }
+    { id: "BSCPH", name: "Bachelor of Science in Public Health", code: "BSC-PH", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 8 },
+
+    // Added after a follow-up completeness check against udom.ac.tz:
+    // School of Law is actually split into Public/Private Law, and
+    // School of Medicine and Dentistry has real named departments
+    // rather than one generic "Department of Medicine".
+    { id: "BSCHIS", name: "Bachelor of Science in Health Information Science", code: "BSC-HIS", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 8 },
+    { id: "BSCCND", name: "Bachelor of Science in Clinical Nutrition and Dietetics", code: "BSC-CND", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 8 }
   ];
 
   const ACADEMIC_YEARS = [
