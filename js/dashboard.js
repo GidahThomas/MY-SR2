@@ -78,6 +78,57 @@
     renderPendingRequests(student.id);
     renderUpcomingTimetable(student);
     renderAnnouncements();
+    renderStudentNeedsAttention(user, student);
+  }
+
+  // "Now" for demo purposes - see data/calendar.js for why this mirrors
+  // the same fixed reference date rather than using the real new Date().
+  const DEMO_TODAY = "2026-09-12";
+
+  // Pulls together anything across the new modules (library, hostel,
+  // e-learning, calendar) that genuinely needs the student's attention,
+  // instead of making them go check four separate pages to find out.
+  function renderStudentNeedsAttention(user, student) {
+    const el = document.getElementById("needsAttentionList");
+    if (!el) return;
+    const items = [];
+
+    if (global.USIAMS.library) {
+      const overdue = global.USIAMS.library.loansForStudent(student.id).filter(l => global.USIAMS.library.effectiveStatus(l) === "Overdue");
+      overdue.forEach(l => {
+        const book = global.USIAMS.library.getBook(l.bookId);
+        items.push({ icon: "bi-journal-x", tint: "danger", text: `"${book ? book.title : l.bookId}" is overdue - please return it.`, href: "library.html" });
+      });
+    }
+
+    if (global.USIAMS.hostel) {
+      const allocation = global.USIAMS.hostel.activeAllocationForStudent(student.id);
+      if (allocation && allocation.status === "Requested") {
+        items.push({ icon: "bi-hourglass-split", tint: "warning", text: "Your accommodation request is still awaiting allocation.", href: "hostel.html" });
+      }
+    }
+
+    if (global.USIAMS.elearning) {
+      const courseIds = global.USIAMS.elearning.coursesForUser(user).map(c => c.id);
+      const assignments = global.USIAMS.elearning.allAssignments().filter(a => courseIds.includes(a.courseId));
+      assignments.forEach(a => {
+        if (global.USIAMS.elearning.mySubmission(a.id, student.id)) return;
+        const dueDiff = (new Date(a.dueDate) - new Date(DEMO_TODAY)) / 86400000;
+        if (dueDiff < 0) items.push({ icon: "bi-exclamation-circle", tint: "danger", text: `Assignment "${a.title}" was due ${util.formatDate(a.dueDate)} and hasn't been submitted.`, href: "elearning.html" });
+        else if (dueDiff <= 7) items.push({ icon: "bi-clock-history", tint: "warning", text: `Assignment "${a.title}" is due ${util.formatDate(a.dueDate)}.`, href: "elearning.html" });
+      });
+    }
+
+    if (global.USIAMS.calendar) {
+      const next = global.USIAMS.calendar.allEvents().find(e => new Date(e.date) >= new Date(DEMO_TODAY));
+      if (next) items.push({ icon: "bi-calendar3", tint: "info", text: `${next.title} - ${util.formatDate(next.date)}${next.type === "Public Holiday" ? " (public holiday)" : ""}.`, href: "calendar.html" });
+    }
+
+    el.innerHTML = items.length ? items.map(i => `
+      <a href="${i.href}" class="d-flex gap-3 py-2 border-bottom text-decoration-none">
+        <div class="icon-tint-${i.tint}" style="width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi ${i.icon}"></i></div>
+        <div style="font-size:.85rem;color:var(--text);">${util.escapeHtml(i.text)}</div>
+      </a>`).join("") : `<div class="empty-state"><i class="bi bi-check2-circle"></i>Nothing needs your attention right now.</div>`;
   }
 
   function withCredits(result) {
@@ -249,6 +300,57 @@
 
     renderRecentActivities();
     renderSystemHealth();
+    renderRoleNeedsAttention(user);
+  }
+
+  // Librarian/Hostel Officer/Registration Officer each get their own
+  // "needs attention" queue on the shared admin dashboard - everyone
+  // else keeps the card hidden. Uses the same live accessors as global
+  // search (USIAMS.library/hostel/admissions) rather than the static seed.
+  const ROLE_NEEDS_ATTENTION = {
+    LIBRARIAN: {
+      title: "Overdue Library Loans",
+      href: "library.html",
+      build: () => global.USIAMS.library.allLoans()
+        .filter(l => global.USIAMS.library.effectiveStatus(l) === "Overdue")
+        .map(l => {
+          const book = global.USIAMS.library.getBook(l.bookId);
+          const student = global.USIAMS.students.getStudent(l.studentId);
+          return { title: book ? book.title : l.bookId, subtitle: `${student ? student.fullName : l.studentId} - due ${util.formatDate(l.dueDate)}` };
+        })
+    },
+    HOSTEL_OFFICER: {
+      title: "Pending Accommodation Requests",
+      href: "hostel.html",
+      build: () => global.USIAMS.hostel.allAllocations()
+        .filter(a => a.status === "Requested")
+        .map(a => {
+          const student = global.USIAMS.students.getStudent(a.studentId);
+          return { title: student ? student.fullName : a.studentId, subtitle: `Requested ${util.formatDate(a.requestedDate)}` };
+        })
+    },
+    REGISTRATION_OFFICER: {
+      title: "Pending Admission Applications",
+      href: "admissions.html",
+      build: () => global.USIAMS.admissions.allApplications()
+        .filter(a => a.status === "Submitted" || a.status === "Under Review")
+        .map(a => ({ title: a.fullName, subtitle: `${a.id} - ${a.status}` }))
+    }
+  };
+
+  function renderRoleNeedsAttention(user) {
+    const card = document.getElementById("roleNeedsAttentionCard");
+    if (!card) return;
+    const config = ROLE_NEEDS_ATTENTION[user.role];
+    if (!config) { card.classList.add("d-none"); return; }
+    card.classList.remove("d-none");
+    document.getElementById("roleNeedsAttentionTitle").innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>${util.escapeHtml(config.title)}`;
+    const rows = config.build();
+    document.getElementById("roleNeedsAttentionList").innerHTML = rows.length ? rows.map(r => `
+      <a href="${config.href}" class="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none">
+        <div><strong style="font-size:.85rem;color:var(--text);">${util.escapeHtml(r.title)}</strong><div class="text-muted-usi" style="font-size:.76rem;">${util.escapeHtml(r.subtitle)}</div></div>
+        <i class="bi bi-arrow-right-short" style="color:var(--text-muted);"></i>
+      </a>`).join("") : `<div class="empty-state"><i class="bi bi-check2-circle"></i>Nothing needs your attention right now.</div>`;
   }
 
   function renderRecentActivities() {
@@ -346,12 +448,19 @@
 
     document.getElementById("studentMetaLine").textContent = `${util.escapeHtml(global.USIAMS.academic.getDepartment(user.departmentId)?.name || "")} - ${myCourseIds.length} course(s) this semester.`;
 
+    const myElearningCourseIds = global.USIAMS.elearning ? global.USIAMS.elearning.coursesForUser(user).map(c => c.id) : [];
+    const ungradedSubmissions = global.USIAMS.elearning
+      ? global.USIAMS.elearning.allSubmissions().filter(s => s.status !== "Graded" && global.USIAMS.elearning.allAssignments().some(a => a.id === s.assignmentId && myElearningCourseIds.includes(a.courseId)))
+      : [];
+
     cards.renderStatGrid("statGrid", [
       { label: "Courses Teaching", value: myCourseIds.length, icon: "bi-journal-bookmark", tint: "primary" },
       { label: "Total Students", value: myStudentCount, icon: "bi-people", tint: "info" },
       { label: "Classes This Week", value: myTimetable.length, icon: "bi-calendar3-week", tint: "success" },
-      { label: "Pending Result Entries", value: 2, icon: "bi-pencil-square", tint: "warning" }
+      { label: "Ungraded Submissions", value: ungradedSubmissions.length, icon: "bi-pencil-square", tint: ungradedSubmissions.length ? "warning" : "success" }
     ]);
+
+    renderNeedsGrading(ungradedSubmissions);
 
     const el = document.getElementById("myCoursesList");
     if (!myCourseIds.length) { el.innerHTML = `<div class="empty-state"><i class="bi bi-journal-x"></i>No courses assigned this semester.</div>`; }
@@ -375,6 +484,20 @@
           <span class="text-muted-usi" style="font-size:.76rem;">${e.room}</span>
         </div>`).join("");
     }
+  }
+
+  function renderNeedsGrading(submissions) {
+    const el = document.getElementById("needsGradingList");
+    if (!el) return;
+    if (!submissions.length) { el.innerHTML = `<div class="empty-state"><i class="bi bi-check2-circle"></i>No submissions waiting to be graded.</div>`; return; }
+    el.innerHTML = submissions.map(s => {
+      const assignment = global.USIAMS.elearning.allAssignments().find(a => a.id === s.assignmentId);
+      const student = global.USIAMS.students.getStudent(s.studentId);
+      return `<a href="elearning.html" class="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none">
+        <div><strong style="font-size:.85rem;color:var(--text);">${assignment ? util.escapeHtml(assignment.title) : s.assignmentId}</strong><div class="text-muted-usi" style="font-size:.76rem;">${student ? util.escapeHtml(student.fullName) : s.studentId} &bull; Submitted ${util.formatDate(s.submittedDate)}</div></div>
+        <span class="status-badge status-submitted">Ungraded</span>
+      </a>`;
+    }).join("");
   }
 
   global.USIAMS = global.USIAMS || {};
