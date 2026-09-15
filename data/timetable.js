@@ -10,7 +10,18 @@
 
   const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const TIMES = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
-  const ROOMS = ["LT-1", "LT-2", "LT-3", "Lab-A", "Lab-B", "Room 204", "Room 301", "Auditorium"];
+  // Real campus venue codes: LRB100-LRB106 (Lecture Room Block), plus
+  // the numbered room blocks 001-005, each split into lettered rooms -
+  // not every block has the same set of letters (e.g. 004 only has
+  // C and D), matching the actual room list provided.
+  const ROOMS = [
+    "LRB100", "LRB101", "LRB102", "LRB103", "LRB104", "LRB105", "LRB106",
+    "001A", "001B", "001C", "001D",
+    "002A", "002B", "002C", "002D",
+    "003B", "003C", "003D",
+    "004C", "004D",
+    "005B", "005C"
+  ];
 
   function seededMark(seed, min, max) {
     let hash = 0;
