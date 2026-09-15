@@ -20,8 +20,13 @@
     "002A", "002B", "002C", "002D",
     "003B", "003C", "003D",
     "004C", "004D",
-    "005B", "005C"
+    "005B", "005C",
+    "Auditorium"
   ];
+  // The Auditorium is the one large multi-purpose venue on this list -
+  // besides being scheduled for classes like every other room here, it
+  // is also the venue used for meetings and student study sessions.
+  const AUDITORIUM = "Auditorium";
 
   function seededMark(seed, min, max) {
     let hash = 0;
@@ -95,6 +100,6 @@
   global.USIAMS = global.USIAMS || {};
   global.USIAMS.data = global.USIAMS.data || {};
   global.USIAMS.data.timetable = buildTimetable();
-  global.USIAMS.timetable = { DAYS, TIMES, detectConflicts, timetableForProgrammeYear, timetableForLecturer };
+  global.USIAMS.timetable = { DAYS, TIMES, ROOMS, AUDITORIUM, detectConflicts, timetableForProgrammeYear, timetableForLecturer };
 
 })(window);
