@@ -101,6 +101,9 @@
         <div class="modal-body">
           <label class="form-label">Category</label>
           <select class="form-select mb-3" id="cmpCategory">${window.USIAMS.data.complaintCategories.map(c => `<option>${c}</option>`).join("")}</select>
+          <label class="form-label">Send To</label>
+          <select class="form-select mb-3" id="cmpRecipient">${window.USIAMS.data.complaintRecipientOffices.map(o => `<option>${o}</option>`).join("")}</select>
+          <p class="text-muted-usi mb-3" style="font-size:.78rem;">Submitting here reaches the right office directly - there is no need to visit in person.</p>
           <label class="form-label">Priority</label>
           <select class="form-select mb-3" id="cmpPriority">${window.USIAMS.data.complaintPriorities.map(p => `<option>${p}</option>`).join("")}</select>
           <label class="form-label">Description</label>
@@ -116,11 +119,12 @@
       const desc = document.getElementById("cmpDesc").value.trim();
       if (!desc) { document.getElementById("cmpFormError").textContent = "Please describe your complaint."; document.getElementById("cmpFormError").classList.remove("d-none"); return; }
       const file = document.getElementById("cmpFile").files[0];
+      const recipient = document.getElementById("cmpRecipient").value;
       const newCmp = {
         id: util.uid("CMP"), studentId: currentUser.studentId, category: document.getElementById("cmpCategory").value,
         priority: document.getElementById("cmpPriority").value, description: desc, attachment: file ? file.name : null,
-        status: "PENDING", assignedTo: null, createdAt: new Date().toISOString(),
-        timeline: [{ status: "PENDING", date: new Date().toISOString(), note: "Complaint submitted by student." }]
+        status: "PENDING", assignedTo: recipient, createdAt: new Date().toISOString(),
+        timeline: [{ status: "PENDING", date: new Date().toISOString(), note: `Complaint submitted by student, routed to ${recipient}.` }]
       };
       const list = all(); list.push(newCmp); save(list);
       modal.close();
@@ -129,12 +133,27 @@
     });
   }
 
+  function applyFilters() {
+    const priority = document.getElementById("complaintPriorityFilter").value;
+    const recipient = document.getElementById("complaintRecipientFilter").value;
+    dataTable.setFilter(c => (!priority || c.priority === priority) && (!recipient || c.assignedTo === recipient));
+  }
+
   function initPage(user) {
     currentUser = user;
     initTable();
     document.getElementById("submitComplaintBtn").addEventListener("click", openSubmitModal);
     document.getElementById("complaintSearchInput").addEventListener("input", util.debounce(() => dataTable.setSearch(document.getElementById("complaintSearchInput").value), 200));
-    document.getElementById("complaintPriorityFilter").addEventListener("change", (e) => dataTable.setFilter(c => !e.target.value || c.priority === e.target.value));
+
+    const recipientFilter = document.getElementById("complaintRecipientFilter");
+    if (recipientFilter) {
+      // Staff-only: students only ever see their own complaints, so
+      // filtering by recipient office is a staff triage convenience.
+      recipientFilter.classList.toggle("d-none", currentUser.role === "STUDENT");
+      recipientFilter.innerHTML = `<option value="">All Offices</option>` + window.USIAMS.data.complaintRecipientOffices.map(o => `<option>${o}</option>`).join("");
+      recipientFilter.addEventListener("change", applyFilters);
+    }
+    document.getElementById("complaintPriorityFilter").addEventListener("change", applyFilters);
 
     const params = new URLSearchParams(window.location.search);
     if (params.get("openComplaint")) openDetails(params.get("openComplaint"));

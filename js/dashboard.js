@@ -77,8 +77,26 @@
     renderStudentNotifications(user);
     renderPendingRequests(student.id);
     renderUpcomingTimetable(student);
-    renderAnnouncements();
+    renderAnnouncements(user.role);
     renderStudentNeedsAttention(user, student);
+    renderBylawsReminder(student);
+  }
+
+  // Shows until the student either acknowledges the by-laws (permanent,
+  // tracked per student - see pages/bylaws.html) or dismisses for this
+  // browser session ("Remind Me Later", sessionStorage so it returns
+  // next time they sign in).
+  function renderBylawsReminder(student) {
+    const banner = document.getElementById("bylawsReminderBanner");
+    if (!banner) return;
+    const acknowledged = global.USIAMS.storage.getStorage(`bylawsAcknowledged.${student.id}`, false);
+    const dismissedThisSession = sessionStorage.getItem("usiams.bylawsBannerDismissed") === "1";
+    banner.classList.toggle("d-none", acknowledged || dismissedThisSession);
+    if (acknowledged || dismissedThisSession) return;
+    document.getElementById("dismissBylawsBannerBtn").addEventListener("click", () => {
+      sessionStorage.setItem("usiams.bylawsBannerDismissed", "1");
+      banner.classList.add("d-none");
+    });
   }
 
   // "Now" for demo purposes - see data/calendar.js for why this mirrors
@@ -205,18 +223,9 @@
     }).join("");
   }
 
-  function renderAnnouncements() {
-    const el = document.getElementById("announcementsList");
-    const items = [
-      { title: "Mid-Semester Break", body: "Mid-semester break runs from 20-24 October 2026 across all campuses.", tone: "info" },
-      { title: "Library Extended Hours", body: "The main library will remain open until midnight during examination weeks.", tone: "success" },
-      { title: "Graduation Ceremony Save-the-Date", body: "The 2026 graduation ceremony is scheduled for 12 December 2026.", tone: "gold" }
-    ];
-    el.innerHTML = items.map(i => `
-      <div class="d-flex gap-3 py-2 border-bottom">
-        <div class="icon-tint-${i.tone}" style="width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-megaphone"></i></div>
-        <div><strong style="font-size:.85rem;">${i.title}</strong><div class="text-muted-usi" style="font-size:.78rem;">${i.body}</div></div>
-      </div>`).join("");
+  function renderAnnouncements(role) {
+    if (!global.USIAMS.announcements) return;
+    global.USIAMS.announcements.renderList("announcementsList", global.USIAMS.announcements.recent(role, 3));
   }
 
   // ---------------------------------------------------------------------
@@ -484,6 +493,8 @@
           <span class="text-muted-usi" style="font-size:.76rem;">${e.room}</span>
         </div>`).join("");
     }
+
+    renderAnnouncements(user.role);
   }
 
   function renderNeedsGrading(submissions) {
