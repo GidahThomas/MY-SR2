@@ -1,46 +1,29 @@
 /* =========================================================
    USIAMS - data/hostel.js
-   Halls of residence, rooms and seed accommodation allocations.
+   Halls of residence, rooms and accommodation allocations.
    Room occupancy is derived in js/hostel.js from active
    allocations rather than stored on the room record, for the
    same single-source-of-truth reason as the library catalog.
+
+   No halls are currently on-campus/in the system - the module
+   stays fully functional with zero halls and zero rooms (see
+   js/hostel.js: the stats show 0, the tables show an empty
+   state, and a Hostel Officer gets a clear "No rooms available"
+   message if they try to allocate a pending request). Real halls
+   can be added to SEED_HOSTELS/SEED_ROOMS whenever they exist.
+   Existing pending/rejected requests are kept, since students can
+   still request accommodation even while none is available yet.
    ========================================================= */
 (function (global) {
   "use strict";
 
   const ALLOCATION_STATUSES = ["Requested", "Allocated", "Rejected", "Vacated"];
 
-  const SEED_HOSTELS = [
-    { id: "HST-02", name: "Kambarage Hall", gender: "Male", feePerYear: 450000 },
-    { id: "HST-03", name: "Uhuru Hall", gender: "Female", feePerYear: 450000 },
-    { id: "HST-04", name: "Amani Hall", gender: "Female", feePerYear: 480000 }
-  ];
+  const SEED_HOSTELS = [];
 
-  // Each hall is physically organised into blocks (buildings/wings), and
-  // room numbers are only unique within a block - two different blocks
-  // can both have a "Room 101". A student's full address is therefore
-  // Hall + Block + Room, not just Hall + Room.
-  const SEED_ROOMS = [
-    { id: "RM-0201", hostelId: "HST-02", block: "A", roomNumber: "101", capacity: 4 },
-    { id: "RM-0202", hostelId: "HST-02", block: "A", roomNumber: "102", capacity: 4 },
-    { id: "RM-0204", hostelId: "HST-02", block: "A", roomNumber: "103", capacity: 4 },
-    { id: "RM-0203", hostelId: "HST-02", block: "B", roomNumber: "101", capacity: 4 },
-    { id: "RM-0205", hostelId: "HST-02", block: "B", roomNumber: "102", capacity: 4 },
-    { id: "RM-0301", hostelId: "HST-03", block: "A", roomNumber: "101", capacity: 4 },
-    { id: "RM-0302", hostelId: "HST-03", block: "A", roomNumber: "102", capacity: 4 },
-    { id: "RM-0303", hostelId: "HST-03", block: "A", roomNumber: "103", capacity: 4 },
-    { id: "RM-0304", hostelId: "HST-03", block: "B", roomNumber: "101", capacity: 4 },
-    { id: "RM-0401", hostelId: "HST-04", block: "A", roomNumber: "101", capacity: 4 },
-    { id: "RM-0402", hostelId: "HST-04", block: "A", roomNumber: "102", capacity: 4 },
-    { id: "RM-0403", hostelId: "HST-04", block: "B", roomNumber: "101", capacity: 4 }
-  ];
+  const SEED_ROOMS = [];
 
   const SEED_ALLOCATIONS = [
-    { id: "ALC-0001", studentId: "STU-0001", roomId: "RM-0201", academicYearId: "AY2025", status: "Allocated", requestedDate: "2025-08-10", allocatedDate: "2025-08-15" },
-    { id: "ALC-0002", studentId: "STU-0007", roomId: "RM-0201", academicYearId: "AY2025", status: "Allocated", requestedDate: "2025-08-10", allocatedDate: "2025-08-15" },
-    { id: "ALC-0003", studentId: "STU-0012", roomId: "RM-0401", academicYearId: "AY2025", status: "Allocated", requestedDate: "2025-08-11", allocatedDate: "2025-08-16" },
-    { id: "ALC-0004", studentId: "STU-0002", roomId: "RM-0301", academicYearId: "AY2025", status: "Allocated", requestedDate: "2025-08-09", allocatedDate: "2025-08-14" },
-    { id: "ALC-0005", studentId: "STU-0004", roomId: "RM-0301", academicYearId: "AY2025", status: "Allocated", requestedDate: "2025-08-09", allocatedDate: "2025-08-14" },
     { id: "ALC-0006", studentId: "STU-0018", roomId: null, academicYearId: "AY2025", status: "Requested", requestedDate: "2026-09-05", allocatedDate: null },
     { id: "ALC-0007", studentId: "STU-0021", roomId: null, academicYearId: "AY2025", status: "Rejected", requestedDate: "2026-08-20", allocatedDate: null }
   ];
