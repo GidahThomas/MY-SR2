@@ -10,10 +10,13 @@
 
   const { util, gpa, academic } = window.USIAMS;
   let lastReport = null;
+  // Set by initPage. util.studentLabel() consults it to decide whether a
+  // viewer may see student names or only registration numbers.
+  let currentUser = null;
 
   function studentReport() {
     const rows = window.USIAMS.data.students.map(s => ({
-      "Reg Number": s.regNumber, "Full Name": s.fullName, "Programme": academic.getProgramme(s.programmeId)?.name,
+      "Reg Number": s.regNumber, "Student": util.studentLabel(s, currentUser), "Programme": academic.getProgramme(s.programmeId)?.name,
       "Department": academic.getDepartment(s.departmentId)?.name, "Year": s.year, "Status": s.status
     }));
     return { title: "Student Report", rows };
@@ -41,7 +44,7 @@
     const rows = window.USIAMS.data.students.map(s => {
       const results = window.USIAMS.results.resultsForStudent(s.id).map(r => ({ ...r, credits: window.USIAMS.courses.getCourse(r.courseId)?.credits || 0 }));
       const g = gpa.calculateGpa(results);
-      return { "Reg Number": s.regNumber, "Full Name": s.fullName, "Programme": academic.getProgramme(s.programmeId)?.code, "GPA": g.toFixed(2), "Classification": gpa.classify(g) };
+      return { "Reg Number": s.regNumber, "Student": util.studentLabel(s, currentUser), "Programme": academic.getProgramme(s.programmeId)?.code, "GPA": g.toFixed(2), "Classification": gpa.classify(g) };
     });
     return { title: "GPA Report", rows };
   }
@@ -82,14 +85,14 @@
   function financeReport() {
     const rows = window.USIAMS.data.students.map(s => {
       const balance = window.USIAMS.finance.balanceForStudent(s.id);
-      return { "Reg Number": s.regNumber, "Full Name": s.fullName, "Billed": balance.billed, "Paid": balance.paid, "Balance": balance.balance };
+      return { "Reg Number": s.regNumber, "Student": util.studentLabel(s, currentUser), "Billed": balance.billed, "Paid": balance.paid, "Balance": balance.balance };
     });
     return { title: "Finance Report", rows };
   }
 
   function attendanceReport() {
     const rows = window.USIAMS.data.students.filter(s => s.status === "Active").map(s => ({
-      "Reg Number": s.regNumber, "Full Name": s.fullName, "Overall Attendance %": window.USIAMS.attendance.overallPercentageForStudent(s.id)
+      "Reg Number": s.regNumber, "Student": util.studentLabel(s, currentUser), "Overall Attendance %": window.USIAMS.attendance.overallPercentageForStudent(s.id)
     }));
     return { title: "Attendance Report", rows };
   }
@@ -98,7 +101,7 @@
     const list = window.USIAMS.storage.getStorage("graduation", window.USIAMS.data.seedGraduation);
     const rows = list.map(r => {
       const s = window.USIAMS.students.getStudent(r.studentId);
-      return { "Reg Number": s?.regNumber, "Full Name": s?.fullName, "Progress": window.USIAMS.graduation.progressFor(r.checklist) + "%", "Eligibility": window.USIAMS.graduation.eligibilityFor(r.checklist) };
+      return { "Reg Number": s?.regNumber, "Student": s ? util.studentLabel(s, currentUser) : "-", "Progress": window.USIAMS.graduation.progressFor(r.checklist) + "%", "Eligibility": window.USIAMS.graduation.eligibilityFor(r.checklist) };
     });
     return { title: "Graduation Report", rows };
   }
@@ -139,7 +142,8 @@
       </table>`;
   }
 
-  function initPage() {
+  function initPage(user) {
+    currentUser = user;
     document.getElementById("generateReportBtn").addEventListener("click", generate);
     document.getElementById("printReportBtn").addEventListener("click", () => { if (!lastReport) { window.USIAMS.toast.show("warning", "Generate a report first", "Please generate a report before printing."); return; } window.print(); });
     document.getElementById("exportReportCsvBtn").addEventListener("click", () => {

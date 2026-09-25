@@ -10,6 +10,12 @@
 
   const { util, cards, charts, gpa, finance, attendance, academic } = global.USIAMS;
 
+  // Set by whichever dashboard is being rendered. util.studentLabel()
+  // consults it to decide whether the viewer may see student names or only
+  // registration numbers, and the ROLE_NEEDS_ATTENTION panels below read it
+  // from inside their build() callbacks.
+  let currentUser = null;
+
   function greetingPrefix() {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -21,6 +27,7 @@
   // STUDENT DASHBOARD
   // ---------------------------------------------------------------------
   function renderStudentDashboard(user) {
+    currentUser = user;
     const student = global.USIAMS.students.getStudent(user.studentId);
     const programme = academic.getProgramme(student.programmeId);
     const semester = academic.activeSemester();
@@ -266,6 +273,7 @@
   ];
 
   function renderAdminDashboard(user) {
+    currentUser = user;
     const students = global.USIAMS.data.students;
     const focus = ROLE_FOCUS[user.role];
     document.getElementById("welcomeName").textContent = `${greetingPrefix()}, ${user.name.split(" ")[0]}!`;
@@ -334,7 +342,7 @@
         .map(l => {
           const book = global.USIAMS.library.getBook(l.bookId);
           const student = global.USIAMS.students.getStudent(l.studentId);
-          return { title: book ? book.title : l.bookId, subtitle: `${student ? student.fullName : l.studentId} - due ${util.formatDate(l.dueDate)}` };
+          return { title: book ? book.title : l.bookId, subtitle: `${student ? util.studentLabel(student, currentUser) : l.studentId} - due ${util.formatDate(l.dueDate)}` };
         })
     },
     HOSTEL_OFFICER: {
@@ -344,7 +352,7 @@
         .filter(a => a.status === "Requested")
         .map(a => {
           const student = global.USIAMS.students.getStudent(a.studentId);
-          return { title: student ? student.fullName : a.studentId, subtitle: `Requested ${util.formatDate(a.requestedDate)}` };
+          return { title: student ? util.studentLabel(student, currentUser) : a.studentId, subtitle: `Requested ${util.formatDate(a.requestedDate)}` };
         })
     },
     REGISTRATION_OFFICER: {
@@ -410,6 +418,7 @@
   // QA DASHBOARD (strictly read-only)
   // ---------------------------------------------------------------------
   function renderQaDashboard(user) {
+    currentUser = user;
     document.getElementById("welcomeName").textContent = `${greetingPrefix()}, ${user.name.split(" ")[0]}!`;
     document.getElementById("studentMetaLine").textContent = "Quality Assurance overview - read-only access across all academic records.";
 
@@ -456,6 +465,7 @@
   // LECTURER DASHBOARD
   // ---------------------------------------------------------------------
   function renderLecturerDashboard(user) {
+    currentUser = user;
     document.getElementById("welcomeName").textContent = `${greetingPrefix()}, ${user.name.split(" ")[1] || user.name}!`;
     const myTimetable = global.USIAMS.timetable.timetableForLecturer(user.name);
     const myCourseIds = [...new Set(myTimetable.map(e => e.courseId))];
@@ -514,7 +524,7 @@
       const assignment = global.USIAMS.elearning.allAssignments().find(a => a.id === s.assignmentId);
       const student = global.USIAMS.students.getStudent(s.studentId);
       return `<a href="elearning.html" class="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none">
-        <div><strong style="font-size:.85rem;color:var(--text);">${assignment ? util.escapeHtml(assignment.title) : s.assignmentId}</strong><div class="text-muted-usi" style="font-size:.76rem;">${student ? util.escapeHtml(student.fullName) : s.studentId} &bull; Submitted ${util.formatDate(s.submittedDate)}</div></div>
+        <div><strong style="font-size:.85rem;color:var(--text);">${assignment ? util.escapeHtml(assignment.title) : s.assignmentId}</strong><div class="text-muted-usi" style="font-size:.76rem;">${student ? util.escapeHtml(util.studentLabel(student, currentUser)) : s.studentId} &bull; Submitted ${util.formatDate(s.submittedDate)}</div></div>
         <span class="status-badge status-submitted">Ungraded</span>
       </a>`;
     }).join("");

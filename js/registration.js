@@ -15,6 +15,9 @@
   let semester = null;
   let programme = null;
   let draftCourseIds = [];
+  // Set by initPage. util.studentLabel() consults it to decide whether a
+  // viewer may see student names or only registration numbers.
+  let currentUser = null;
 
   function allRegistrations() { return global.USIAMS.storage.ensureSeed(KEY, () => global.USIAMS.data.seedRegistrations); }
   function saveRegistrations(list) { global.USIAMS.storage.setStorage(KEY, list); }
@@ -173,12 +176,13 @@
   }
 
   function initPage(user) {
+    currentUser = user;
     let targetStudentId = user.studentId;
     const selectorWrap = document.getElementById("studentSelectorWrap");
     if (user.role !== "STUDENT") {
       selectorWrap.classList.remove("d-none");
       const select = document.getElementById("studentSelector");
-      select.innerHTML = global.USIAMS.data.students.filter(s => s.status === "Active").map(s => `<option value="${s.id}">${s.regNumber} - ${s.fullName}</option>`).join("");
+      select.innerHTML = global.USIAMS.data.students.filter(s => s.status === "Active").map(s => `<option value="${s.id}">${s.regNumber}</option>`).join("");
       targetStudentId = select.value;
       select.addEventListener("change", () => { loadStudent(select.value); });
     } else {
@@ -196,7 +200,7 @@
     semester = academic.activeSemester();
     const existing = existingRegistration();
     draftCourseIds = existing ? [...existing.courseIds] : [];
-    document.getElementById("regStudentName").textContent = `${student.fullName} (${student.regNumber})`;
+    document.getElementById("regStudentName").textContent = `${global.USIAMS.util.studentLabel(student, currentUser)} (${student.regNumber})`;
     render();
   }
 

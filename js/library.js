@@ -145,7 +145,7 @@
       searchKeys: ["studentId", "bookId"],
       columns: [
         { key: "book", label: "Book", render: l => util.escapeHtml(getBook(l.bookId)?.title || l.bookId) },
-        { key: "student", label: "Student", render: l => { const s = global.USIAMS.students.getStudent(l.studentId); return s ? util.escapeHtml(`${s.fullName} (${s.regNumber})`) : l.studentId; } },
+        { key: "student", label: "Student", render: l => { const s = global.USIAMS.students.getStudent(l.studentId); return s ? util.escapeHtml(`${util.studentLabel(s, currentUser)} (${s.regNumber})`) : l.studentId; } },
         { key: "borrowedDate", label: "Borrowed", sortable: true, render: l => util.formatDate(l.borrowedDate) },
         { key: "dueDate", label: "Due", sortable: true, render: l => util.formatDate(l.dueDate) },
         { key: "status", label: "Status", render: l => `<span class="status-badge status-${effectiveStatus(l).toLowerCase()}">${effectiveStatus(l)}</span>` }

@@ -133,6 +133,11 @@
 
   function initPage(user) {
     currentStudent = global.USIAMS.students.getStudent(user.studentId);
+    if (!currentStudent) {
+      document.querySelector("main")?.insertAdjacentHTML("afterbegin", `<div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>Your account is created, but you are not enrolled in an academic programme yet. Submit an admission application to continue.</div>`);
+      document.querySelectorAll("#profileForm, #profileWizard, .profile-wizard").forEach(el => el.classList.add("d-none"));
+      return;
+    }
     prefill();
     document.getElementById("psNextPersonal").addEventListener("click", goNext);
     document.getElementById("psNextEmergency").addEventListener("click", goNext);

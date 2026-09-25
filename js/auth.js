@@ -1,56 +1,62 @@
 /* =========================================================
    USIAMS - js/auth.js
-   Frontend authentication + role simulation.
+   Frontend session handling and role-aware navigation.
 
-   *** IMPORTANT - READ BEFORE REUSING THIS PATTERN ***
-   Everything in this file is a CLIENT-SIDE SIMULATION for this
-   HTML/CSS/JS prototype only. It is convenient for demoing role
-   based navigation and read-only behaviour, but it is NOT a
-   security boundary: any user can open devtools and edit
-   localStorage to change their simulated role.
+   *** WHERE THE SECURITY BOUNDARY ACTUALLY IS ***
+   Nothing in this file is a security control. The role held in
+   localStorage only decides what the browser draws; a user who
+   edits it changes what they see, never what they may do.
 
-   When this prototype is rebuilt on Yii2 + MySQL, the backend
-   MUST:
-     - authenticate the user and issue a server-side session or
-       signed token,
-     - re-check the user's role/permissions on every single
-       request (never trust a role sent from the browser),
-     - return HTTP 403 Forbidden for any unauthorized action,
-       especially for Quality Assurance Officer accounts which
-       must be enforced as strictly read-only server-side.
+   Authorisation is enforced on the server:
+     - the token issued by POST /api/auth/login maps to a session
+       held in server memory, and the role on THAT session is the
+       one every request is checked against,
+     - db/resources.js declares who may read and write each
+       resource, and server.js re-checks it on every call,
+     - students are scoped to their own records in the SQL query
+       itself, so another student's data is never sent,
+     - the Quality Assurance Officer is refused every write with
+       HTTP 403 before the resource rules are even consulted.
+
+   USIAMS.boot() also refreshes the cached session from the server
+   on each page load, so a tampered localStorage role is corrected
+   rather than trusted.
    ========================================================= */
 (function (global) {
   "use strict";
 
   const { storage, toast } = global.USIAMS;
   const SESSION_KEY = "session.currentUser";
+  const TOKEN_KEY = "session.token";
+  const ROLE_PAGE_ALLOWLIST = {
+    LIBRARIAN: ["library.html", "notifications.html", "settings.html"],
+    HOSTEL_OFFICER: ["hostel.html", "notifications.html", "settings.html"]
+  };
 
-  function login(username, password, remember) {
-    const account = global.USIAMS.users.findByUsername(username);
-    if (!account || account.password !== password) {
-      return { success: false, message: "Invalid username or password. Please check your credentials and try again." };
+  async function login(username, password, remember) {
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) return result;
+      storage.setStorage(TOKEN_KEY, result.token);
+      storage.setStorage(SESSION_KEY, { ...result.user, loginAt: new Date().toISOString(), remember: !!remember });
+      return { success: true, user: storage.getStorage(SESSION_KEY) };
+    } catch (error) {
+      return { success: false, message: "The backend is unavailable. Start USIAMS with `npm start` and try again." };
     }
-    if (account.status !== "Active") {
-      return { success: false, message: "This account has been deactivated. Please contact the System Admin." };
-    }
-    const session = {
-      id: account.id,
-      username: account.username,
-      name: account.name,
-      email: account.email,
-      role: account.role,
-      roleLabel: global.USIAMS.users.roleLabel(account.role),
-      departmentId: account.departmentId || null,
-      unitId: account.unitId || null,
-      studentId: account.studentId || null,
-      loginAt: new Date().toISOString(),
-      remember: !!remember
-    };
-    storage.setStorage(SESSION_KEY, session);
-    return { success: true, user: session };
   }
 
-  function logout() {
+  async function logout() {
+    const token = storage.getStorage(TOKEN_KEY, null);
+    if (token) {
+      try { await fetch("/api/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${token}` } }); }
+      catch (error) { console.warn("USIAMS logout request failed", error); }
+    }
+    storage.removeStorage(TOKEN_KEY);
     storage.removeStorage(SESSION_KEY);
     window.location.href = getBasePath() + "login.html";
   }
@@ -89,12 +95,19 @@
       window.location.href = getBasePath() + "pages/403.html";
       return null;
     }
+    const restrictedPages = ROLE_PAGE_ALLOWLIST[user.role];
+    const currentPage = window.location.pathname.replace(/\\/g, "/").split("/").pop();
+    if (restrictedPages && !restrictedPages.includes(currentPage)) {
+      window.location.href = getBasePath() + "pages/403.html";
+      return null;
+    }
     return user;
   }
 
-  // ---- Read-only (QA) enforcement -------------------------------------
-  // Frontend protection is demonstration only. The real Yii2 backend must
-  // enforce this with proper authorization and HTTP 403 responses.
+  // ---- Read-only (QA) presentation ------------------------------------
+  // Hides and disables controls the user could not use anyway. The refusal
+  // itself comes from the server: see canWrite() in server.js, which returns
+  // HTTP 403 for every read-only role regardless of what the browser sends.
   function isReadOnlyRole(role) {
     const r = role || (getCurrentUser() || {}).role;
     return r === "QUALITY_ASSURANCE_OFFICER";

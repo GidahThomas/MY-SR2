@@ -155,7 +155,7 @@
       data: [...allocations].sort((a, b) => new Date(b.requestedDate) - new Date(a.requestedDate)),
       searchKeys: ["studentId"],
       columns: [
-        { key: "student", label: "Student", render: a => { const s = global.USIAMS.students.getStudent(a.studentId); return s ? util.escapeHtml(`${s.fullName} (${s.regNumber})`) : a.studentId; } },
+        { key: "student", label: "Student", render: a => { const s = global.USIAMS.students.getStudent(a.studentId); return s ? util.escapeHtml(`${util.studentLabel(s, currentUser)} (${s.regNumber})`) : a.studentId; } },
         { key: "room", label: "Room", render: a => { const r = a.roomId ? getRoom(a.roomId) : null; return r ? `${util.escapeHtml(getHostel(r.hostelId).name)} - ${util.escapeHtml(roomLabel(r))}` : "-"; } },
         { key: "requestedDate", label: "Requested", sortable: true, render: a => util.formatDate(a.requestedDate) },
         { key: "status", label: "Status", render: a => `<span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span>` }

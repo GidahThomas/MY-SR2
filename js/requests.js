@@ -125,7 +125,7 @@
   function exportCsv() {
     util.downloadCsv("requests-export", myRequests().map(r => {
       const student = window.USIAMS.students.getStudent(r.studentId);
-      return { ID: r.id, Student: student ? student.fullName : r.studentId, Type: r.type, Description: r.description, Status: r.status, Submitted: util.formatDate(r.createdAt) };
+      return { ID: r.id, Student: student ? util.studentLabel(student, currentUser) : r.studentId, Type: r.type, Description: r.description, Status: r.status, Submitted: util.formatDate(r.createdAt) };
     }));
   }
 

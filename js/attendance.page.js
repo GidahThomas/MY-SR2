@@ -8,6 +8,9 @@
 
   const { util, charts } = global.USIAMS;
   let student = null;
+  // Set by initPage. util.studentLabel() consults it to decide whether a
+  // viewer may see student names or only registration numbers.
+  let currentUser = null;
 
   function render() {
     const rows = global.USIAMS.attendance.attendanceForStudent(student.id);
@@ -47,12 +50,13 @@
   }
 
   function initPage(user) {
+    currentUser = user;
     let targetStudentId = user.studentId;
     const selectorWrap = document.getElementById("studentSelectorWrap");
     if (user.role !== "STUDENT") {
       selectorWrap.classList.remove("d-none");
       const select = document.getElementById("studentSelector");
-      select.innerHTML = global.USIAMS.data.students.filter(s => s.status === "Active").map(s => `<option value="${s.id}">${s.regNumber} - ${s.fullName}</option>`).join("");
+      select.innerHTML = global.USIAMS.data.students.filter(s => s.status === "Active").map(s => `<option value="${s.id}">${s.regNumber}</option>`).join("");
       targetStudentId = select.value;
       select.addEventListener("change", () => loadStudent(select.value));
     } else {
@@ -63,7 +67,7 @@
 
   function loadStudent(id) {
     student = global.USIAMS.students.getStudent(id);
-    document.getElementById("attendanceStudentName").textContent = `${student.fullName} (${student.regNumber})`;
+    document.getElementById("attendanceStudentName").textContent = `${global.USIAMS.util.studentLabel(student, currentUser)} (${student.regNumber})`;
     render();
   }
 

@@ -36,6 +36,13 @@
     global.USIAMS.storage.setStorage(KEY, list);
   }
 
+  function add(notification) {
+    const list = all();
+    if (list.some(n => n.id === notification.id)) return;
+    list.unshift(notification);
+    global.USIAMS.storage.setStorage(KEY, list);
+  }
+
   function categoryIcon(category) {
     const map = {
       Academic: { icon: "bi-mortarboard", tint: "primary" },
@@ -105,6 +112,6 @@
   }
 
   global.USIAMS = global.USIAMS || {};
-  global.USIAMS.notifications = { all, forUser, unreadCountFor, markRead, markAllRead, remove, categoryIcon, initPage };
+  global.USIAMS.notifications = { all, forUser, unreadCountFor, markRead, markAllRead, remove, add, categoryIcon, initPage };
 
 })(window);

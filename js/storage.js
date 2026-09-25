@@ -1,12 +1,22 @@
 /* =========================================================
    USIAMS - storage.js
-   Thin wrapper around localStorage used to simulate a backend
-   database/session store for this frontend prototype.
+   Thin wrapper around localStorage, namespaced with "usiams.".
 
-   NOTE FOR FUTURE BACKEND INTEGRATION:
-   Every read/write here is a stand-in for a future Yii2 REST
-   endpoint + MySQL table. Keys are namespaced with "usiams."
-   so they can be mapped 1:1 to future API resources.
+   *** THIS IS NO LONGER THE APPLICATION'S DATA STORE ***
+   js/api.js loads immediately after this file and replaces
+   getStorage, setStorage, ensureSeed and createOverlay with
+   resource-aware versions. Any key that names a database
+   resource (students, courses, requests, ...) is served from
+   the REST API and written back to MySQL; see RESOURCE_BY_KEY
+   in js/api.js for the full list.
+
+   What remains genuinely browser-local, and still lands here:
+   the session token and cached user, the theme, sidebar state,
+   user preferences and system settings.
+
+   The implementations below are still the ones used on pages
+   that load no API layer (login, the public application form)
+   and are the fallback for every unmapped key.
    ========================================================= */
 (function (global) {
   "use strict";

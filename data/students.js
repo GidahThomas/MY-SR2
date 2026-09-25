@@ -21,21 +21,19 @@
 
   const programmes = () => global.USIAMS.data.programmes;
 
-  // Registration number prefix by academic level. This is how USIAMS tells
-  // Diploma, Degree (Undergraduate) and PhD students apart at a glance -
-  // e.g. Degree "T23-03-20452", Diploma "D24-01-10087", PhD "PhD22-08-00104".
-  const REG_PREFIX_BY_LEVEL = { Undergraduate: "T", Diploma: "D", PhD: "PhD" };
+  // Registration numbers use the institutional level code after the
+  // admission year: degree 03, diploma 02, and postgraduate programmes 05.
+  const REG_LEVEL_CODE = { Undergraduate: "03", Diploma: "02", "Postgraduate Diploma": "05", Masters: "05", Postgraduate: "05", PhD: "05" };
   // Serial numbers start from a different band per level purely so the
   // generated numbers look like real institutional ranges rather than a
   // suspiciously tidy 1, 2, 3...
   const SERIAL_BASE_BY_LEVEL = { Undergraduate: 20000, Diploma: 10000, PhD: 100 };
 
   function buildRegNumber(programme, admissionYear, sequenceInProgramme) {
-    const department = global.USIAMS.academic.getDepartment(programme.departmentId);
-    const prefix = REG_PREFIX_BY_LEVEL[programme.level] || "T";
-    const yy = String(admissionYear).slice(-2);
+    const admissionYearCode = String(admissionYear).slice(-2);
+    const levelCode = REG_LEVEL_CODE[programme.level] || "03";
     const serial = (SERIAL_BASE_BY_LEVEL[programme.level] || 20000) + sequenceInProgramme;
-    return `${prefix}${yy}-${department.code}-${String(serial).padStart(5, "0")}`;
+    return `T${admissionYearCode}-${levelCode}-${String(serial).padStart(5, "0")}`;
   }
 
   function buildStudents() {
@@ -59,7 +57,7 @@
       const year = ((progSeq[prog.id] - 1) % 3) + 1;
       const status = STATUS_CYCLE[i % STATUS_CYCLE.length];
       const admissionYear = 2025 - (year - 1);
-      const regKey = `${prog.departmentId}-${prog.level}`;
+      const regKey = `${admissionYear}-${prog.level}`;
       regSeq[regKey] = (regSeq[regKey] || 0) + 1;
       const regNumber = buildRegNumber(prog, admissionYear, regSeq[regKey]);
       const dobYear = 2007 - year;

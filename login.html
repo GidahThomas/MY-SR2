@@ -118,23 +118,76 @@
       </form>
 
       <p class="text-center mt-3 mb-0">
-        <a href="#" id="forgotPasswordLink" style="font-size:.83rem;">Forgot Password? Click Here</a>
+        <a href="#" id="forgotPasswordLink" data-bs-toggle="modal" data-bs-target="#resetPasswordModal" style="font-size:.83rem;">Forgot Password? Click Here</a>
       </p>
       <p class="text-center mt-2 mb-0">
         <a href="apply.html" style="font-size:.83rem;">New applicant? Apply for Admission</a>
       </p>
+      <div class="text-center mt-3">
+        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createAccountModal">
+          <i class="bi bi-person-plus me-1"></i>Create Account
+        </button>
+      </div>
 
       <div class="mt-4 pt-3 border-top">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <strong style="font-size:.85rem;">Demo Accounts</strong>
-          <span class="text-soft-usi" style="font-size:.72rem;">Click to autofill</span>
+          <strong style="font-size:.85rem;">Development Accounts</strong>
+          <span class="text-soft-usi" style="font-size:.72rem;">Change before production</span>
         </div>
-        <div class="row g-2" id="demoAccountList"></div>
+        <div class="row g-2" id="accountDirectory"></div>
       </div>
 
       <div class="divider mt-4">
         <span class="divider-text">Copyright &copy; 2026 USIAMS (Version 1.0)</span>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="resetPasswordTitle">Reset Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="resetPasswordForm">
+        <div class="modal-body">
+          <div id="resetPasswordAlert" class="alert d-none" role="alert"></div>
+          <p class="text-muted-usi" style="font-size:.83rem;">Confirm your username and account email, then choose a new password.</p>
+          <div class="mb-3"><label class="form-label" for="resetUsername">Username</label><input class="form-control" id="resetUsername" required></div>
+          <div class="mb-3"><label class="form-label" for="resetEmail">Account email</label><input class="form-control" id="resetEmail" type="email" required></div>
+          <div><label class="form-label" for="resetPassword">New password</label><input class="form-control" id="resetPassword" type="password" minlength="8" required></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary" id="resetPasswordSubmit">Reset Password</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="createAccountModal" tabindex="-1" aria-labelledby="createAccountTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createAccountTitle">Create Student Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="createAccountForm">
+        <div class="modal-body">
+          <div id="createAccountAlert" class="alert d-none" role="alert"></div>
+          <div class="mb-3"><label class="form-label" for="createFullName">Full name</label><input class="form-control" id="createFullName" required></div>
+          <div class="mb-3"><label class="form-label" for="createEmail">Email</label><input class="form-control" id="createEmail" type="email" required></div>
+          <div class="mb-3"><label class="form-label" for="createUsername">Username</label><input class="form-control" id="createUsername" required minlength="3"></div>
+          <div class="mb-3"><label class="form-label" for="createProgramme">Programme</label>
+            <select class="form-select" id="createProgramme" required>
+              <option value="">Loading programmes...</option>
+            </select>
+            <div class="form-text">This sets your department and registration number.</div>
+          </div>
+          <div><label class="form-label" for="createPassword">Password</label><input class="form-control" id="createPassword" type="password" required minlength="8"></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary" id="createAccountSubmit">Create Account</button></div>
+      </form>
     </div>
   </div>
 </div>
@@ -151,44 +204,118 @@
   const existing = USIAMS.auth.getCurrentUser();
   if (existing) window.location.replace(USIAMS.navigation.dashboardHrefFor(existing.role));
 
-  const DEMO_ACCOUNTS = [
-    { role: "Student", username: "student", password: "student123", icon: "bi-mortarboard" },
-    { role: "University Admin", username: "admin", password: "admin123", icon: "bi-building-gear" },
-    { role: "QA Officer", username: "qa", password: "qa123", icon: "bi-patch-check" },
-    { role: "Lecturer", username: "lecturer", password: "lecturer123", icon: "bi-easel" },
-    { role: "Finance Officer", username: "finance", password: "finance123", icon: "bi-cash-coin" },
-    { role: "Registration Officer", username: "registration", password: "registration123", icon: "bi-pencil-square" }
-  ];
-
-  const list = document.getElementById("demoAccountList");
-  list.innerHTML = DEMO_ACCOUNTS.map(acc => `
-    <div class="col-6">
-      <div class="demo-account-chip" data-username="${acc.username}" data-password="${acc.password}">
-        <div class="d-flex align-items-center gap-2 mb-1">
-          <i class="bi ${acc.icon} text-primary"></i>
-          <strong style="font-size:.76rem;">${acc.role}</strong>
-        </div>
-        <div class="text-muted-usi" style="font-size:.7rem;">${acc.username} / ${acc.password}</div>
-      </div>
-    </div>
-  `).join("");
-
-  list.querySelectorAll(".demo-account-chip").forEach(chip => {
-    chip.addEventListener("click", () => {
-      document.getElementById("username").value = chip.dataset.username;
-      document.getElementById("password").value = chip.dataset.password;
-      document.getElementById("username").classList.remove("is-invalid");
-      document.getElementById("password").classList.remove("is-invalid");
-    });
-  });
-
   document.getElementById("showPassword").addEventListener("change", (e) => {
     document.getElementById("password").type = e.target.checked ? "text" : "password";
   });
 
-  document.getElementById("forgotPasswordLink").addEventListener("click", (e) => {
+  const accountDirectory = document.getElementById("accountDirectory");
+  accountDirectory.innerHTML = [
+    ["Student", "student", "student123"],
+    ["University Admin", "admin", "admin123"],
+    ["Quality Assurance Officer", "qa", "qa123"],
+    ["Lecturer", "lecturer", "lecturer123"],
+    ["Finance Officer", "finance", "finance123"],
+    ["Registration Officer", "registration", "registration123"],
+    ["System Admin", "sysadmin", "sysadmin123"],
+    ["Librarian", "librarian", "librarian123"],
+    ["Hostel Officer", "hostel", "hostel123"]
+  ].map(([role, username, password]) => `
+    <div class="col-6">
+      <button type="button" class="demo-account-chip w-100 text-start" data-username="${username}" data-password="${password}">
+        <strong style="font-size:.76rem;display:block;">${role}</strong>
+        <span class="text-muted-usi" style="font-size:.7rem;">${username} / ${password}</span>
+      </button>
+    </div>
+  `).join("");
+
+  accountDirectory.querySelectorAll("[data-username]").forEach((account) => {
+    account.addEventListener("click", () => {
+      document.getElementById("username").value = account.dataset.username;
+      document.getElementById("password").value = account.dataset.password;
+    });
+  });
+
+  document.getElementById("forgotPasswordLink").addEventListener("click", () => {
+    document.getElementById("resetUsername").value = document.getElementById("username").value.trim();
+  });
+
+  document.getElementById("resetPasswordForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    alert("Password reset is managed by the System Admin. Please contact usiams-support@usiams.ac.tz or visit the ICT Help Desk to reset your password.");
+    const submit = document.getElementById("resetPasswordSubmit");
+    const alert = document.getElementById("resetPasswordAlert");
+    submit.disabled = true;
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("resetUsername").value,
+          email: document.getElementById("resetEmail").value,
+          password: document.getElementById("resetPassword").value
+        })
+      });
+      const result = await response.json();
+      alert.textContent = result.message;
+      alert.className = `alert ${response.ok ? "alert-success" : "alert-danger"}`;
+      if (response.ok) {
+        document.getElementById("username").value = document.getElementById("resetUsername").value.trim().toLowerCase();
+        bootstrap.Modal.getInstance(document.getElementById("resetPasswordModal")).hide();
+        document.getElementById("resetPasswordForm").reset();
+      }
+    } catch (error) {
+      alert.textContent = "The backend is unavailable. Start USIAMS with npm start and try again.";
+      alert.className = "alert alert-danger";
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
+  // The programme list comes from the database, so the sign-up form always
+  // offers what the university currently admits to.
+  (async function loadProgrammes() {
+    const select = document.getElementById("createProgramme");
+    try {
+      const response = await fetch("/api/public/programmes");
+      const result = await response.json();
+      if (!response.ok || !result.data.length) throw new Error("No programmes available.");
+      select.innerHTML = '<option value="">Select a programme...</option>' + result.data
+        .map(p => `<option value="${p.id}">${p.name} (${p.level})</option>`).join("");
+    } catch (error) {
+      select.innerHTML = '<option value="">Programme list unavailable</option>';
+    }
+  })();
+
+  document.getElementById("createAccountForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const submit = document.getElementById("createAccountSubmit");
+    const alert = document.getElementById("createAccountAlert");
+    submit.disabled = true;
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: document.getElementById("createFullName").value,
+          email: document.getElementById("createEmail").value,
+          username: document.getElementById("createUsername").value,
+          programmeId: document.getElementById("createProgramme").value,
+          password: document.getElementById("createPassword").value
+        })
+      });
+      const result = await response.json();
+      alert.textContent = result.message;
+      alert.className = `alert ${response.ok ? "alert-success" : "alert-danger"}`;
+      if (response.ok) {
+        document.getElementById("loginForm").reset();
+        document.getElementById("username").value = document.getElementById("createUsername").value.trim().toLowerCase();
+        bootstrap.Modal.getInstance(document.getElementById("createAccountModal")).hide();
+      }
+    } catch (error) {
+      alert.textContent = "The backend is unavailable. Start the server and try again.";
+      alert.className = "alert alert-danger";
+    } finally {
+      submit.disabled = false;
+    }
   });
 
   const form = document.getElementById("loginForm");
@@ -212,8 +339,8 @@
 
     // Small delay purely for UX feedback - this is a frontend prototype,
     // there is no real network request to wait for.
-    setTimeout(() => {
-      const result = USIAMS.auth.login(usernameEl.value.trim(), passwordEl.value, document.getElementById("rememberMe").checked);
+    setTimeout(async () => {
+      const result = await USIAMS.auth.login(usernameEl.value.trim(), passwordEl.value, document.getElementById("rememberMe").checked);
       if (!result.success) {
         alertBox.textContent = result.message;
         alertBox.classList.remove("d-none");
@@ -222,6 +349,10 @@
         return;
       }
       alertBox.classList.add("d-none");
+      if (result.user.role === "STUDENT" && !result.user.studentId) {
+        window.location.href = "apply.html?account=created";
+        return;
+      }
       window.location.href = USIAMS.navigation.dashboardHrefFor(result.user.role);
     }, 350);
   });

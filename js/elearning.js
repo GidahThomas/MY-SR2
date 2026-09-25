@@ -135,7 +135,7 @@
       ${subs.map(s => {
         const student = global.USIAMS.students.getStudent(s.studentId);
         return `<tr>
-          <td>${student ? util.escapeHtml(student.fullName) : s.studentId}</td>
+          <td>${student ? util.escapeHtml(util.studentLabel(student, currentUser)) : s.studentId}</td>
           <td>${util.formatDate(s.submittedDate)}</td>
           <td><span class="status-badge status-${s.status.toLowerCase()}">${s.status}</span></td>
           <td>${s.score !== null ? `${s.score}/${assignment.maxScore}` : "-"}</td>

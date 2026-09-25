@@ -59,9 +59,9 @@
       searchKeys: ["fullName", "regNumber", "email"],
       emptyMessage: "No students match your filters.",
       columns: [
-        { key: "photo", label: "Photo", render: s => `<div class="avatar-circle" style="background:${util.avatarColorFromString(s.fullName)}">${util.initials(s.fullName)}</div>` },
+        { key: "photo", label: "Photo", render: s => util.canViewStudentNames(currentUser, s) ? `<div class="avatar-circle" style="background:${util.avatarColorFromString(s.fullName)}">${util.initials(s.fullName)}</div>` : "-" },
         { key: "regNumber", label: "Reg. Number", sortable: true },
-        { key: "fullName", label: "Full Name", sortable: true },
+        { key: "fullName", label: "Student", sortable: true, render: s => util.escapeHtml(util.studentLabel(s, currentUser)) },
         { key: "gender", label: "Gender", sortable: true },
         { key: "programmeId", label: "Programme", sortable: true, render: s => util.escapeHtml(programmeName(s.programmeId)) },
         { key: "year", label: "Year", sortable: true },
@@ -83,13 +83,13 @@
     const student = getStudents().find(s => s.id === id);
     modal.confirm({
       title: "Delete Student Record",
-      message: `Are you sure you want to delete <strong>${util.escapeHtml(student.fullName)}</strong> (${student.regNumber})? This cannot be undone.`,
+      message: `Are you sure you want to delete <strong>${util.escapeHtml(util.studentLabel(student, currentUser))}</strong>? This cannot be undone.`,
       confirmText: "Delete",
       variant: "danger",
       onConfirm: () => {
         global.USIAMS.students.removeStudent(id);
         dataTable.refresh(getStudents());
-        toast.show("success", "Student deleted", `${student.fullName}'s record has been removed.`);
+        toast.show("success", "Student deleted", `${util.studentLabel(student, currentUser)}'s record has been removed.`);
       }
     });
   }
@@ -283,9 +283,9 @@
           <div class="modal-content">
             <div class="modal-header">
               <div class="d-flex align-items-center gap-3">
-                <div class="avatar-circle" style="width:52px;height:52px;font-size:1.1rem;background:${util.avatarColorFromString(s.fullName)}">${util.initials(s.fullName)}</div>
+                ${util.canViewStudentNames(currentUser, s) ? `<div class="avatar-circle" style="width:52px;height:52px;font-size:1.1rem;background:${util.avatarColorFromString(s.fullName)}">${util.initials(s.fullName)}</div>` : ""}
                 <div>
-                  <h5 class="modal-title mb-0">${util.escapeHtml(s.fullName)}</h5>
+                  <h5 class="modal-title mb-0">${util.escapeHtml(util.studentLabel(s, currentUser))}</h5>
                   <div class="text-muted-usi" style="font-size:.8rem;">${util.escapeHtml(s.regNumber)} &bull; ${util.escapeHtml(programmeName(s.programmeId))}</div>
                 </div>
               </div>
@@ -302,7 +302,7 @@
               <div class="tab-content">
                 <div class="tab-pane fade show active" id="tabPersonal">
                   <dl class="kv-list row">
-                    <div class="col-md-6"><dt>Full Name</dt><dd>${util.escapeHtml(s.fullName)}</dd></div>
+                    ${util.canViewStudentNames(currentUser, s) ? `<div class="col-md-6"><dt>Full Name</dt><dd>${util.escapeHtml(s.fullName)}</dd></div>` : ""}
                     <div class="col-md-6"><dt>Gender</dt><dd>${s.gender}</dd></div>
                     <div class="col-md-6"><dt>Date of Birth</dt><dd>${util.formatDate(s.dob)}</dd></div>
                     <div class="col-md-6"><dt>Status</dt><dd><span class="status-badge status-${s.status.toLowerCase().replace(/\s+/g, "_")}">${s.status}</span></dd></div>
@@ -357,7 +357,7 @@
 
   function exportCsv() {
     const rows = getStudents().map(s => ({
-      RegNumber: s.regNumber, FullName: s.fullName, Gender: s.gender,
+      RegNumber: s.regNumber, Student: util.studentLabel(s, currentUser), Gender: s.gender,
       Programme: programmeName(s.programmeId), Department: academic.getDepartment(s.departmentId)?.name,
       College: collegeName(s.departmentId), Year: s.year, Status: s.status, Email: s.email, Phone: s.phone
     }));

@@ -9,6 +9,9 @@
 
   const { util, charts, gpa, academic } = window.USIAMS;
   let student = null;
+  // Set by initPage. util.studentLabel() consults it to decide whether a
+  // viewer may see student names or only registration numbers.
+  let currentUser = null;
 
   function withCredits(result) {
     const course = window.USIAMS.courses.getCourse(result.courseId);
@@ -95,7 +98,7 @@
     const results = window.USIAMS.results.resultsForStudent(student.id).map(withCredits);
     const lines = [
       "USIAMS - UNOFFICIAL ACADEMIC TRANSCRIPT (SIMULATED)",
-      `Student: ${student.fullName} (${student.regNumber})`,
+      `Student: ${window.USIAMS.util.studentLabel(student, currentUser)} (${student.regNumber})`,
       `Programme: ${academic.getProgramme(student.programmeId).name}`,
       "",
       "Semester, Course, Title, Credits, CA, Exam, Total, Grade"
@@ -114,12 +117,13 @@
   }
 
   function initPage(user) {
+    currentUser = user;
     let targetStudentId = user.studentId;
     const selectorWrap = document.getElementById("studentSelectorWrap");
     if (user.role !== "STUDENT") {
       selectorWrap.classList.remove("d-none");
       const select = document.getElementById("studentSelector");
-      select.innerHTML = window.USIAMS.data.students.map(s => `<option value="${s.id}">${s.regNumber} - ${s.fullName}</option>`).join("");
+      select.innerHTML = window.USIAMS.data.students.map(s => `<option value="${s.id}">${s.regNumber}</option>`).join("");
       targetStudentId = select.value;
       select.addEventListener("change", () => loadStudent(select.value));
     } else {
@@ -135,7 +139,7 @@
 
   function loadStudent(id) {
     student = window.USIAMS.students.getStudent(id);
-    document.getElementById("resultsStudentName").textContent = `${student.fullName} (${student.regNumber}) - ${window.USIAMS.academic.getProgramme(student.programmeId).name}`;
+    document.getElementById("resultsStudentName").textContent = `${window.USIAMS.util.studentLabel(student, currentUser)} (${student.regNumber}) - ${window.USIAMS.academic.getProgramme(student.programmeId).name}`;
     populateSemesterFilter();
     render();
   }

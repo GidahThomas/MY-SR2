@@ -4,11 +4,8 @@
    Core design system: variables, typography, layout shell
    ========================================================= */
 
-/* Matches the real UDOM SRMS (sr2.udom.ac.tz): body copy in Ropa Sans,
-   the brand wordmark in Montserrat ExtraBold (theirs is self-hosted as
-   "RopaSans"/"BigFont" - same open-source typefaces, loaded from Google
-   Fonts here instead of self-hosted .ttf files). */
-@import url('https://fonts.googleapis.com/css2?family=Ropa+Sans:ital@0;1&family=Montserrat:wght@800&display=swap');
+/* Professional, readable type system for the university application. */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
 
 :root {
   /* Brand */
@@ -93,7 +90,7 @@ html, body {
 
 body {
   margin: 0;
-  font-family: 'Ropa Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 14.5px;
@@ -105,7 +102,12 @@ body {
 a { color: var(--usiams-blue-500); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Manrope', 'DM Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--text);
+}
 
 .text-muted-usi { color: var(--text-muted) !important; }
 .text-soft-usi { color: var(--text-soft) !important; }
@@ -161,7 +163,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.01em; color: var(-
    .brand-mark is the square logo badge, .brand-wordmark is the
    "USIAMS" text next to it (both on the sidebar and the login page). */
 .brand-mark, .brand-wordmark, .sidebar-brand .brand-text strong {
-  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Manrope', 'DM Sans', sans-serif;
   font-weight: 800;
 }
 

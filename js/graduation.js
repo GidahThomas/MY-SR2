@@ -67,17 +67,17 @@
     if (user.role !== "STUDENT") {
       selectorWrap.classList.remove("d-none");
       const select = document.getElementById("studentSelector");
-      select.innerHTML = window.USIAMS.data.students.filter(s => s.year >= 3).map(s => `<option value="${s.id}">${s.regNumber} - ${s.fullName}</option>`).join("");
+      select.innerHTML = window.USIAMS.data.students.filter(s => s.year >= 3).map(s => `<option value="${s.id}">${s.regNumber}</option>`).join("");
       targetStudentId = select.value;
       select.addEventListener("change", () => {
-        document.getElementById("graduationStudentName").textContent = window.USIAMS.students.getStudent(select.value).fullName;
+        document.getElementById("graduationStudentName").textContent = window.USIAMS.util.studentLabel(window.USIAMS.students.getStudent(select.value), currentUser);
         render(select.value);
       });
     } else {
       selectorWrap.classList.add("d-none");
     }
     const student = window.USIAMS.students.getStudent(targetStudentId);
-    document.getElementById("graduationStudentName").textContent = `${student.fullName} (${student.regNumber})`;
+    document.getElementById("graduationStudentName").textContent = `${window.USIAMS.util.studentLabel(student, currentUser)} (${student.regNumber})`;
     render(targetStudentId);
   }
 

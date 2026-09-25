@@ -19,7 +19,7 @@
       groups.push({
         label: "Students",
         items: students.map(s => ({
-          title: s.fullName, subtitle: `${s.regNumber} - ${global.USIAMS.academic.getProgramme(s.programmeId)?.name || ""}`,
+          title: global.USIAMS.util.studentLabel(s, user), subtitle: global.USIAMS.util.canViewStudentNames(user, s) ? `${s.regNumber} - ${global.USIAMS.academic.getProgramme(s.programmeId)?.name || ""}` : global.USIAMS.academic.getProgramme(s.programmeId)?.name || "",
           icon: "bi-person-badge", href: `pages/students.html?openStudent=${s.id}`
         }))
       });

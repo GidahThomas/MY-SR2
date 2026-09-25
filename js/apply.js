@@ -9,17 +9,32 @@
   "use strict";
 
   const { util } = global.USIAMS;
-  const applicationsOverlay = global.USIAMS.storage.createOverlay("admissionApplications", () => global.USIAMS.data.seedApplications);
 
-  function populateProgrammes() {
+  /**
+   * The programme list comes from the database so the form always offers
+   * what the university currently admits to. This page is public, so it
+   * uses the unauthenticated endpoint; if the server cannot be reached the
+   * bundled catalogue is used rather than showing an empty dropdown.
+   */
+  async function populateProgrammes() {
     const select = document.getElementById("applyProgramme");
-    select.innerHTML = global.USIAMS.data.programmes.map(p => `<option value="${p.id}">${util.escapeHtml(p.name)} (${util.escapeHtml(p.level)})</option>`).join("");
+    let programmes = global.USIAMS.data.programmes || [];
+    try {
+      const response = await fetch("/api/public/programmes");
+      const result = await response.json();
+      if (response.ok && result.success && result.data.length) programmes = result.data;
+    } catch (error) {
+      console.warn("USIAMS: falling back to the bundled programme catalogue.", error);
+    }
+    select.innerHTML = programmes
+      .map(p => `<option value="${util.escapeHtml(p.id)}">${util.escapeHtml(p.name)} (${util.escapeHtml(p.level)})</option>`)
+      .join("");
   }
 
-  function init() {
-    populateProgrammes();
+  async function init() {
+    await populateProgrammes();
     const form = document.getElementById("applyForm");
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const fields = ["applyFullName", "applyEmail", "applyPhone", "applyGender", "applyProgramme", "applySchool", "applyQualification"];
       let valid = true;
@@ -32,7 +47,6 @@
       if (!valid) return;
 
       const application = {
-        id: global.USIAMS.storage.nextId("APP", applicationsOverlay.getAll()),
         fullName: document.getElementById("applyFullName").value.trim(),
         email: document.getElementById("applyEmail").value.trim(),
         phone: document.getElementById("applyPhone").value.trim(),
@@ -40,11 +54,20 @@
         programmeId: document.getElementById("applyProgramme").value,
         previousSchool: document.getElementById("applySchool").value.trim(),
         entryQualification: document.getElementById("applyQualification").value,
-        applicationDate: new Date().toISOString().slice(0, 10),
-        status: "Submitted",
-        notes: ""
+        applicationDate: new Date().toISOString().slice(0, 10)
       };
-      applicationsOverlay.add(application);
+      const submitButton = form.querySelector("button[type=submit]");
+      submitButton.disabled = true;
+      try {
+        const response = await fetch("/api/admissions/applications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(application) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || "Application could not be submitted.");
+        application.id = result.reference;
+      } catch (error) {
+        submitButton.disabled = false;
+        alert(error.message);
+        return;
+      }
 
       document.getElementById("applyFormCard").classList.add("d-none");
       const confirmCard = document.getElementById("applyConfirmCard");

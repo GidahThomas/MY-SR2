@@ -54,6 +54,15 @@
     return name.split(" ").filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join("");
   }
 
+  function canViewStudentNames(user, student) {
+    return user?.role === "SYSTEM_ADMIN" || (user?.role === "STUDENT" && (!student || student.id === user.studentId));
+  }
+
+  function studentLabel(student, user) {
+    if (!student) return "-";
+    return canViewStudentNames(user, student) ? student.fullName : student.regNumber;
+  }
+
   function debounce(fn, wait = 250) {
     let t;
     return function (...args) {
@@ -134,7 +143,7 @@
   global.USIAMS.util = {
     escapeHtml, formatCurrency, formatDate, formatDateTime, timeAgo, initials,
     debounce, slugify, titleCase, paginate, downloadCsv, avatarColorFromString,
-    validateEmail, validatePhone, uid
+    validateEmail, validatePhone, uid, canViewStudentNames, studentLabel
   };
 
 })(window);

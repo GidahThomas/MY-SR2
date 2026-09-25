@@ -20,7 +20,7 @@
     const balance = balanceForStudent(student.id);
     const payments = paymentsForStudent(student.id).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    document.getElementById("financeSubtitle").textContent = `${student.fullName} (${student.regNumber})`;
+    document.getElementById("financeSubtitle").textContent = `${util.studentLabel(student, user)} (${student.regNumber})`;
     global.USIAMS.cards.renderStatGrid("statGrid", [
       { label: "Total Fees", value: util.formatCurrency(balance.billed), icon: "bi-receipt", tint: "primary" },
       { label: "Paid", value: util.formatCurrency(balance.paid), icon: "bi-check2-circle", tint: "success" },
@@ -28,8 +28,34 @@
       { label: "Payments Made", value: payments.length, icon: "bi-cash-stack", tint: "info" }
     ]);
 
-    document.getElementById("viewInvoiceBtn").onclick = () => openInvoiceModal(student, invoice, balance);
-    document.getElementById("makePaymentBtn").onclick = () => openPaymentModal(student, balance);
+    // A newly admitted student has not been billed yet. That is a normal
+    // state, not a paid-up one: there is no invoice to open and nothing to
+    // pay against, so say so rather than claiming the fees are cleared.
+    const alert = document.getElementById("financeBalanceAlert");
+    if (!invoice) {
+      alert.className = "alert alert-info mb-3";
+      alert.innerHTML = `<strong><i class="bi bi-info-circle me-1"></i>No fees billed yet.</strong> Your invoice for this academic year has not been issued. It will appear here once the Finance Office raises it.`;
+    } else {
+      alert.className = `alert ${balance.balance <= 0 ? "alert-success" : "alert-warning"} mb-3`;
+      alert.innerHTML = balance.balance <= 0
+        ? `<strong><i class="bi bi-check-circle me-1"></i>Fees fully paid.</strong> Your total payments of ${util.formatCurrency(balance.paid)} cover the full debit of ${util.formatCurrency(balance.billed)}.`
+        : `<strong><i class="bi bi-exclamation-circle me-1"></i>Outstanding debit:</strong> ${util.formatCurrency(balance.balance)} remains after payments of ${util.formatCurrency(balance.paid)} against total fees of ${util.formatCurrency(balance.billed)}.`;
+    }
+
+    // Both actions need an invoice behind them.
+    const viewInvoiceBtn = document.getElementById("viewInvoiceBtn");
+    const makePaymentBtn = document.getElementById("makePaymentBtn");
+    viewInvoiceBtn.disabled = !invoice;
+    makePaymentBtn.disabled = !invoice || balance.balance <= 0;
+    viewInvoiceBtn.onclick = () => {
+      if (!invoice) { toast.show("info", "No invoice yet", "Your invoice for this academic year has not been issued."); return; }
+      openInvoiceModal(student, invoice, balance, user);
+    };
+    makePaymentBtn.onclick = () => {
+      if (!invoice) { toast.show("info", "Nothing to pay", "You have no invoice to pay against yet."); return; }
+      if (balance.balance <= 0) { toast.show("info", "Nothing outstanding", "Your fees are already fully paid."); return; }
+      openPaymentModal(student, balance, user);
+    };
 
     const tbody = document.getElementById("paymentHistoryBody");
     tbody.innerHTML = payments.length ? payments.map(p => `
@@ -42,16 +68,30 @@
         <td><button class="btn btn-sm btn-outline-secondary" data-action="receipt" data-id="${p.id}"><i class="bi bi-receipt"></i> Receipt</button></td>
       </tr>`).join("") : `<tr><td colspan="6"><div class="empty-state"><i class="bi bi-cash"></i>No payments recorded yet.</div></td></tr>`;
 
-    tbody.querySelectorAll("[data-action='receipt']").forEach(btn => btn.addEventListener("click", () => openReceiptModal(student, payments.find(p => p.id === btn.dataset.id))));
+    tbody.querySelectorAll("[data-action='receipt']").forEach(btn => btn.addEventListener("click", () => openReceiptModal(student, payments.find(p => p.id === btn.dataset.id), user)));
+
+    // Only worth announcing when there was actually a debit to clear - a
+    // student who has not been billed has a zero balance but has paid nothing.
+    if (invoice && balance.billed > 0 && balance.balance <= 0 && global.USIAMS.notifications) {
+      global.USIAMS.notifications.add({
+        id: `NTF-FEE-PAID-${student.id}-${invoice.id}`,
+        target: user.id,
+        category: "Finance",
+        title: "Fees Fully Paid",
+        description: `Your payments of ${util.formatCurrency(balance.paid)} have cleared the full debit of ${util.formatCurrency(balance.billed)} for ${invoice.description}.`,
+        date: new Date().toISOString(),
+        read: false
+      });
+    }
   }
 
-  function openInvoiceModal(student, invoice, balance) {
+  function openInvoiceModal(student, invoice, balance, user) {
     modal.renderInto(`
       <div class="modal fade" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Invoice ${invoice.id}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body print-doc">
           <div class="print-header"><strong>USIAMS</strong><span>${util.formatDate(invoice.issuedDate)}</span></div>
-          <p><strong>Billed to:</strong> ${util.escapeHtml(student.fullName)} (${student.regNumber})</p>
+          <p><strong>Billed to:</strong> ${util.escapeHtml(util.studentLabel(student, user))} (${student.regNumber})</p>
           <p>${util.escapeHtml(invoice.description)}</p>
           <table class="usi-table"><tbody>
             <tr><td>Amount Billed</td><td class="text-end">${util.formatCurrency(invoice.amountBilled)}</td></tr>
@@ -65,14 +105,14 @@
     `);
   }
 
-  function openReceiptModal(student, payment) {
+  function openReceiptModal(student, payment, user) {
     if (!payment) return;
     modal.renderInto(`
       <div class="modal fade" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Payment Receipt</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body print-doc">
           <div class="print-header"><strong>USIAMS</strong><span>${util.formatDate(payment.date)}</span></div>
-          <p><strong>Received from:</strong> ${util.escapeHtml(student.fullName)} (${student.regNumber})</p>
+          <p><strong>Received from:</strong> ${util.escapeHtml(util.studentLabel(student, user))} (${student.regNumber})</p>
           <table class="usi-table"><tbody>
             <tr><td>Reference</td><td class="text-end">${util.escapeHtml(payment.reference)}</td></tr>
             <tr><td>Method</td><td class="text-end">${util.escapeHtml(payment.method)}</td></tr>
@@ -85,7 +125,7 @@
     `);
   }
 
-  function openPaymentModal(student, balance) {
+  function openPaymentModal(student, balance, user) {
     if (balance.balance <= 0) { toast.show("info", "No balance due", "This student has no outstanding balance."); return; }
     modal.renderInto(`
       <div class="modal fade" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
@@ -103,13 +143,14 @@
       const amount = parseFloat(document.getElementById("paymentAmount").value);
       if (!amount || amount <= 0 || amount > balance.balance) { toast.show("error", "Invalid amount", "Please enter a valid amount not exceeding your balance."); return; }
       const invoice = global.USIAMS.finance.invoiceForStudent(student.id);
+      if (!invoice) { toast.show("error", "No invoice", "There is no invoice to pay against."); return; }
       global.USIAMS.finance.addPayment({
         id: util.uid("PAY"), studentId: student.id, invoiceId: invoice.id, amount,
         date: new Date().toISOString().slice(0, 10), method: document.getElementById("paymentMethod").value,
         reference: `USI${student.id.slice(-4)}${Date.now().toString().slice(-6)}`, status: "Completed"
       });
       modal.close();
-      renderStudentView({ studentId: student.id, role: "STUDENT" });
+      renderStudentView(user);
       toast.show("success", "Payment recorded", `Your payment of ${util.formatCurrency(amount)} has been recorded.`);
     });
   }
@@ -117,7 +158,7 @@
   // ---------------------------------------------------------------------
   // FINANCE / ADMIN VIEW
   // ---------------------------------------------------------------------
-  function renderAdminView() {
+  function renderAdminView(user) {
     document.getElementById("financeSubtitle").textContent = "University-wide fee collection overview.";
     const invoices = global.USIAMS.data.invoices;
     const payments = global.USIAMS.finance.allPayments();
@@ -148,7 +189,7 @@
       const student = global.USIAMS.students.getStudent(p.studentId);
       return `<tr>
         <td>${util.formatDate(p.date)}</td>
-        <td>${student ? util.escapeHtml(student.fullName) : p.studentId}</td>
+        <td>${student ? util.escapeHtml(util.studentLabel(student, user)) : p.studentId}</td>
         <td>${util.escapeHtml(p.reference)}</td>
         <td>${util.escapeHtml(p.method)}</td>
         <td>${util.formatCurrency(p.amount)}</td>
@@ -165,9 +206,10 @@
 
   function initPage(user) {
     document.getElementById("adminFinanceSection").classList.toggle("d-none", user.role === "STUDENT");
+    document.getElementById("studentFinanceActions").classList.toggle("d-none", user.role !== "STUDENT");
     document.getElementById("studentFinanceSection").classList.toggle("d-none", user.role !== "STUDENT");
     if (user.role === "STUDENT") renderStudentView(user);
-    else renderAdminView();
+    else renderAdminView(user);
   }
 
   global.USIAMS = global.USIAMS || {};

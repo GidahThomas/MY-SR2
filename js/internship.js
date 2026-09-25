@@ -25,7 +25,7 @@
         <div class="usi-card-header">
           <div>
             <h3>${util.escapeHtml(i.organization)}</h3>
-            <div class="text-muted-usi" style="font-size:.78rem;">${currentUser.role !== "STUDENT" ? util.escapeHtml(student.fullName) + " &bull; " : ""}${util.escapeHtml(i.location)}</div>
+            <div class="text-muted-usi" style="font-size:.78rem;">${util.escapeHtml(util.studentLabel(student, currentUser))} &bull; ${util.escapeHtml(i.location)}</div>
           </div>
           <span class="status-badge status-${i.status.toLowerCase().replace(/\s+/g, "_")}">${i.status}</span>
         </div>

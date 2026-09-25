@@ -15,11 +15,21 @@
 
   const ALL_ROLES = Object.keys(global.USIAMS.data.roles);
   const NOT_STUDENT = ALL_ROLES.filter(r => r !== "STUDENT");
+  const DUTY_MENU = {
+    LECTURER: ["Dashboard", "Courses", "Results", "Attendance", "Timetable", "E-Learning", "Notifications", "Announcements", "Academic Calendar", "Staff Directory", "Settings"],
+    FINANCE_OFFICER: ["Dashboard", "Finance", "Notifications", "Announcements", "Academic Calendar", "Reports", "Settings"],
+    REGISTRATION_OFFICER: ["Dashboard", "Students", "Academics", "Courses", "Registration", "Results", "Documents", "Admissions", "Graduation", "Notifications", "Announcements", "Academic Calendar", "Reports", "Settings"],
+    LIBRARIAN: ["Dashboard", "Library", "Notifications", "Settings"],
+    HOSTEL_OFFICER: ["Dashboard", "Hostel", "Notifications", "Settings"],
+    QUALITY_ASSURANCE_OFFICER: ["Dashboard", "Students", "Academics", "Courses", "Registration", "Results", "Attendance", "Timetable", "Notifications", "Announcements", "Academic Calendar", "Quality Assurance", "Reports", "Audit Logs", "Settings"]
+  };
 
   function dashboardHrefFor(role) {
     if (role === "STUDENT") return "pages/student-dashboard.html";
     if (role === "LECTURER") return "pages/lecturer-dashboard.html";
     if (role === "QUALITY_ASSURANCE_OFFICER") return "pages/qa-dashboard.html";
+    if (role === "LIBRARIAN") return "pages/library.html";
+    if (role === "HOSTEL_OFFICER") return "pages/hostel.html";
     return "pages/admin-dashboard.html";
   }
 
@@ -44,6 +54,7 @@
       { label: "Complaints", icon: "bi-flag", href: "pages/complaints.html", roles: ALL_ROLES },
       { label: "Notifications", icon: "bi-bell", href: "pages/notifications.html", roles: ALL_ROLES },
       { label: "Announcements", icon: "bi-megaphone", href: "pages/announcements.html", roles: ALL_ROLES },
+      { label: "UDOSO Elections", icon: "bi-check2-square", href: "pages/elections.html", roles: ["STUDENT"] },
       { label: "Academic Calendar", icon: "bi-calendar3", href: "pages/calendar.html", roles: ALL_ROLES },
       { label: "Student By-Laws", icon: "bi-journal-text", href: "pages/bylaws.html", roles: ["STUDENT"] },
       { label: "Complete My Profile", icon: "bi-person-check", href: "pages/profile-setup.html", roles: ["STUDENT"] },
@@ -66,7 +77,25 @@
   }
 
   function menuForRole(role) {
-    return buildMenu(role).filter(item => item.section || (item.roles || []).includes(role));
+    const allowed = DUTY_MENU[role];
+    const menu = buildMenu(role);
+    if (!allowed) return menu.filter(item => item.section || (item.roles || []).includes(role));
+
+    const result = [];
+    let pendingSection = null;
+    menu.forEach(item => {
+      if (item.section) {
+        pendingSection = item;
+        return;
+      }
+      if (!(item.roles || []).includes(role) || !allowed.includes(item.label)) return;
+      if (pendingSection) {
+        result.push(pendingSection);
+        pendingSection = null;
+      }
+      result.push(item);
+    });
+    return result;
   }
 
   const PAGE_TITLES = {
@@ -90,6 +119,7 @@
     "complaints.html": "Complaints",
     "notifications.html": "Notifications",
     "announcements.html": "Announcements",
+    "elections.html": "UDOSO Elections",
     "calendar.html": "Academic Calendar",
     "bylaws.html": "Student By-Laws",
     "profile-setup.html": "Complete My Profile",

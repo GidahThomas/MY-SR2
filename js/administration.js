@@ -39,6 +39,24 @@
     if (!window.USIAMS.auth.guardWrite("change user account status")) return;
     const user = usersOverlay.getAll().find(u => u.id === id);
     const newStatus = user.status === "Active" ? "Inactive" : "Active";
+
+    // The server refuses both of these outright; checking here means the
+    // administrator gets told why before the row appears to change.
+    if (newStatus !== "Active") {
+      const signedIn = window.USIAMS.auth.getCurrentUser();
+      if (signedIn && signedIn.id === id) {
+        toast.show("error", "Not allowed", "You cannot deactivate the account you are signed in with.");
+        return;
+      }
+      const ADMIN_ROLES = ["SYSTEM_ADMIN", "UNIVERSITY_ADMIN"];
+      const otherActiveAdmins = usersOverlay.getAll()
+        .filter(u => u.id !== id && u.status === "Active" && ADMIN_ROLES.includes(u.role));
+      if (ADMIN_ROLES.includes(user.role) && !otherActiveAdmins.length) {
+        toast.show("error", "Not allowed",
+          "This is the last active administrator account. Grant another account an administrator role first.");
+        return;
+      }
+    }
     usersOverlay.update(id, { status: newStatus });
     dataTable.refresh(usersOverlay.getAll());
     toast.show("success", "User status updated", `${user.name} is now ${newStatus}.`);
