@@ -14,8 +14,12 @@
   let currentUser = null;
   let selectedCourseId = null;
 
+  // The courses a lecturer teaches on the timetable; staff who teach none
+  // (department admins, heads) see their department's courses.
   function lecturerCourses(user) {
-    return global.USIAMS.data.courses.filter(c => c.departmentId === user.departmentId && c.status === "Active");
+    const taught = new Set((global.USIAMS.data.timetable || []).filter(e => e.lecturer === user.name).map(e => e.courseId));
+    const active = global.USIAMS.data.courses.filter(c => c.status === "Active");
+    return taught.size ? active.filter(c => taught.has(c.id)) : active.filter(c => c.departmentId === user.departmentId);
   }
 
   function studentCourses(user) {

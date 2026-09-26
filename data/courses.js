@@ -60,6 +60,87 @@
     { id: "AI405", title: "Cybersecurity Fundamentals", credits: 3, type: "Core", departmentId: "DCSE", programmeIds: ["BSCS", "BSSE", "BSCIS"], year: 3, semesterNumber: 2, prerequisites: ["CP302"], status: "Active" }
   ];
 
+  // ---------------------------------------------------------------------
+  // Filling the curriculum. Every student takes six or seven courses a
+  // semester (USIAMS.academic.COURSE_LOAD), so every programme must offer
+  // at least seven in each year and semester of study. The hand-written
+  // courses above cover only a few programmes; the rest of each
+  // programme's curriculum is generated here from its discipline name.
+  // Generated codes are the programme id + year + semester + sequence
+  // (e.g. BSCCHEM213), so they cannot collide with the courses above.
+  // ---------------------------------------------------------------------
+  const COURSES_PER_TERM = 7;
+
+  // "Bachelor of Science in Chemistry" -> "Chemistry",
+  // "Bachelor of Arts with Media Studies" -> "Media Studies",
+  // "Doctor of Medicine (MD)" -> "Medicine", "Bachelor of Laws" -> "Law".
+  function disciplineOf(programme) {
+    // A bracketed specialism names the subject ("Bachelor of Education
+    // (Educational Psychology)"); a one-word one is a variant ("(Arts)").
+    const bracketed = programme.name.match(/\(([^)]+)\)\s*$/);
+    if (bracketed && bracketed[1].trim().includes(" ")) return bracketed[1].trim();
+    const name = programme.name.replace(/\s*\([^)]*\)\s*$/, "");
+    const subject = name.match(/\s(?:in|with)\s+(.+)$/) || name.match(/\sof\s+(.+)$/);
+    const discipline = subject ? subject[1].trim() : name;
+    return discipline === "Laws" ? "Law" : discipline;
+  }
+
+  const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+  // Seven strands per semester, numbered by the semester of study, so a
+  // programme's titles never repeat (Principles of Chemistry I, II, ...).
+  const STRANDS = [
+    d => `Principles of ${d}`,
+    d => `${d} Theory and Concepts`,
+    d => `${d} in Practice`,
+    d => `Quantitative Methods for ${d}`,
+    d => `${d} Practicum`,
+    d => `Research Methods in ${d}`,
+    d => `Contemporary Issues in ${d}`
+  ];
+  const DOCTORAL_STRANDS = [
+    d => `Advanced Topics in ${d}`,
+    d => `Doctoral Seminar in ${d}`,
+    d => `Advanced Research Design in ${d}`,
+    d => `Literature Review in ${d}`,
+    d => `Research Ethics and Scholarly Writing`,
+    d => `Thesis Proposal Development in ${d}`,
+    d => `Independent Study in ${d}`
+  ];
+
+  function fillCurriculum() {
+    const programmes = (global.USIAMS.data && global.USIAMS.data.programmes) || [];
+    const ids = new Set(COURSES.map(c => c.id));
+    programmes.forEach(programme => {
+      const discipline = disciplineOf(programme);
+      const strands = programme.level === "PhD" ? DOCTORAL_STRANDS : STRANDS;
+      for (let year = 1; year <= programme.durationYears; year++) {
+        [1, 2].forEach(semesterNumber => {
+          const offered = COURSES.filter(c => c.status === "Active" && c.year === year &&
+            c.semesterNumber === semesterNumber && c.programmeIds.includes(programme.id));
+          const termIndex = (year - 1) * 2 + (semesterNumber - 1);
+          let seq = 1;
+          for (let n = offered.length; n < COURSES_PER_TERM; n++) {
+            const strand = strands[n % strands.length];
+            const id = `${programme.id}${year}${semesterNumber}${seq++}`;
+            if (ids.has(id)) continue;
+            ids.add(id);
+            COURSES.push({
+              id,
+              title: `${strand(discipline)} ${ROMAN[termIndex] || termIndex + 1}`,
+              credits: 3,
+              // Five core courses and two electives per semester.
+              type: n < 5 ? "Core" : "Elective",
+              departmentId: programme.departmentId,
+              programmeIds: [programme.id],
+              year, semesterNumber, prerequisites: [], status: "Active"
+            });
+          }
+        });
+      }
+    });
+  }
+  fillCurriculum();
+
   function getCourse(id) { return COURSES.find(c => c.id === id); }
   function coursesForProgramme(programmeId) { return COURSES.filter(c => c.programmeIds.includes(programmeId)); }
   function coursesForDepartment(deptId) { return COURSES.filter(c => c.departmentId === deptId); }

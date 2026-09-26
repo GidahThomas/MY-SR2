@@ -1,6 +1,7 @@
 /* =========================================================
    USIAMS - data/registrations.js
-   Seed course registrations for the active semester (AY2025-S1).
+   Seed course registrations for the active semester (AY2025-S1):
+   every active student, six or seven courses each.
    js/registration.js copies this into localStorage on first run
    (see USIAMS.storage.ensureSeed) so Reports > Registration
    Report and the admin/registration-officer views have real data
@@ -22,31 +23,30 @@
     const semesterId = "AY2025-S1";
     const students = global.USIAMS.data.students.filter(s => s.status === "Active");
 
-    students.forEach(student => {
-      // Only ~70% of active students have completed registration by demo
-      // time - the rest show up correctly as "Not Registered" in reports.
-      if (seededMark(`${student.id}-registered`, 0, 99) >= 70) return;
+    const load = global.USIAMS.academic.COURSE_LOAD;
 
+    // Every active student is registered for six or seven courses - the
+    // load js/registration.js and server.js enforce.
+    students.forEach(student => {
       const programme = global.USIAMS.academic.getProgramme(student.programmeId);
       const available = global.USIAMS.data.courses.filter(c =>
         c.status === "Active" && c.year === student.year && c.semesterNumber === 1 &&
         c.programmeIds.includes(student.programmeId)
       );
-      if (!available.length) return;
+      const target = seededMark(`${student.id}-load`, load.min, load.max);
 
-      // Core courses first, then electives, stopping at the programme's
-      // per-semester credit limit - the same rule the live registration
-      // page enforces.
+      // Core courses first, then electives, up to the target count and
+      // within the programme's credit limit.
       const ordered = [...available].sort((a, b) => (a.type === "Core" ? -1 : 1) - (b.type === "Core" ? -1 : 1));
       const selected = [];
       let totalCredits = 0;
       ordered.forEach(course => {
-        if (totalCredits + course.credits <= programme.creditLimitPerSemester) {
+        if (selected.length < target && totalCredits + course.credits <= programme.creditLimitPerSemester) {
           selected.push(course.id);
           totalCredits += course.credits;
         }
       });
-      if (!selected.length) return;
+      if (selected.length < load.min) return;
 
       registrations.push({
         id: `REG-${String(registrations.length + 1).padStart(4, "0")}`,

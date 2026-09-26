@@ -32,6 +32,7 @@ loadEnvFile();
 const config = {
   host: process.env.HOST || "127.0.0.1",
   port: Number(process.env.PORT || 3000),
+  remindersEnabled: !/^(0|off|false|no)$/i.test(process.env.REMINDERS || ""),
   sessionTtlMs: Number(process.env.SESSION_TTL_HOURS || 8) * 60 * 60 * 1000,
   // Only verifies password hashes written before each got its own salt;
   // those are upgraded on the account's next sign-in.

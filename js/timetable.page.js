@@ -50,6 +50,10 @@
       document.getElementById("timetableSubtitle").textContent = `${global.USIAMS.academic.getProgramme(student.programmeId).name} - Year ${student.year}`;
       renderGrid(global.USIAMS.timetable.timetableForProgrammeYear(student.programmeId, student.year));
       filterWrap.classList.add("d-none");
+      if (global.USIAMS.classChecklist) {
+        document.getElementById("todayClassesCard").classList.remove("d-none");
+        global.USIAMS.classChecklist.start("todayClassesList", student);
+      }
     } else if (user.role === "LECTURER") {
       document.getElementById("timetableSubtitle").textContent = `Teaching schedule for ${user.name}`;
       renderGrid(global.USIAMS.timetable.timetableForLecturer(user.name));

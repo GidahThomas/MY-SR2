@@ -72,10 +72,10 @@ function load(sandbox, relative) {
   await sandbox.USIAMS.api.hydrate();
   const data = sandbox.USIAMS.data;
   check("students come from the database", data.students.length === 60, String(data.students.length));
-  check("courses come from the database", data.courses.length === 39);
-  check("results come from the database", data.results.length === 67);
+  check("courses come from the database", data.courses.length === 1625);
+  check("results come from the database", data.results.length === 350);
   check("library books come from the database", data.seedBooks.length === 14);
-  check("attendance summary hydrated", data.attendance.length === 34);
+  check("attendance summary hydrated", data.attendance.length === 312, String(data.attendance.length));
   check("audit log hydrated", data.seedAuditLogs.length > 0);
   check("calendar hydrated", data.academicCalendar.length === 10);
   check("holidays hydrated", data.publicHolidays.length === 32);

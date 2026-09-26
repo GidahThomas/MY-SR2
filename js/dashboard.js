@@ -49,8 +49,8 @@
     document.getElementById("regStatusBadge").innerHTML = `<span class="status-badge status-active">Registration ${semester.registrationOpen ? "Open" : "Closed"}</span>`;
 
     cards.renderStatGrid("statGrid", [
-      { label: "Current Semester GPA", value: currentSemGpa.toFixed(2), icon: "bi-graph-up-arrow", tint: "primary" },
-      { label: "Overall GPA", value: overallGpa.toFixed(2), icon: "bi-award", tint: "success", trend: gpa.classify(overallGpa) },
+      { label: "Current Semester GPA", value: currentSemGpa.toFixed(2), icon: "bi-graph-up-arrow", tint: "primary", private: true },
+      { label: "Overall GPA", value: overallGpa.toFixed(2), icon: "bi-award", tint: "success", trend: gpa.classify(overallGpa), private: true },
       { label: "Registered Courses", value: currentCourses.length, icon: "bi-journal-bookmark", tint: "info" },
       { label: "Outstanding Fees", value: util.formatCurrency(balance.balance), icon: "bi-cash-coin", tint: balance.balance > 0 ? "warning" : "success" }
     ]);
@@ -84,6 +84,7 @@
     renderStudentNotifications(user);
     renderPendingRequests(student.id);
     renderUpcomingTimetable(student);
+    if (global.USIAMS.classChecklist) global.USIAMS.classChecklist.start("todayClassesList", student);
     renderAnnouncements(user.role);
     renderStudentNeedsAttention(user, student);
     renderBylawsReminder(student);

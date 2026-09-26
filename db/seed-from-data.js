@@ -36,7 +36,10 @@ const TABLES_IN_DEPENDENCY_ORDER = [
   "control_numbers",
   // Per-user settings, sign-ins and reset links belong to the demo
   // accounts being replaced.
-  "user_preferences", "user_sessions", "password_resets"
+  "user_preferences", "user_sessions", "password_resets",
+  // Checklist ticks and sent reminders refer to the timetable and students
+  // being replaced.
+  "class_checkins", "class_reminders_sent"
 ];
 
 /** "2023/2024" -> { startsOn: "2023-09-01", endsOn: "2024-08-31" } */

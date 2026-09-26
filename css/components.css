@@ -175,3 +175,19 @@ table.usi-table tbody tr:last-child td { border-bottom: none; }
 .tour-footer { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .9rem; }
 .tour-count { font-size: .75rem; color: var(--text-muted); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .tour-spotlight, .tour-card { transition: none; } }
+
+/* Private values (GPA): blurred until clicked, blurred again on the next
+   click. See USIAMS.util.privateValue in js/ui.js. */
+.private-value {
+  display: inline-flex; align-items: center; gap: .6rem;
+  background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; text-align: left;
+  cursor: pointer; border-radius: .5rem;
+}
+.private-value .private-content {
+  display: block; filter: blur(8px); user-select: none; transition: filter .2s ease;
+}
+.private-value.is-revealed .private-content { filter: none; user-select: auto; }
+.private-value .private-eye { font-size: 1.05rem; color: var(--text-muted); }
+.private-value:hover .private-eye { color: var(--primary); }
+.private-value:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+@media print { .private-value .private-content { filter: none; } .private-eye { display: none; } }

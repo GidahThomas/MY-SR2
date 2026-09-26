@@ -58,7 +58,9 @@ function waitForServer(timeoutMs = 15000) {
 (async () => {
   const server = spawn(process.execPath, [path.join(ROOT, "server.js")], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(PORT) },
+    // Timetable reminders would add notifications mid-run and change the
+    // counts the suites check.
+    env: { ...process.env, PORT: String(PORT), REMINDERS: "off" },
     stdio: ["ignore", "pipe", "pipe"]
   });
   let serverLog = "";

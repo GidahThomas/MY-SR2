@@ -394,6 +394,22 @@ const RESOURCES = {
     order: "uploaded_at"
   },
 
+  // The daily class checklist: each of today's classes a student has
+  // marked attended or missed. Students write only their own.
+  classCheckins: {
+    table: "class_checkins",
+    idPrefix: "CHK",
+    fields: {
+      id: "id", studentId: "student_id", entryId: "timetable_entry_id", courseId: "course_id",
+      date: "class_date", status: "status", recordedAt: "recorded_at"
+    },
+    read: EVERYONE,
+    write: ADMINS,
+    ownerField: "studentId",
+    selfService: true,
+    order: "class_date"
+  },
+
   hostels: {
     table: "hostels",
     idPrefix: "HST",

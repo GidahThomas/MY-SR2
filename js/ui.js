@@ -139,11 +139,39 @@
     return `${prefix}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`;
   }
 
+  // ---- Private values (GPA) --------------------------------------------
+  // A .private-value button blurs its content until the user clicks it;
+  // the next click blurs it again. Always hidden when a page loads, so a
+  // GPA is not on show to anyone looking at the screen.
+  function privateValue(contentHtml, label = "value") {
+    return `<button type="button" class="private-value" aria-pressed="false" data-private-label="${escapeHtml(label)}"
+      aria-label="Show ${escapeHtml(label)}" title="Click to show"><span class="private-content" aria-hidden="true">${contentHtml}</span><i class="bi bi-eye private-eye" aria-hidden="true"></i></button>`;
+  }
+
+  function togglePrivateValue(button) {
+    const revealed = button.classList.toggle("is-revealed");
+    const label = button.dataset.privateLabel || "value";
+    button.setAttribute("aria-pressed", String(revealed));
+    button.setAttribute("aria-label", `${revealed ? "Hide" : "Show"} ${label}`);
+    button.title = revealed ? "Click to hide" : "Click to show";
+    const content = button.querySelector(".private-content");
+    if (content) content.setAttribute("aria-hidden", String(!revealed));
+    const eye = button.querySelector(".private-eye");
+    if (eye) eye.className = `bi ${revealed ? "bi-eye-slash" : "bi-eye"} private-eye`;
+  }
+
+  if (global.document) {
+    global.document.addEventListener("click", event => {
+      const button = event.target.closest && event.target.closest(".private-value");
+      if (button) togglePrivateValue(button);
+    });
+  }
+
   global.USIAMS = global.USIAMS || {};
   global.USIAMS.util = {
     escapeHtml, formatCurrency, formatDate, formatDateTime, timeAgo, initials,
     debounce, slugify, titleCase, paginate, downloadCsv, avatarColorFromString,
-    validateEmail, validatePhone, uid, canViewStudentNames, studentLabel
+    validateEmail, validatePhone, uid, canViewStudentNames, studentLabel, privateValue
   };
 
 })(window);

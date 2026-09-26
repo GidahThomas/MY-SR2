@@ -34,6 +34,7 @@
     admissionApplications: "applications",
     announcements: "announcements",
     auditLogs: "auditLogs",
+    classCheckins: "classCheckins",
     complaints: "complaints",
     courses: "courses",
     departments: "departments",

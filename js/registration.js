@@ -58,6 +58,13 @@
     const totalCredits = creditsOf(draftCourseIds);
     document.getElementById("totalCreditsValue").textContent = totalCredits;
     document.getElementById("creditLimitValue").textContent = `${programme.creditMinPerSemester} - ${programme.creditLimitPerSemester}`;
+    const load = academic.COURSE_LOAD;
+    const countEl = document.getElementById("courseCountValue");
+    if (countEl) {
+      countEl.textContent = draftCourseIds.length;
+      countEl.className = draftCourseIds.length >= load.min && draftCourseIds.length <= load.max ? "text-success" : "text-danger";
+      document.getElementById("courseLoadValue").textContent = `${load.min} - ${load.max}`;
+    }
 
     renderAvailable();
     renderSelected();
@@ -114,6 +121,7 @@
     const errors = [];
     if (!semester.registrationOpen) errors.push("The registration period for this semester is closed.");
     if (draftCourseIds.includes(courseId)) errors.push("This course has already been added to your registration.");
+    if (draftCourseIds.length >= academic.COURSE_LOAD.max) errors.push(`You can take at most ${academic.COURSE_LOAD.max} courses a semester. Remove one to add another.`);
     const course = courseSvc.getCourse(courseId);
     if (course.status !== "Active") errors.push("This course is not currently available for registration.");
     if (!courseSvc.prerequisitesMet(courseId, passedCourseIds())) errors.push(`Prerequisite requirement not satisfied for ${courseId}.`);
@@ -147,7 +155,11 @@
       toast.show("error", "Credit limit exceeded", `Your total credits (${totalCredits}) exceed the maximum of ${programme.creditLimitPerSemester}.`);
       return;
     }
-    if (!draftCourseIds.length) { toast.show("warning", "No courses selected", "Please add at least one course before registering."); return; }
+    const load = academic.COURSE_LOAD;
+    if (draftCourseIds.length < load.min || draftCourseIds.length > load.max) {
+      toast.show("warning", "Six or seven courses required", `Every student must register for ${load.min} to ${load.max} courses a semester (currently ${draftCourseIds.length}).`);
+      return;
+    }
 
     modal.confirm({
       title: "Confirm Course Registration",

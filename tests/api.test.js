@@ -48,8 +48,8 @@ async function login(username, password) {
   check("admin bootstrap ok", adminBoot.status === 200);
   const ad = adminBoot.json.data;
   check("admin sees 60 students", ad.students.length === 60, String(ad.students && ad.students.length));
-  check("admin sees 39 courses", ad.courses.length === 39);
-  check("admin sees 67 results", ad.results.length === 67);
+  check("admin sees 1625 courses", ad.courses.length === 1625, String(ad.courses && ad.courses.length));
+  check("admin sees 350 results", ad.results.length === 350, String(ad.results && ad.results.length));
   check("admin sees 60 invoices", ad.invoices.length === 60);
   check("admin sees alumni", ad.alumni.length === 12);
   check("admin sees audit logs", ad.seedAuditLogs.length >= 15);
@@ -62,7 +62,7 @@ async function login(username, password) {
   check("student sees only own results", sd.results.every(r => r.studentId === "STU-0001"), String(sd.results.length));
   check("student sees only own invoices", sd.invoices.every(r => r.studentId === "STU-0001"));
   check("student sees only own student record", sd.students.length === 1 && sd.students[0].id === "STU-0001");
-  check("student sees shared course catalogue", sd.courses.length === 39);
+  check("student sees shared course catalogue", sd.courses.length === 1625);
   check("student is denied alumni register", studentBoot.json.withheld.includes("alumni"));
   check("student is denied user accounts", studentBoot.json.withheld.includes("users"));
   check("student is denied audit logs", studentBoot.json.withheld.includes("auditLogs"));
@@ -127,13 +127,22 @@ async function login(username, password) {
   check("librarian updates a book", patched.status === 200 && patched.json.data.category === "Algorithms");
   await call("/api/data/books/BK-0001", { method: "PATCH", token: librarian.token, body: { category: "Computer Science" } });
 
+  // Change the course list while keeping the load within six to seven:
+  // drop one course from a seven-course registration, or add one from the
+  // same class group to a six-course one.
+  const reg1 = ad.seedRegistrations.find(r => r.id === "REG-0001");
+  const reg1Student = ad.students.find(s => s.id === reg1.studentId);
+  const spare = ad.courses.find(c => c.programmeIds.includes(reg1Student.programmeId) && c.year === reg1Student.year &&
+    c.semesterNumber === 1 && !reg1.courseIds.includes(c.id));
+  const swapped = reg1.courseIds.length === 7 || !spare ? reg1.courseIds.slice(1) : [...reg1.courseIds, spare.id];
   const regPatch = await call("/api/data/registrations/REG-0001", {
-    method: "PATCH", token: admin.token, body: { courseIds: ["CP301", "CP302"] }
+    method: "PATCH", token: admin.token, body: { courseIds: swapped }
   });
-  check("join collections update", regPatch.status === 200 && regPatch.json.data.courseIds.length === 2,
+  check("join collections update", regPatch.status === 200 &&
+    [...regPatch.json.data.courseIds].sort().join() === [...swapped].sort().join(),
     JSON.stringify(regPatch.json).slice(0, 160));
   await call("/api/data/registrations/REG-0001", {
-    method: "PATCH", token: admin.token, body: { courseIds: ["CP301", "CP302", "CP304", "CP401"] }
+    method: "PATCH", token: admin.token, body: { courseIds: reg1.courseIds }
   });
 
   if (newRequestId) {
@@ -225,6 +234,52 @@ async function login(username, password) {
   const logs = await call("/api/data/auditLogs", { token: admin.token });
   check("writes are audited", logs.status === 200 && logs.json.data.length > 15, String(logs.json.data && logs.json.data.length));
   check("failed login recorded", logs.json.data.some(l => l.action === "LOGIN" && l.status === "Failed"));
+
+  console.log("\n== Six or seven courses per student ==");
+  const allRegs = (await call("/api/data/registrations", { token: admin.token })).json.data;
+  const activeStudents = (await call("/api/data/students", { token: admin.token })).json.data.filter(s => s.status === "Active");
+  check("every active student is registered",
+    activeStudents.every(s => allRegs.some(r => r.studentId === s.id)), `${allRegs.length} registrations, ${activeStudents.length} active`);
+  check("every registration has 6 or 7 courses",
+    allRegs.every(r => r.courseIds.length >= 6 && r.courseIds.length <= 7),
+    JSON.stringify(allRegs.filter(r => r.courseIds.length < 6 || r.courseIds.length > 7).map(r => [r.id, r.courseIds.length])));
+  const myReg = allRegs.find(r => r.studentId === "STU-0001");
+  const tooFew = await call("/api/data/registrations/" + myReg.id, {
+    method: "PATCH", token: admin.token, body: { courseIds: myReg.courseIds.slice(0, 5) }
+  });
+  check("a registration with 5 courses is refused", tooFew.status === 422, String(tooFew.status));
+  const tooMany = await call("/api/data/registrations", {
+    method: "POST", token: student.token,
+    body: { studentId: "STU-0001", semesterId: myReg.semesterId, status: "Registered", courseIds: [...myReg.courseIds, "CP101", "TN103"] }
+  });
+  check("a registration with 8 or more courses is refused", tooMany.status === 422, String(tooMany.status));
+  const draft = await call("/api/data/registrations/" + myReg.id, {
+    method: "PATCH", token: admin.token, body: { status: "Draft", courseIds: myReg.courseIds.slice(0, 2) }
+  });
+  check("a draft registration may hold fewer while being amended", draft.status === 200, String(draft.status));
+  await call("/api/data/registrations/" + myReg.id, {
+    method: "PATCH", token: admin.token, body: { status: myReg.status, courseIds: myReg.courseIds }
+  });
+
+  console.log("\n== Daily class checklist ==");
+  const entries = (await call("/api/data/timetable", { token: student.token })).json.data;
+  const myEntry = entries.find(e => myReg.courseIds.includes(e.courseId) && e.programmeId === sd.students[0].programmeId);
+  const forOther = await call("/api/data/classCheckins", {
+    method: "POST", token: student.token,
+    body: { studentId: "STU-0002", entryId: myEntry.id, courseId: myEntry.courseId, date: "2026-09-21", status: "Attended" }
+  });
+  check("a student cannot mark classes for someone else", forOther.status === 403, String(forOther.status));
+  const tick = await call("/api/data/classCheckins", {
+    method: "POST", token: student.token,
+    body: { studentId: "STU-0001", entryId: myEntry.id, courseId: myEntry.courseId, date: "2026-09-21", status: "Attended" }
+  });
+  check("a student can mark a class", tick.status === 201, JSON.stringify(tick.json));
+  check("the mark is filed under the student's own record", tick.json.data && tick.json.data.studentId === "STU-0001");
+  const change = await call("/api/data/classCheckins/" + tick.json.data.id, { method: "PATCH", token: student.token, body: { status: "Missed" } });
+  check("a student can change their mark", change.status === 200 && change.json.data.status === "Missed");
+  const otherReads = (await call("/api/data/classCheckins", { token: (await login("lecturer", "lecturer123")).token })).json.data;
+  check("staff can see class marks", otherReads.some(c => c.id === tick.json.data.id));
+  await call("/api/data/classCheckins/" + tick.json.data.id, { method: "DELETE", token: student.token });
 
   console.log("\n== Password reset ==");
   const oldStyle = await call("/api/auth/reset-password", {

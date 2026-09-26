@@ -79,57 +79,63 @@
   ];
 
   const PROGRAMMES = [
-    { id: "BSCS", name: "Bachelor of Science in Computer Science", code: "BSCS", departmentId: "DCSE", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 9 },
-    { id: "BSSE", name: "Bachelor of Science in Software Engineering", code: "BSSE", departmentId: "DCSE", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 9 },
-    { id: "BSCDS", name: "Bachelor of Science in Computer Engineering", code: "BSC-CE", departmentId: "DCSE", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 9 },
-    { id: "BENGEE", name: "Bachelor of Engineering in Electronics and Telecommunications Engineering", code: "BENG-ETE", departmentId: "DEE", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 7 },
-    { id: "BSCMATH", name: "Bachelor of Science in Mathematics", code: "BSC-MATH", departmentId: "DMS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BSCBIO", name: "Bachelor of Science in Biology", code: "BSC-BIO", departmentId: "DBIO", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BCOMACC", name: "Bachelor of Commerce in Accounting", code: "BCOM-ACC", departmentId: "DACC", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BBAMKT", name: "Bachelor of Commerce in Marketing", code: "BCOM-MKT", departmentId: "DMKT", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BSCIS", name: "Bachelor of Science in Information Systems and Technology", code: "BSC-IST", departmentId: "DIS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 9 },
-    { id: "BADS", name: "Bachelor of Arts in Development Studies", code: "BA-DS", departmentId: "DDS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "LLB", name: "Bachelor of Laws", code: "LLB", departmentId: "DLAW", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BED", name: "Bachelor of Education (Arts)", code: "BED", departmentId: "DEDU", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
+    { id: "BSCS", name: "Bachelor of Science in Computer Science", code: "BSCS", departmentId: "DCSE", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSSE", name: "Bachelor of Science in Software Engineering", code: "BSSE", departmentId: "DCSE", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCDS", name: "Bachelor of Science in Computer Engineering", code: "BSC-CE", departmentId: "DCSE", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BENGEE", name: "Bachelor of Engineering in Electronics and Telecommunications Engineering", code: "BENG-ETE", departmentId: "DEE", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCMATH", name: "Bachelor of Science in Mathematics", code: "BSC-MATH", departmentId: "DMS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCBIO", name: "Bachelor of Science in Biology", code: "BSC-BIO", departmentId: "DBIO", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BCOMACC", name: "Bachelor of Commerce in Accounting", code: "BCOM-ACC", departmentId: "DACC", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BBAMKT", name: "Bachelor of Commerce in Marketing", code: "BCOM-MKT", departmentId: "DMKT", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCIS", name: "Bachelor of Science in Information Systems and Technology", code: "BSC-IST", departmentId: "DIS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BADS", name: "Bachelor of Arts in Development Studies", code: "BA-DS", departmentId: "DDS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "LLB", name: "Bachelor of Laws", code: "LLB", departmentId: "DLAW", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BED", name: "Bachelor of Education (Arts)", code: "BED", departmentId: "DEDU", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
 
     // Diploma and PhD programmes - included so student registration numbers
     // can be demonstrated across all three academic levels (see
     // data/students.js buildRegNumber, which prefixes by programme.level).
-    { id: "DIPCS", name: "Diploma in Computer Science", code: "DIP-CS", departmentId: "DCSE", level: "Diploma", durationYears: 2, creditLimitPerSemester: 16, creditMinPerSemester: 8 },
-    { id: "DIPEE", name: "Diploma in Electronics and Telecommunications Engineering", code: "DIP-ETE", departmentId: "DEE", level: "Diploma", durationYears: 2, creditLimitPerSemester: 16, creditMinPerSemester: 8 },
-    { id: "DIPACC", name: "Diploma in Accountancy", code: "DIP-ACC", departmentId: "DACC", level: "Diploma", durationYears: 2, creditLimitPerSemester: 16, creditMinPerSemester: 8 },
-    { id: "PHDCS", name: "PhD in Computer Science", code: "PHD-CS", departmentId: "DCSE", level: "PhD", durationYears: 3, creditLimitPerSemester: 12, creditMinPerSemester: 6 },
-    { id: "PHDDS", name: "PhD in Development Studies", code: "PHD-DS", departmentId: "DDS", level: "PhD", durationYears: 3, creditLimitPerSemester: 12, creditMinPerSemester: 6 },
+    { id: "DIPCS", name: "Diploma in Computer Science", code: "DIP-CS", departmentId: "DCSE", level: "Diploma", durationYears: 2, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "DIPEE", name: "Diploma in Electronics and Telecommunications Engineering", code: "DIP-ETE", departmentId: "DEE", level: "Diploma", durationYears: 2, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "DIPACC", name: "Diploma in Accountancy", code: "DIP-ACC", departmentId: "DACC", level: "Diploma", durationYears: 2, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "PHDCS", name: "PhD in Computer Science", code: "PHD-CS", departmentId: "DCSE", level: "PhD", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "PHDDS", name: "PhD in Development Studies", code: "PHD-DS", departmentId: "DDS", level: "PhD", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
 
     // Real UDOM colleges/schools added for this pass - one flagship
     // undergraduate programme per new department, matching real
     // programme names/naming conventions found on udom.ac.tz.
-    { id: "BSCCHEM", name: "Bachelor of Science in Chemistry", code: "BSC-CHEM", departmentId: "DCHEM", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BSCPHY", name: "Bachelor of Science in Physics", code: "BSC-PHY", departmentId: "DPHY", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BAECO", name: "Bachelor of Arts in Economics", code: "BA-ECO", departmentId: "DECO", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BAGES", name: "Bachelor of Arts in Geography and Environmental Studies", code: "BA-GES", departmentId: "DGES", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BAPSPA", name: "Bachelor of Arts in Political Science and Public Administration", code: "BA-PSPA", departmentId: "DPSPA", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BASOC", name: "Bachelor of Arts in Sociology and Anthropology", code: "BA-SOC", departmentId: "DSOC", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BAAMS", name: "Bachelor of Arts with Media Studies", code: "BA-AMS", departmentId: "DAMS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BAKIS", name: "Bachelor of Arts in Kiswahili", code: "BA-KIS", departmentId: "DKIS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BEDEMPS", name: "Bachelor of Education (Educational Management and Policy Studies)", code: "BED-EMPS", departmentId: "DEMPS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BEDPSY", name: "Bachelor of Education (Educational Psychology)", code: "BED-PSY", departmentId: "DEPSY", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BEDCES", name: "Bachelor of Education (Curriculum and Educational Studies)", code: "BED-CES", departmentId: "DCES", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BENGMIN", name: "Bachelor of Engineering in Mining and Mineral Processing Engineering", code: "BENG-MIN", departmentId: "DMMPE", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 7 },
-    { id: "BSCPET", name: "Bachelor of Science in Petroleum and Energy Engineering", code: "BSC-PET", departmentId: "DPEE", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 7 },
-    { id: "BSCGEO", name: "Bachelor of Science in Applied Geology", code: "BSC-GEO", departmentId: "DGEO", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 18, creditMinPerSemester: 6 },
-    { id: "BSCENV", name: "Bachelor of Science in Environmental Engineering and Management", code: "BSC-ENV", departmentId: "DEEM", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 7 },
-    { id: "MD", name: "Doctor of Medicine (MD)", code: "MD", departmentId: "DMED", level: "Undergraduate", durationYears: 5, creditLimitPerSemester: 24, creditMinPerSemester: 12 },
-    { id: "BSCNUR", name: "Bachelor of Science in Nursing", code: "BSC-NUR", departmentId: "DCNM", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 8 },
-    { id: "BSCPH", name: "Bachelor of Science in Public Health", code: "BSC-PH", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 8 },
+    { id: "BSCCHEM", name: "Bachelor of Science in Chemistry", code: "BSC-CHEM", departmentId: "DCHEM", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCPHY", name: "Bachelor of Science in Physics", code: "BSC-PHY", departmentId: "DPHY", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BAECO", name: "Bachelor of Arts in Economics", code: "BA-ECO", departmentId: "DECO", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BAGES", name: "Bachelor of Arts in Geography and Environmental Studies", code: "BA-GES", departmentId: "DGES", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BAPSPA", name: "Bachelor of Arts in Political Science and Public Administration", code: "BA-PSPA", departmentId: "DPSPA", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BASOC", name: "Bachelor of Arts in Sociology and Anthropology", code: "BA-SOC", departmentId: "DSOC", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BAAMS", name: "Bachelor of Arts with Media Studies", code: "BA-AMS", departmentId: "DAMS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BAKIS", name: "Bachelor of Arts in Kiswahili", code: "BA-KIS", departmentId: "DKIS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BEDEMPS", name: "Bachelor of Education (Educational Management and Policy Studies)", code: "BED-EMPS", departmentId: "DEMPS", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BEDPSY", name: "Bachelor of Education (Educational Psychology)", code: "BED-PSY", departmentId: "DEPSY", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BEDCES", name: "Bachelor of Education (Curriculum and Educational Studies)", code: "BED-CES", departmentId: "DCES", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BENGMIN", name: "Bachelor of Engineering in Mining and Mineral Processing Engineering", code: "BENG-MIN", departmentId: "DMMPE", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCPET", name: "Bachelor of Science in Petroleum and Energy Engineering", code: "BSC-PET", departmentId: "DPEE", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCGEO", name: "Bachelor of Science in Applied Geology", code: "BSC-GEO", departmentId: "DGEO", level: "Undergraduate", durationYears: 3, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCENV", name: "Bachelor of Science in Environmental Engineering and Management", code: "BSC-ENV", departmentId: "DEEM", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "MD", name: "Doctor of Medicine (MD)", code: "MD", departmentId: "DMED", level: "Undergraduate", durationYears: 5, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCNUR", name: "Bachelor of Science in Nursing", code: "BSC-NUR", departmentId: "DCNM", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCPH", name: "Bachelor of Science in Public Health", code: "BSC-PH", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
 
     // Added after a follow-up completeness check against udom.ac.tz:
     // School of Law is actually split into Public/Private Law, and
     // School of Medicine and Dentistry has real named departments
     // rather than one generic "Department of Medicine".
-    { id: "BSCHIS", name: "Bachelor of Science in Health Information Science", code: "BSC-HIS", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 8 },
-    { id: "BSCCND", name: "Bachelor of Science in Clinical Nutrition and Dietetics", code: "BSC-CND", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 18, creditMinPerSemester: 8 }
+    { id: "BSCHIS", name: "Bachelor of Science in Health Information Science", code: "BSC-HIS", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 },
+    { id: "BSCCND", name: "Bachelor of Science in Clinical Nutrition and Dietetics", code: "BSC-CND", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 }
   ];
+
+  // Every student takes six or seven courses a semester. Credit limits are
+  // set wide enough for that load (6 courses of 2 credits = 12, 7 courses of
+  // 4 credits = 28); the course count is the rule that binds. server.js
+  // enforces the same numbers (COURSE_LOAD) on every saved registration.
+  const COURSE_LOAD = { min: 6, max: 7 };
 
   const ACADEMIC_YEARS = [
     { id: "AY2023", label: "2023/2024", status: "Closed" },
@@ -177,7 +183,7 @@
   });
   global.USIAMS.academic = {
     getOrgUnit, getDepartment, getProgramme, departmentsForUnit, programmesForDepartment,
-    collegeNameForDepartment, programmeFullPath, activeSemester, activeAcademicYear
+    collegeNameForDepartment, programmeFullPath, activeSemester, activeAcademicYear, COURSE_LOAD
   };
 
 })(window);

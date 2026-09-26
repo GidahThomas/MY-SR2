@@ -462,3 +462,33 @@ CREATE TABLE IF NOT EXISTS outbound_messages (
   sent_at DATETIME NULL,
   INDEX idx_outbound_messages_status (status)
 ) ENGINE=InnoDB;
+
+-- Daily class checklist: a student ticks each of today's classes as
+-- attended or missed (Student Dashboard > Today's Classes). One row per
+-- student, timetable entry and date.
+CREATE TABLE IF NOT EXISTS class_checkins (
+  id VARCHAR(40) PRIMARY KEY,
+  student_id VARCHAR(40) NOT NULL,
+  timetable_entry_id VARCHAR(40) NOT NULL,
+  course_id VARCHAR(40) NOT NULL,
+  class_date DATE NOT NULL,
+  status ENUM('Attended', 'Missed') NOT NULL,
+  recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_class_checkins (student_id, timetable_entry_id, class_date),
+  INDEX idx_class_checkins_date (class_date),
+  CONSTRAINT fk_class_checkins_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+  CONSTRAINT fk_class_checkins_entry FOREIGN KEY (timetable_entry_id) REFERENCES timetable_entries(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Which timetable reminders have been sent, so the reminder job (see
+-- reminders.js) sends each one once: the morning summary, the notice before
+-- each class, and the evening prompt to finish the day's checklist.
+CREATE TABLE IF NOT EXISTS class_reminders_sent (
+  student_id VARCHAR(40) NOT NULL,
+  class_date DATE NOT NULL,
+  kind ENUM('Morning', 'BeforeClass', 'Evening') NOT NULL,
+  timetable_entry_id VARCHAR(40) NOT NULL DEFAULT '',
+  sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (student_id, class_date, kind, timetable_entry_id),
+  CONSTRAINT fk_class_reminders_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

@@ -18,6 +18,7 @@ const db = require("./db");
 const repo = require("./db/repository");
 const { RESOURCES, READ_ONLY_ROLES } = require("./db/resources");
 const mailer = require("./mailer");
+const reminders = require("./reminders");
 
 const ROOT = __dirname;
 
@@ -319,6 +320,20 @@ function denyWrite(res, user) {
  * Fields in a write that no column stores. The repository silently ignores
  * them, so data typed into a form could be lost without anyone noticing.
  */
+// Every student takes six or seven courses a semester. Mirrors
+// USIAMS.academic.COURSE_LOAD in data/academic-structure.js. A Draft
+// registration (being amended) may hold any number; anything submitted may not.
+const COURSE_LOAD = { min: 6, max: 7 };
+
+function registrationLoadRefusal(record) {
+  if (!record || record.status === "Draft") return null;
+  const courses = Array.isArray(record.courseIds) ? [...new Set(record.courseIds)] : [];
+  if (courses.length < COURSE_LOAD.min || courses.length > COURSE_LOAD.max) {
+    return `A registration must have ${COURSE_LOAD.min} to ${COURSE_LOAD.max} courses; this one has ${courses.length}.`;
+  }
+  return null;
+}
+
 function droppedFields(resource, body) {
   const flat = resource.transformIn ? resource.transformIn({ ...(body || {}) }) : (body || {});
   const stored = new Set([
@@ -387,6 +402,10 @@ async function handleResourceRoute(req, res, url, session) {
       const refusal = await scopedAccountRefusal({ actor: user, operation: "create", body });
       if (refusal) { sendJson(res, 403, { success: false, message: refusal }); return; }
     }
+    if (name === "registrations") {
+      const refusal = registrationLoadRefusal({ status: "Registered", ...body });
+      if (refusal) { sendJson(res, 422, { success: false, message: refusal }); return; }
+    }
     const created = await repo.create(name, body);
     await db.recordAudit({
       userId: user.id, userName: user.name, userRole: user.role, action: "CREATE",
@@ -446,6 +465,10 @@ async function handleResourceRoute(req, res, url, session) {
       const refusal = await accountChangeRefusal({ operation: "update", targetId: id, patch: body, actor: user });
       if (refusal) { sendJson(res, 409, { success: false, message: refusal }); return; }
     }
+    if (name === "registrations") {
+      const refusal = registrationLoadRefusal({ ...existing, ...body });
+      if (refusal) { sendJson(res, 422, { success: false, message: refusal }); return; }
+    }
     const updated = await repo.update(name, id, body);
     // Suspending an account has to take effect now, not when its token
     // happens to expire.
@@ -496,7 +519,7 @@ const BOOTSTRAP_RESOURCES = [
   "payments", "requests", "complaints", "announcements", "notifications", "documents",
   "hostels", "hostelRooms", "hostelAllocations", "books", "loans", "internships",
   "graduation", "alumni", "qaFlags", "calendar", "holidays", "materials", "assignments",
-  "submissions", "applications", "auditLogs", "users"
+  "submissions", "applications", "auditLogs", "users", "classCheckins"
 ];
 
 // The frontend keeps these under different names from the resource route.
@@ -1205,6 +1228,9 @@ server.listen(config.port, config.host, async () => {
   const purge = () => db.purgeExpiredSessions().catch(error => console.warn("USIAMS: session cleanup failed:", error.message));
   purge();
   setInterval(purge, 60 * 60 * 1000).unref();
+  // Daily timetable reminders (reminders.js). REMINDERS=off disables them,
+  // e.g. for the test suite, whose notification counts they would change.
+  if (config.remindersEnabled) reminders.start();
 });
 
 module.exports = { server };

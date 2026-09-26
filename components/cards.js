@@ -5,14 +5,17 @@
 (function (global) {
   "use strict";
 
-  function statCard({ label, value, icon, tint = "primary", trend, trendUp = true }) {
-    const { escapeHtml } = global.USIAMS.util;
+  // private: true hides the value (and its trend) behind a blur the user
+  // clicks to show and clicks again to hide - used for GPA.
+  function statCard({ label, value, icon, tint = "primary", trend, trendUp = true, private: isPrivate = false }) {
+    const { escapeHtml, privateValue } = global.USIAMS.util;
+    const valueHtml = `<div class="stat-value">${escapeHtml(String(value))}</div>`;
+    const trendHtml = trend ? `<div class="stat-trend ${trendUp ? "up" : "down"}"><i class="bi bi-arrow-${trendUp ? "up" : "down"}-short"></i>${escapeHtml(trend)}</div>` : "";
     return `
       <div class="stat-card">
         <div>
           <div class="stat-label">${escapeHtml(label)}</div>
-          <div class="stat-value">${escapeHtml(String(value))}</div>
-          ${trend ? `<div class="stat-trend ${trendUp ? "up" : "down"}"><i class="bi bi-arrow-${trendUp ? "up" : "down"}-short"></i>${escapeHtml(trend)}</div>` : ""}
+          ${isPrivate ? privateValue(valueHtml + trendHtml, label) : valueHtml + trendHtml}
         </div>
         <div class="stat-icon icon-tint-${tint}"><i class="bi ${icon}"></i></div>
       </div>

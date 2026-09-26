@@ -19,7 +19,11 @@
     return dept ? dept.hod : "Staff Lecturer";
   }
 
+  // The courses the student registered for this semester (data/
+  // registrations.js loads first); otherwise every course of their year.
   function currentCoursesFor(student) {
+    const registration = (global.USIAMS.data.seedRegistrations || []).find(r => r.studentId === student.id);
+    if (registration) return global.USIAMS.data.courses.filter(c => registration.courseIds.includes(c.id));
     return global.USIAMS.data.courses.filter(c =>
       c.status === "Active" && c.year === student.year && c.semesterNumber === 1 &&
       c.programmeIds.includes(student.programmeId)
