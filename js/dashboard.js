@@ -38,7 +38,6 @@
     const overallGpa = gpa.calculateGpa(results.map(withCredits));
     const currentCourses = attendance.currentCoursesFor(student);
     const balance = finance.balanceForStudent(student.id);
-    const attendancePct = attendance.overallPercentageForStudent(student.id);
 
     document.getElementById("welcomeName").textContent = `${greetingPrefix()}, ${student.firstName}!`;
     document.getElementById("studentMetaLine").innerHTML = `

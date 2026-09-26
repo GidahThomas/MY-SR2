@@ -51,7 +51,7 @@ function storageShim() {
       });
       return `${prefix}-${String((numbers.length ? Math.max(...numbers) : 0) + 1).padStart(4, "0")}`;
     },
-    createOverlay(name, baseListFn) {
+    createOverlay(_name, baseListFn) {
       return {
         getAll: () => baseListFn(),
         add(item) { return item; },

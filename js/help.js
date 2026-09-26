@@ -20,7 +20,7 @@
       title: "Your dashboard",
       intro: "Your home page: a summary of your studies, fees and notices.",
       steps: [
-        "The cards at the top show your GPA, registered courses, attendance and fee balance.",
+        "The cards at the top show your GPA, registered courses and fee balance; the charts below show your GPA trend and attendance.",
         "Check the notices and upcoming events for deadlines.",
         "Use the menu on the left to open any service. On a phone, tap the menu button at the top left.",
         "If you are asked to complete your profile, open Complete My Profile and fill in each step."
@@ -407,7 +407,7 @@
           <a class="btn btn-light" href="${base}pages/help.html"><i class="bi bi-book me-1"></i>Open the Help Centre</a>
         </div>
       </div>`;
-    const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
+    const offcanvas = global.bootstrap.Offcanvas.getOrCreateInstance(panel);
     panel.querySelector("#helpStartTour").addEventListener("click", () => { offcanvas.hide(); startTour(user); });
     offcanvas.show();
   }
@@ -453,7 +453,7 @@
     try { localStorage.setItem(tourKey(user), "1"); } catch (e) { /* storage unavailable */ }
   }
 
-  function showTourStep(user) {
+  function showTourStep() {
     const { steps, index, layer } = tourState;
     const step = steps[index];
     const shell = document.querySelector(".app-shell");
@@ -519,7 +519,7 @@
     tourState = {
       steps: tourSteps(user), index: 0, layer,
       onKey: e => { if (e.key === "Escape") finish(); if (e.key === "ArrowRight") move(1); if (e.key === "ArrowLeft") move(-1); },
-      onResize: () => tourState && showTourStep(user)
+      onResize: () => tourState && showTourStep()
     };
     function finish() {
       const shell = document.querySelector(".app-shell");
@@ -531,14 +531,14 @@
       if (next >= tourState.steps.length) { finish(); return; }
       if (next < 0) return;
       tourState.index = next;
-      showTourStep(user);
+      showTourStep();
     }
     layer.querySelector("[data-tour='skip']").addEventListener("click", finish);
     layer.querySelector("[data-tour='back']").addEventListener("click", () => move(-1));
     layer.querySelector("[data-tour='next']").addEventListener("click", () => move(1));
     document.addEventListener("keydown", tourState.onKey);
     global.addEventListener("resize", tourState.onResize);
-    showTourStep(user);
+    showTourStep();
   }
 
   function tourSeen(user) {

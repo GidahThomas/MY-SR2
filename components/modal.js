@@ -20,7 +20,7 @@
     const root = getRootModalContainer();
     root.innerHTML = html;
     const modalEl = root.querySelector(".modal");
-    const instance = new bootstrap.Modal(modalEl);
+    const instance = new global.bootstrap.Modal(modalEl);
     modalEl.addEventListener("hidden.bs.modal", () => { root.innerHTML = ""; });
     instance.show();
     return { modalEl, instance };
@@ -30,7 +30,7 @@
     const root = getRootModalContainer();
     const modalEl = root.querySelector(".modal");
     if (modalEl) {
-      const instance = bootstrap.Modal.getInstance(modalEl);
+      const instance = global.bootstrap.Modal.getInstance(modalEl);
       if (instance) instance.hide();
     }
   }

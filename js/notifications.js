@@ -17,7 +17,6 @@
   }
 
   function unreadCountFor(userId) {
-    const user = { id: userId };
     return all().filter(n => (n.target === userId || n.target === "ALL") && !n.read).length;
   }
 

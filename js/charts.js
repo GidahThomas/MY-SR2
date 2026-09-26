@@ -22,7 +22,7 @@
   function textColor() { return isDark() ? "#9aa5b8" : "#667085"; }
 
   function baseOptions(overrides = {}) {
-    return Chart.helpers.merge({
+    return global.Chart.helpers.merge({
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
@@ -39,7 +39,7 @@
   function lineChart(canvasId, labels, datasets, opts = {}) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
-    return new Chart(ctx, {
+    return new global.Chart(ctx, {
       type: "line",
       data: { labels, datasets: datasets.map((d, i) => ({ tension: 0.35, fill: d.fill ?? true, borderWidth: 2, pointRadius: 3, borderColor: PALETTE[i % PALETTE.length], backgroundColor: hexToRgba(PALETTE[i % PALETTE.length], 0.12), ...d })) },
       options: baseOptions(opts)
@@ -49,7 +49,7 @@
   function barChart(canvasId, labels, datasets, opts = {}) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
-    return new Chart(ctx, {
+    return new global.Chart(ctx, {
       type: "bar",
       data: { labels, datasets: datasets.map((d, i) => ({ borderRadius: 6, backgroundColor: PALETTE[i % PALETTE.length], maxBarThickness: 34, ...d })) },
       options: baseOptions({ scales: { x: { grid: { display: false } } }, ...opts })
@@ -59,10 +59,10 @@
   function doughnutChart(canvasId, labels, data, opts = {}) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
-    return new Chart(ctx, {
+    return new global.Chart(ctx, {
       type: "doughnut",
       data: { labels, datasets: [{ data, backgroundColor: PALETTE, borderWidth: 2, borderColor: isDark() ? "#131c2b" : "#fff" }] },
-      options: Chart.helpers.merge(baseOptions(), { cutout: "68%", scales: undefined, ...opts })
+      options: global.Chart.helpers.merge(baseOptions(), { cutout: "68%", scales: undefined, ...opts })
     });
   }
 

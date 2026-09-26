@@ -271,7 +271,7 @@ async function seed() {
     const notificationRows = [];
     for (const notification of data.seedNotifications) {
       const recipients = notification.target === "ALL" ? data.users.map(u => u.id) : [notification.target];
-      recipients.forEach((userId, index) => {
+      recipients.forEach(userId => {
         notificationRows.push([
           recipients.length > 1 ? `${notification.id}-${userId}` : notification.id,
           userId,

@@ -96,7 +96,6 @@
     const container = document.getElementById("assignmentsList");
     container.innerHTML = (assignments.length ? assignments.map(a => {
       if (isLecturer) {
-        const subs = submissionsFor(a.id);
         return `
         <div class="usi-card mb-3">
           <div class="usi-card-header"><div><h3>${util.escapeHtml(a.title)}</h3><div class="text-muted-usi" style="font-size:.78rem;">Due ${util.formatDate(a.dueDate)} &bull; Max Score ${a.maxScore}</div></div></div>

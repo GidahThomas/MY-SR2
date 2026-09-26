@@ -102,7 +102,7 @@
     d => `Doctoral Seminar in ${d}`,
     d => `Advanced Research Design in ${d}`,
     d => `Literature Review in ${d}`,
-    d => `Research Ethics and Scholarly Writing`,
+    () => `Research Ethics and Scholarly Writing`,
     d => `Thesis Proposal Development in ${d}`,
     d => `Independent Study in ${d}`
   ];

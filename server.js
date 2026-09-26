@@ -605,7 +605,7 @@ async function handleFinanceRoute(req, res, url, session) {
   }
 }
 
-async function handleBootstrap(req, res, session) {
+async function handleBootstrap(res, session) {
   const { user } = session;
   const scope = scopeFor(user);
   const data = {};
@@ -663,7 +663,7 @@ async function handleSettingsRoute(req, res, url, session) {
 // ---------------------------------------------------------------------
 // Dashboard summary
 // ---------------------------------------------------------------------
-async function handleDashboardSummary(req, res, session) {
+async function handleDashboardSummary(res, session) {
   const { user } = session;
   const counts = await repo.query(`
     SELECT
@@ -1046,13 +1046,13 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/bootstrap") {
     const session = await requireUser(req, res);
-    if (session) await handleBootstrap(req, res, session);
+    if (session) await handleBootstrap(res, session);
     return;
   }
 
   if (req.method === "GET" && url.pathname === "/api/dashboard/summary") {
     const session = await requireUser(req, res);
-    if (session) await handleDashboardSummary(req, res, session);
+    if (session) await handleDashboardSummary(res, session);
     return;
   }
 

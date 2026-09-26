@@ -9,7 +9,7 @@
 (function (global) {
   "use strict";
 
-  const { util, modal, toast, academic, courses: courseSvc, gpa } = global.USIAMS;
+  const { util, modal, toast, academic, courses: courseSvc } = global.USIAMS;
   const KEY = "registrations";
   let student = null;
   let semester = null;

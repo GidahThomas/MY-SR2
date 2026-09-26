@@ -6,7 +6,7 @@
 (function (window) {
   "use strict";
 
-  const { util, modal, toast } = window.USIAMS;
+  const { util, toast } = window.USIAMS;
   const KEY = "internships";
   let currentUser = null;
 
