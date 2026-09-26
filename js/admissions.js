@@ -47,8 +47,8 @@
     `);
     const notesVal = () => document.getElementById("reviewNotesInput").value.trim();
     document.getElementById("markReviewBtn").addEventListener("click", () => { if (!global.USIAMS.auth.guardWrite("update this application")) return; setStatus(app.id, "Under Review", notesVal()); modal.close(); render(); toast.show("success", "Status updated", "Application marked as under review."); });
-    document.getElementById("rejectAppBtn").addEventListener("click", () => { if (!global.USIAMS.auth.guardWrite("update this application")) return; setStatus(app.id, "Rejected", notesVal()); modal.close(); render(); toast.show("success", "Application rejected", "The applicant has been notified in this simulation."); });
-    document.getElementById("acceptAppBtn").addEventListener("click", () => { if (!global.USIAMS.auth.guardWrite("update this application")) return; setStatus(app.id, "Accepted", notesVal()); modal.close(); render(); toast.show("success", "Application accepted", "The applicant has been notified in this simulation."); });
+    document.getElementById("rejectAppBtn").addEventListener("click", () => { if (!global.USIAMS.auth.guardWrite("update this application")) return; setStatus(app.id, "Rejected", notesVal()); modal.close(); render(); toast.show("success", "Application rejected", "The applicant will be emailed the decision."); });
+    document.getElementById("acceptAppBtn").addEventListener("click", () => { if (!global.USIAMS.auth.guardWrite("update this application")) return; setStatus(app.id, "Accepted", notesVal()); modal.close(); render(); toast.show("success", "Application accepted", "The applicant will be emailed the decision."); });
   }
 
   function render() {

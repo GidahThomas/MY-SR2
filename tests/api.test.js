@@ -226,6 +226,39 @@ async function login(username, password) {
   check("writes are audited", logs.status === 200 && logs.json.data.length > 15, String(logs.json.data && logs.json.data.length));
   check("failed login recorded", logs.json.data.some(l => l.action === "LOGIN" && l.status === "Failed"));
 
+  console.log("\n== Password reset ==");
+  const oldStyle = await call("/api/auth/reset-password", {
+    method: "POST", body: { username: "student", email: student.user.email, password: "takeover123" }
+  });
+  check("username + email alone cannot reset a password", oldStyle.status === 422, String(oldStyle.status));
+  const unknown = await call("/api/auth/forgot-password", { method: "POST", body: { identifier: "no-such-user" } });
+  const known = await call("/api/auth/forgot-password", { method: "POST", body: { identifier: "student" } });
+  check("forgot-password does not reveal whether an account exists",
+    unknown.status === 200 && known.status === 200 && unknown.json.message === known.json.message);
+
+  // The emailed token is only stored hashed, so plant a known one.
+  const crypto = require("node:crypto");
+  const repo = require("../db/repository");
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  await repo.query("INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, NOW() + INTERVAL 10 MINUTE)",
+    [crypto.createHash("sha256").update(resetToken).digest("hex"), student.user.id]);
+  const reset = await call("/api/auth/reset-password", { method: "POST", body: { token: resetToken, password: "student-new-1" } });
+  check("a valid reset token sets the password", reset.status === 200, JSON.stringify(reset.json));
+  const reused = await call("/api/auth/reset-password", { method: "POST", body: { token: resetToken, password: "student-new-2" } });
+  check("a reset token works only once", reused.status === 410, String(reused.status));
+  check("resetting signs out existing sessions", (await call("/api/auth/me", { token: student.token })).status === 401);
+  check("the new password signs in", !!(await login("student", "student-new-1")).token);
+  const expired = crypto.randomBytes(32).toString("hex");
+  await repo.query("INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, NOW() - INTERVAL 1 MINUTE)",
+    [crypto.createHash("sha256").update(expired).digest("hex"), student.user.id]);
+  check("an expired reset token is refused",
+    (await call("/api/auth/reset-password", { method: "POST", body: { token: expired, password: "student-new-3" } })).status === 410);
+  const [stored] = await repo.query("SELECT password_hash AS h FROM users WHERE id = ?", [student.user.id]);
+  check("passwords are stored with their own salt", /^scrypt\$[0-9a-f]{32}\$[0-9a-f]{128}$/.test(stored.h));
+  const [sessionRow] = await repo.query("SELECT COUNT(*) AS n FROM user_sessions WHERE token_hash = ?", [admin.token]);
+  check("session tokens are not stored in plain text", sessionRow.n === 0);
+  await repo.pool.end();
+
   console.log("\n" + (fail === 0 ? "ALL PASS" : "FAILURES: " + fail) + "  (" + pass + " passed)");
   process.exit(fail === 0 ? 0 : 1);
 })();

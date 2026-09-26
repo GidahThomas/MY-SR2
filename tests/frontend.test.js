@@ -23,7 +23,11 @@ function makeWindow() {
       removeItem: k => store.delete(k)
     },
     location: { pathname: "/pages/library.html", href: "" },
-    document: { body: {}, documentElement: { setAttribute() {} }, querySelector: () => null, getElementById: () => null },
+    document: {
+      body: {}, documentElement: { setAttribute() {} }, querySelector: () => null, getElementById: () => null,
+      // js/api.js wires a delegated click listener for attachment downloads.
+      addEventListener() {}
+    },
     // Absolute-ise the API paths the client uses.
     fetch: (url, opts) => fetch(url.startsWith("http") ? url : BASE + url, opts),
     setTimeout, clearTimeout

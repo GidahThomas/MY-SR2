@@ -62,7 +62,19 @@ alumni, QA flags, academic calendar, e-learning content and audit trail.
 | hostel | hostel123 | Hostel Officer |
 
 The seed loads 20 accounts in total, one per role in `data/users.js`. Passwords
-are scrypt hashes using the salt in `config.js`. Never use these in production.
+are scrypt hashes, each with its own random salt (`db/passwords.js`); older
+hashes made with the shared `PASSWORD_SALT` still verify and are upgraded on
+the next sign-in. Never use these accounts in production.
+
+## Sessions, password resets and email
+
+- **Sessions** are rows in `user_sessions` (a SHA-256 of the token, never the
+  token), so restarting the server does not sign anyone out.
+- **Forgot Password** emails a one-time link (`password_resets`, 30 minutes,
+  single use). Knowing a username and email is not enough to reset.
+- **Email** (reset links, admission decisions) goes through the SMTP server in
+  `.env`. Without `SMTP_HOST` each message is kept in `outbound_messages` with
+  status `Queued` and printed to the server console.
 
 ## Verifying
 

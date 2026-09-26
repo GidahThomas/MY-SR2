@@ -311,9 +311,18 @@
     const byProgramme = global.USIAMS.data.programmes.map(p => ({ name: p.code, count: students.filter(s => s.programmeId === p.id).length }));
     charts.barChart("populationByProgrammeChart", byProgramme.map(p => p.name), [{ label: "Students", data: byProgramme.map(p => p.count) }]);
 
-    // Registration trend (mocked historical + current)
-    charts.lineChart("registrationTrendChart", ["AY2023 S1", "AY2023 S2", "AY2024 S1", "AY2024 S2", "AY2025 S1"], [
-      { label: "Registrations", data: [180, 195, 210, 225, students.length] }
+    // Registration trend: semester registrations recorded in the database,
+    // oldest semester first. Rejected registrations are not counted.
+    const registrations = (global.USIAMS.data.seedRegistrations || []).filter(r => r.status !== "Rejected");
+    const trendSemesters = (global.USIAMS.data.semesters || [])
+      .filter(s => registrations.some(r => r.semesterId === s.id))
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const yearLabel = s => {
+      const year = (global.USIAMS.data.academicYears || []).find(a => a.id === s.academicYearId);
+      return `${s.label.replace("Semester ", "S")} ${year ? year.label : ""}`.trim();
+    };
+    charts.lineChart("registrationTrendChart", trendSemesters.map(yearLabel), [
+      { label: "Registrations", data: trendSemesters.map(s => registrations.filter(r => r.semesterId === s.id).length) }
     ]);
 
     // GPA distribution across all published results

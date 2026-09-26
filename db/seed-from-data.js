@@ -13,10 +13,10 @@
    Usage: node db/seed-from-data.js        (prompts nothing, wipes+seeds)
           npm run db:seed
    ========================================================= */
-const crypto = require("node:crypto");
 const mysql = require("mysql2/promise");
 const { config } = require("../config");
 const { loadSeedData } = require("./load-seed-data");
+const { hashPassword } = require("./passwords");
 
 // Truncated in reverse-dependency order before reseeding.
 const TABLES_IN_DEPENDENCY_ORDER = [
@@ -34,13 +34,10 @@ const TABLES_IN_DEPENDENCY_ORDER = [
   // methods and fee items they refer to are reference data from the
   // migration and are kept.
   "control_numbers",
-  // Per-user settings belong to the demo accounts being replaced.
-  "user_preferences"
+  // Per-user settings, sign-ins and reset links belong to the demo
+  // accounts being replaced.
+  "user_preferences", "user_sessions", "password_resets"
 ];
-
-function hashPassword(password) {
-  return crypto.scryptSync(String(password || ""), config.passwordSalt, 64).toString("hex");
-}
 
 /** "2023/2024" -> { startsOn: "2023-09-01", endsOn: "2024-08-31" } */
 function academicYearDates(label) {

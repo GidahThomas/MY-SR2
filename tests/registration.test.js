@@ -30,7 +30,10 @@ const call = async (p, { method = "GET", token, body } = {}) => {
 
 function localOnly() {
   return requestInterceptor(request => {
-    if (request.url.startsWith(BASE)) return undefined;
+    // Third-party libraries (served from assets/vendor/) are stubbed, as
+    // they were when they came from a CDN: the harness supplies its own
+    // bootstrap and Chart stand-ins.
+    if (request.url.startsWith(BASE) && !request.url.includes("/assets/vendor/")) return undefined;
     return new Response("", { status: 200, headers: { "Content-Type": "text/plain" } });
   });
 }

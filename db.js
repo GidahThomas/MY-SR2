@@ -11,12 +11,9 @@
    propagates so the caller can report the outage honestly.
    ========================================================= */
 const crypto = require("node:crypto");
-const { config } = require("./config");
 const { pool, query } = require("./db/repository");
+const { hashPassword, verifyPassword, needsRehash } = require("./db/passwords");
 
-function hashPassword(password, salt = config.passwordSalt) {
-  return crypto.scryptSync(String(password || ""), salt, 64).toString("hex");
-}
 
 async function health() {
   try {
@@ -520,12 +517,96 @@ async function changePassword(userId, passwordHash) {
   return result.affectedRows === 1;
 }
 
-async function resetPassword({ username, email, passwordHash }) {
-  const [result] = await pool.execute(
-    "UPDATE users SET password_hash = ? WHERE LOWER(username) = LOWER(?) AND LOWER(email) = LOWER(?) AND status = 'Active'",
-    [passwordHash, String(username || "").trim(), String(email || "").trim()]
+// ---------------------------------------------------------------------
+// Sessions (user_sessions). The table holds a SHA-256 of each token, never
+// the token itself, and a snapshot of the signed-in user.
+// ---------------------------------------------------------------------
+const sha256 = value => crypto.createHash("sha256").update(String(value)).digest("hex");
+
+async function createSession({ token, user, ip, ttlMs }) {
+  await query(
+    "INSERT INTO user_sessions (token_hash, user_id, user_json, ip_address, expires_at) VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND))",
+    [sha256(token), user.id, JSON.stringify(user), ip || null, Math.max(1, Math.round(ttlMs / 1000))]
   );
-  return result.affectedRows === 1;
+}
+
+/** The session's user, or null when the token is unknown or expired. */
+async function findSession(token) {
+  const rows = await query(
+    "SELECT user_json AS userJson FROM user_sessions WHERE token_hash = ? AND expires_at > NOW() LIMIT 1",
+    [sha256(token)]
+  );
+  return rows[0] ? JSON.parse(rows[0].userJson) : null;
+}
+
+async function deleteSession(token) {
+  await query("DELETE FROM user_sessions WHERE token_hash = ?", [sha256(token)]);
+}
+
+async function deleteSessionsFor(userId) {
+  const [result] = await pool.execute("DELETE FROM user_sessions WHERE user_id = ?", [userId]);
+  return result.affectedRows;
+}
+
+async function purgeExpiredSessions() {
+  await query("DELETE FROM user_sessions WHERE expires_at <= NOW()");
+  await query("DELETE FROM password_resets WHERE expires_at <= NOW() - INTERVAL 1 DAY");
+}
+
+// ---------------------------------------------------------------------
+// Password reset links (password_resets)
+// ---------------------------------------------------------------------
+const RESET_LINK_MINUTES = 30;
+
+/** An active account by username or email, for the Forgot Password form. */
+async function findActiveAccount(identifier) {
+  const value = String(identifier || "").trim();
+  if (!value) return null;
+  const rows = await query(
+    "SELECT id, username, full_name AS name, email FROM users WHERE status = 'Active' AND (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)) LIMIT 1",
+    [value, value]
+  );
+  return rows[0] || null;
+}
+
+/** Issues a reset token for the account; earlier unused ones stop working. */
+async function createPasswordReset(userId) {
+  const token = crypto.randomBytes(32).toString("hex");
+  await query("UPDATE password_resets SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL", [userId]);
+  await query(
+    `INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ${RESET_LINK_MINUTES} MINUTE))`,
+    [sha256(token), userId]
+  );
+  return { token, minutes: RESET_LINK_MINUTES };
+}
+
+/**
+ * Sets a new password with a reset token. The token is spent in the same
+ * transaction, so it cannot be used twice. Returns the user id, or null
+ * when the token is unknown, used or expired.
+ */
+async function consumePasswordReset(token, passwordHash) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.execute(
+      `SELECT r.user_id AS userId FROM password_resets r JOIN users u ON u.id = r.user_id
+       WHERE r.token_hash = ? AND r.used_at IS NULL AND r.expires_at > NOW() AND u.status = 'Active'
+       LIMIT 1 FOR UPDATE`,
+      [sha256(token)]
+    );
+    if (!rows[0]) { await connection.rollback(); return null; }
+    const { userId } = rows[0];
+    await connection.execute("UPDATE password_resets SET used_at = NOW() WHERE token_hash = ?", [sha256(token)]);
+    await connection.execute("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, userId]);
+    await connection.commit();
+    return userId;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 async function activeElection() {
@@ -620,8 +701,10 @@ async function recordAudit({ userId, userName, userRole, action, entityType, ent
 }
 
 module.exports = {
-  query, health, hashPassword, findUser, findUserByEmail, recordLogin, createStudentAccount,
-  createStaffAccount, registrationScopes, resetPassword,
+  query, health, hashPassword, verifyPassword, needsRehash, findUser, findUserByEmail, recordLogin, createStudentAccount,
+  createStaffAccount, registrationScopes,
+  createSession, findSession, deleteSession, deleteSessionsFor, purgeExpiredSessions,
+  findActiveAccount, createPasswordReset, consumePasswordReset,
   getPreferences, savePreferences, getSystemSettings, saveSystemSettings, passwordHashFor, changePassword,
   saveFile, getFileInfo, getFileContent,
   paymentMethods, feeItems, tuitionBalance, controlNumbersFor, findControlNumber, issueControlNumber, payControlNumber, activeElection, votesCast, electionResults, castElectionVote,

@@ -9,6 +9,7 @@
    Quality Assurance Officer is enforced as strictly read-only.
    ========================================================= */
 const http = require("node:http");
+const https = require("node:https");
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -16,9 +17,9 @@ const { config } = require("./config");
 const db = require("./db");
 const repo = require("./db/repository");
 const { RESOURCES, READ_ONLY_ROLES } = require("./db/resources");
+const mailer = require("./mailer");
 
 const ROOT = __dirname;
-const sessions = new Map();
 
 // Roles a visitor may request on the public Create Account form, and the
 // scope each needs. A student account is usable at once; every staff role
@@ -47,13 +48,6 @@ const SELF_REGISTER_ROLES = {
 // ---------------------------------------------------------------------
 function accountId() {
   return `USR-${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
-}
-
-function safeEqual(left, right) {
-  if (typeof left !== "string" || typeof right !== "string") return false;
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 function publicUser(account) {
@@ -87,23 +81,33 @@ function getToken(req) {
   return header.startsWith("Bearer ") ? header.slice(7) : null;
 }
 
-function authenticatedUser(req) {
+// Sessions live in the user_sessions table (see db.js), so they survive a
+// restart and are shared by every server process.
+async function authenticatedUser(req) {
   const token = getToken(req);
-  const session = token && sessions.get(token);
-  if (!session || session.expiresAt < Date.now()) {
-    if (token) sessions.delete(token);
-    return null;
-  }
-  return { token, user: session.user };
+  if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
+  const user = await db.findSession(token);
+  return user ? { token, user } : null;
 }
 
-function requireUser(req, res) {
-  const session = authenticatedUser(req);
+async function requireUser(req, res) {
+  const session = await authenticatedUser(req);
   if (!session) {
     sendJson(res, 401, { success: false, message: "Authentication required." });
     return null;
   }
   return session;
+}
+
+/** Where this server is reached, for links in emails. */
+function publicBaseUrl(req) {
+  if (config.publicUrl) return config.publicUrl;
+  const scheme = tlsEnabled() ? "https" : "http";
+  return `${scheme}://${req.headers.host || `${config.host}:${config.port}`}`;
+}
+
+function tlsEnabled() {
+  return !!(config.tls.certFile && config.tls.keyFile);
 }
 
 function clientIp(req) {
@@ -176,6 +180,30 @@ function ownerIdentity(resource, user) {
   return resource.ownerUserField ? user.id : user.studentId;
 }
 
+/**
+ * Applicants have no account, so an admission decision reaches them by
+ * email. Only final decisions are sent; "Under Review" is internal.
+ */
+async function emailAdmissionDecision(application) {
+  if (!["Accepted", "Rejected"].includes(application.status) || !application.email) return;
+  const [programme] = await repo.query("SELECT name FROM programmes WHERE id = ? LIMIT 1", [application.programmeId]);
+  const programmeName = programme ? programme.name : application.programmeId;
+  const accepted = application.status === "Accepted";
+  const notes = String(application.notes || "").trim();
+  await mailer.send({
+    to: application.email,
+    purpose: "admission-decision",
+    subject: `Your USIAMS admission application ${application.id}: ${application.status}`,
+    text: `Dear ${application.fullName},\n\n` +
+      (accepted
+        ? `Congratulations - your application ${application.id} for ${programmeName} has been accepted. ` +
+          "Create your student account on the USIAMS sign-in page (Create Account) choosing this programme to continue with registration."
+        : `Thank you for applying. We regret that your application ${application.id} for ${programmeName} was not successful.`) +
+      (notes ? `\n\nNotes from the admissions office:\n${notes}` : "") +
+      "\n\nUSIAMS Admissions Office"
+  });
+}
+
 // Roles that can administer accounts. If every one of these is deactivated
 // or removed, nobody can ever restore them.
 const ACCOUNT_ADMIN_ROLES = ["SYSTEM_ADMIN", "UNIVERSITY_ADMIN"];
@@ -187,11 +215,7 @@ const ACCOUNT_ADMIN_ROLES = ["SYSTEM_ADMIN", "UNIVERSITY_ADMIN"];
  * administrator believed they had revoked it.
  */
 function revokeSessionsFor(userId) {
-  let revoked = 0;
-  for (const [token, session] of sessions) {
-    if (session.user.id === userId) { sessions.delete(token); revoked++; }
-  }
-  return revoked;
+  return db.deleteSessionsFor(userId);
 }
 
 /**
@@ -425,7 +449,8 @@ async function handleResourceRoute(req, res, url, session) {
     const updated = await repo.update(name, id, body);
     // Suspending an account has to take effect now, not when its token
     // happens to expire.
-    if (name === "users" && updated && updated.status !== "Active") revokeSessionsFor(id);
+    if (name === "users" && updated && updated.status !== "Active") await revokeSessionsFor(id);
+    if (name === "applications" && updated && updated.status !== existing.status) await emailAdmissionDecision(updated);
     await db.recordAudit({
       userId: user.id, userName: user.name, userRole: user.role, action: "UPDATE",
       entityType: name, entityId: id, ip: clientIp(req)
@@ -447,7 +472,7 @@ async function handleResourceRoute(req, res, url, session) {
       if (refusal) { sendJson(res, 409, { success: false, message: refusal }); return; }
     }
     await repo.remove(name, id);
-    if (name === "users") revokeSessionsFor(id);
+    if (name === "users") await revokeSessionsFor(id);
     await db.recordAudit({
       userId: user.id, userName: user.name, userRole: user.role, action: "DELETE",
       entityType: name, entityId: id, ip: clientIp(req)
@@ -650,7 +675,7 @@ function contentType(filePath) {
 // static handler happily served server.js, db.js, the SQL scripts and - once
 // the operator follows db/README.md and creates one - .env with the database
 // password in it.
-const PUBLIC_DIRECTORIES = ["css", "js", "data", "components", "assets", "modules", "pages"];
+const PUBLIC_DIRECTORIES = ["css", "js", "data", "components", "assets", "pages"];
 
 function isPublicPath(relativePath) {
   const normalized = relativePath.split(path.sep).join("/");
@@ -704,7 +729,7 @@ async function handleApi(req, res, url) {
     try {
       const { username, password } = await readBody(req);
       const account = await db.findUser(String(username || ""));
-      const passwordMatches = !!account && safeEqual(account.passwordHash, db.hashPassword(String(password || "")));
+      const passwordMatches = !!account && db.verifyPassword(String(password || ""), account.passwordHash);
       // Only someone who knows the password learns the account is waiting.
       if (passwordMatches && account.status === "Pending") {
         sendJson(res, 403, { success: false, message: "Your account request is awaiting approval by a university administrator. You can sign in once it is approved." });
@@ -721,11 +746,14 @@ async function handleApi(req, res, url) {
       const token = crypto.randomBytes(32).toString("hex");
       const user = publicUser(account);
       await db.recordLogin(account.id);
+      // Hashes from before per-password salts are replaced now that the
+      // password is known to be correct.
+      if (db.needsRehash(account.passwordHash)) await db.changePassword(account.id, db.hashPassword(String(password)));
       await db.recordAudit({
         userId: user.id, userName: user.name, userRole: user.role, action: "LOGIN",
         entityType: "Session", entityId: token.slice(0, 8).toUpperCase(), ip: clientIp(req)
       });
-      sessions.set(token, { user, expiresAt: Date.now() + config.sessionTtlMs });
+      await db.createSession({ token, user, ip: clientIp(req), ttlMs: config.sessionTtlMs });
       sendJson(res, 200, { success: true, token, user });
     } catch (error) {
       console.error("USIAMS database authentication failed:", error.message);
@@ -832,21 +860,58 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  // Forgot Password, step 1: email a one-time reset link to the account.
+  // Knowing a username and email is not proof of owning the account, so the
+  // new password is only accepted with the token from that email (step 2).
+  // The reply is the same whether or not an account matched, so this form
+  // cannot be used to discover which usernames or emails exist.
+  if (req.method === "POST" && url.pathname === "/api/auth/forgot-password") {
+    const generic = { success: true, message: "If an active account matches, a password reset link has been sent to its email address. The link works once and expires in 30 minutes." };
+    try {
+      const { identifier } = await readBody(req);
+      const account = await db.findActiveAccount(String(identifier || "").trim());
+      if (account && account.email) {
+        const { token, minutes } = await db.createPasswordReset(account.id);
+        const link = `${publicBaseUrl(req)}/login.html?reset=${token}`;
+        await mailer.send({
+          to: account.email,
+          purpose: "password-reset",
+          subject: "Reset your USIAMS password",
+          text: `Hello ${account.name},\n\nSomeone asked to reset the password for the USIAMS account "${account.username}". ` +
+            `To choose a new password, open this link within ${minutes} minutes:\n\n${link}\n\n` +
+            "If you did not ask for this, ignore this email - your password has not changed."
+        });
+        await db.recordAudit({ userId: account.id, userName: account.name, action: "UPDATE", entityType: "password_reset_requested", entityId: account.id, ip: clientIp(req) });
+      }
+      sendJson(res, 200, generic);
+    } catch (error) {
+      console.error("USIAMS password reset request failed:", error.message);
+      sendJson(res, 503, { success: false, message: "The password reset service is unavailable." });
+    }
+    return;
+  }
+
+  // Forgot Password, step 2: the token from the email sets the new password.
   if (req.method === "POST" && url.pathname === "/api/auth/reset-password") {
     try {
-      const { username, email, password } = await readBody(req);
-      const normalizedUsername = String(username || "").trim().toLowerCase();
-      const normalizedEmail = String(email || "").trim().toLowerCase();
+      const { token, password } = await readBody(req);
       const newPassword = String(password || "");
-      if (!normalizedUsername || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || newPassword.length < 8) {
-        sendJson(res, 422, { success: false, message: "Enter a valid username, email, and password of at least 8 characters." });
+      if (!/^[0-9a-f]{64}$/.test(String(token || ""))) {
+        sendJson(res, 422, { success: false, message: "This reset link is not valid. Request a new one." });
         return;
       }
-      const updated = await db.resetPassword({ username: normalizedUsername, email: normalizedEmail, passwordHash: db.hashPassword(newPassword) });
-      if (!updated) {
-        sendJson(res, 404, { success: false, message: "No active account matched that username and email." });
+      if (newPassword.length < 8) {
+        sendJson(res, 422, { success: false, message: "Choose a password of at least 8 characters." });
         return;
       }
+      const userId = await db.consumePasswordReset(String(token), db.hashPassword(newPassword));
+      if (!userId) {
+        sendJson(res, 410, { success: false, message: "This reset link has expired or has already been used. Request a new one." });
+        return;
+      }
+      // Whoever may have been signed in with the old password is signed out.
+      await revokeSessionsFor(userId);
+      await db.recordAudit({ userId, action: "UPDATE", entityType: "password", entityId: userId, ip: clientIp(req) });
       sendJson(res, 200, { success: true, message: "Password reset successfully. You can now sign in." });
     } catch (error) {
       console.error("USIAMS password reset failed:", error.message);
@@ -919,13 +984,13 @@ async function handleApi(req, res, url) {
   // Settings > Change Password: the signed-in user proves the current
   // password, then the new one replaces it in the database.
   if (req.method === "POST" && url.pathname === "/api/auth/change-password") {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (!session) return;
     const { user } = session;
     const { currentPassword, newPassword } = await readBody(req);
     const next = String(newPassword || "");
     const storedHash = await db.passwordHashFor(user.id);
-    if (!storedHash || !safeEqual(storedHash, db.hashPassword(String(currentPassword || "")))) {
+    if (!storedHash || !db.verifyPassword(String(currentPassword || ""), storedHash)) {
       sendJson(res, 422, { success: false, message: "Your current password is not correct." });
       return;
     }
@@ -938,32 +1003,32 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/auth/me") {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (session) sendJson(res, 200, { success: true, user: session.user });
     return;
   }
 
   if (req.method === "POST" && url.pathname === "/api/auth/logout") {
-    const session = authenticatedUser(req);
+    const session = await authenticatedUser(req);
     if (session) {
       await db.recordAudit({
         userId: session.user.id, userName: session.user.name, userRole: session.user.role,
         action: "LOGOUT", entityType: "Session", ip: clientIp(req)
       });
-      sessions.delete(session.token);
+      await db.deleteSession(session.token);
     }
     sendJson(res, 200, { success: true });
     return;
   }
 
   if (req.method === "GET" && url.pathname === "/api/bootstrap") {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (session) await handleBootstrap(req, res, session);
     return;
   }
 
   if (req.method === "GET" && url.pathname === "/api/dashboard/summary") {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (session) await handleDashboardSummary(req, res, session);
     return;
   }
@@ -972,7 +1037,7 @@ async function handleApi(req, res, url) {
   // /api/files/<id> URL. Students reach only their own files; staff
   // (who review documents and mark submissions) can open any.
   if (url.pathname === "/api/files" && req.method === "POST") {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (!session) return;
     const { user } = session;
     let body;
@@ -992,7 +1057,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && /^\/api\/files\/[A-Z0-9-]+$/.test(url.pathname)) {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (!session) return;
     const { user } = session;
     const info = await db.getFileInfo(url.pathname.split("/").pop());
@@ -1011,25 +1076,25 @@ async function handleApi(req, res, url) {
   }
 
   if (url.pathname === "/api/me/preferences" || url.pathname === "/api/settings/system") {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (session) await handleSettingsRoute(req, res, url, session);
     return;
   }
 
   if (url.pathname.startsWith("/api/finance/")) {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (session) await handleFinanceRoute(req, res, url, session);
     return;
   }
 
   if (url.pathname.startsWith("/api/data/")) {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (session) await handleResourceRoute(req, res, url, session);
     return;
   }
 
   if (req.method === "GET" && url.pathname === "/api/elections/active") {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (!session) return;
     const election = await db.activeElection();
     const votedPositions = election && session.user.studentId
@@ -1040,7 +1105,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/elections/results") {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (!session) return;
     const election = await db.activeElection();
     if (!election) { sendJson(res, 200, { success: true, results: [] }); return; }
@@ -1049,7 +1114,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && url.pathname === "/api/elections/vote") {
-    const session = requireUser(req, res);
+    const session = await requireUser(req, res);
     if (!session) return;
     if (session.user.role !== "STUDENT" || !session.user.studentId) {
       sendJson(res, 403, { success: false, message: "Only registered students may vote." });
@@ -1077,7 +1142,17 @@ async function handleApi(req, res, url) {
 }
 
 // ---------------------------------------------------------------------
-const server = http.createServer(async (req, res) => {
+// With TLS_CERT_FILE and TLS_KEY_FILE set the server speaks HTTPS itself;
+// otherwise it serves plain HTTP (for local use, or behind a proxy such as
+// nginx or IIS that terminates HTTPS).
+function tlsOptions() {
+  if (!tlsEnabled()) return null;
+  return { cert: fs.readFileSync(config.tls.certFile), key: fs.readFileSync(config.tls.keyFile) };
+}
+
+async function handleRequest(req, res) {
+  // Over HTTPS, tell browsers never to fall back to plain HTTP.
+  if (tlsEnabled()) res.setHeader("Strict-Transport-Security", "max-age=31536000");
   const rawPath = String(req.url || "/").split("?")[0];
   let decodedPath;
   try {
@@ -1103,7 +1178,9 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   serveStatic(req, res, url.pathname);
-});
+}
+
+const server = tlsEnabled() ? https.createServer(tlsOptions(), handleRequest) : http.createServer(handleRequest);
 
 server.on("error", error => {
   if (error.code === "EADDRINUSE") {
@@ -1117,13 +1194,17 @@ server.on("error", error => {
 });
 
 server.listen(config.port, config.host, async () => {
-  console.log(`USIAMS running at http://${config.host}:${config.port}`);
+  console.log(`USIAMS running at ${tlsEnabled() ? "https" : "http"}://${config.host}:${config.port}`);
   // Report the database state up front; otherwise a stopped MySQL only
   // shows up later as a failed sign-in.
   if (!(await db.health())) {
     console.error(`USIAMS cannot reach MySQL at ${config.db.host}:${config.db.port} (database "${config.db.database}").`);
     console.error("Start MySQL and check DB_* in .env - pages will load but sign-in will fail until it is reachable.");
   }
+  // Expired sessions are already refused; this only keeps the table small.
+  const purge = () => db.purgeExpiredSessions().catch(error => console.warn("USIAMS: session cleanup failed:", error.message));
+  purge();
+  setInterval(purge, 60 * 60 * 1000).unref();
 });
 
 module.exports = { server };

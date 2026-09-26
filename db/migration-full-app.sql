@@ -417,3 +417,48 @@ CREATE TABLE IF NOT EXISTS stored_file_chunks (
   PRIMARY KEY (file_id, chunk_index),
   CONSTRAINT fk_stored_file_chunks_file FOREIGN KEY (file_id) REFERENCES stored_files(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- Sign-in sessions. Held here rather than in the server's memory so a
+-- restart does not sign everyone out and more than one server process can
+-- share them. Only a SHA-256 of the token is stored: a copy of this table
+-- cannot be used to sign in.
+CREATE TABLE IF NOT EXISTS user_sessions (
+  token_hash CHAR(64) PRIMARY KEY,
+  user_id VARCHAR(40) NOT NULL,
+  user_json TEXT NOT NULL,
+  ip_address VARCHAR(64) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  INDEX idx_user_sessions_user (user_id),
+  INDEX idx_user_sessions_expiry (expires_at),
+  CONSTRAINT fk_user_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- One-time password reset links, sent to the account's email. Stored as a
+-- SHA-256 of the token, valid for 30 minutes and for a single use.
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash CHAR(64) PRIMARY KEY,
+  user_id VARCHAR(40) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  INDEX idx_password_resets_user (user_id),
+  CONSTRAINT fk_password_resets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Every email the system sends, and whether it went out. With no SMTP
+-- server configured messages stay 'Queued' here (and are printed to the
+-- server console) so nothing is silently lost.
+CREATE TABLE IF NOT EXISTS outbound_messages (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  channel ENUM('Email') NOT NULL DEFAULT 'Email',
+  recipient VARCHAR(255) NOT NULL,
+  subject VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL,
+  purpose VARCHAR(40) NOT NULL,
+  status ENUM('Queued', 'Sent', 'Failed') NOT NULL DEFAULT 'Queued',
+  error VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  sent_at DATETIME NULL,
+  INDEX idx_outbound_messages_status (status)
+) ENGINE=InnoDB;

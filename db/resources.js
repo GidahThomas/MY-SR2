@@ -17,13 +17,7 @@
    server.js, so a tampered client cannot gain write access.
    ========================================================= */
 
-const crypto = require("node:crypto");
-const { config } = require("../config");
-
-/** Same scrypt parameters as the login route, so hashes stay comparable. */
-function hashPassword(password) {
-  return crypto.scryptSync(String(password || ""), config.passwordSalt, 64).toString("hex");
-}
+const { hashPassword } = require("./passwords");
 
 const ROLES = [
   "STUDENT", "LECTURER", "ACADEMIC_ADVISOR", "DEPARTMENT_ADMIN", "HEAD_OF_DEPARTMENT",

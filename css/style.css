@@ -5,7 +5,7 @@
    ========================================================= */
 
 /* Professional, readable type system for the university application. */
-@import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
+@import url('../assets/vendor/mulish/mulish.css');
 
 :root {
   /* Brand - the primary blue scale (#1C60A4) with a lighter accent blue,
@@ -25,14 +25,20 @@
   --primary-dark: #164d83;
   --primary-light: #e8f1fa;
   --accent: #4e90fe;
-  --success: #1a8b5e;
-  --success-bg: #e6f6ef;
-  --warning: #b5790a;
-  --warning-bg: #fdf1de;
-  --danger: #c0362c;
-  --danger-bg: #fbe9e7;
-  --info: #2563eb;
-  --info-bg: #eaf1fd;
+  --success: #15803d;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --warning: #a16207;
+  --warning-bg: #fefce8;
+  --warning-border: #fef08a;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --info: #1d4ed8;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
+  --input-border: #d1d5db;
+  --focus-ring: #3b82f6;
 
   /* Neutrals - light theme */
   --bg: #f9fafb;
@@ -83,6 +89,11 @@
   --warning-bg: #2b220f;
   --danger-bg: #2b1613;
   --info-bg: #101f33;
+  --success-border: #1d4a33;
+  --warning-border: #4a3a12;
+  --danger-border: #4d2320;
+  --info-border: #1e3a5f;
+  --input-border: #2e3c55;
 
   --sidebar-bg: #0a1424;
   --sidebar-border: rgba(255,255,255,0.06);
@@ -616,30 +627,40 @@ h1, h2, h3, h4, h5, h6 {
 .offcanvas { background: var(--surface); color: var(--text); }
 .modal-content { background: var(--surface); color: var(--text); border-radius: var(--radius-lg); }
 .form-control, .form-select {
-  background: var(--surface); color: var(--text); border-color: var(--border);
+  background-color: var(--surface); color: var(--text); border-color: var(--input-border);
+  border-radius: .75rem; padding-top: .625rem; padding-bottom: .625rem;
 }
+.form-control { padding-left: 1rem; padding-right: 1rem; }
+.form-control-sm, .form-select-sm { border-radius: .5rem; padding-top: .35rem; padding-bottom: .35rem; }
+.input-group > .form-control, .input-group > .form-select { border-radius: 0; }
+.input-group > :first-child { border-top-left-radius: .75rem; border-bottom-left-radius: .75rem; }
+.input-group > :last-child { border-top-right-radius: .75rem; border-bottom-right-radius: .75rem; }
 .form-control:focus, .form-select:focus {
-  border-color: var(--primary); box-shadow: 0 0 0 .2rem rgba(28,96,164,.18);
-  background: var(--surface); color: var(--text);
+  border-color: transparent; box-shadow: 0 0 0 2px var(--focus-ring);
+  background-color: var(--surface); color: var(--text);
 }
-/* Buttons: solid primary with a lift on hover, and a white "secondary"
-   with a 2px primary border - rounded .5rem, semibold. */
-.btn { --bs-btn-border-radius: .5rem; --bs-btn-font-weight: 600; }
+/* Buttons: rounded-xl, semibold, and a flat darker shade on hover - no
+   lift. Small buttons use rounded-lg. */
+.btn { --bs-btn-border-radius: .75rem; --bs-btn-font-weight: 600; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+.btn-sm { --bs-btn-border-radius: .5rem; }
 .btn-primary {
   --bs-btn-bg: var(--primary); --bs-btn-border-color: var(--primary);
   --bs-btn-hover-bg: var(--primary-dark); --bs-btn-hover-border-color: var(--primary-dark);
   --bs-btn-active-bg: var(--primary-dark); --bs-btn-active-border-color: var(--primary-dark);
   --bs-btn-disabled-bg: var(--primary); --bs-btn-disabled-border-color: var(--primary);
   --bs-btn-focus-shadow-rgb: 28, 96, 164;
-  box-shadow: var(--shadow-md);
 }
-.btn-primary:hover { box-shadow: var(--shadow-lg); }
 .btn-outline-primary {
   --bs-btn-color: var(--primary); --bs-btn-border-color: var(--primary);
-  --bs-btn-hover-bg: var(--surface-alt); --bs-btn-hover-color: var(--primary); --bs-btn-hover-border-color: var(--primary);
-  --bs-btn-active-bg: var(--surface-alt); --bs-btn-active-color: var(--primary); --bs-btn-active-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--primary-light); --bs-btn-hover-color: var(--primary); --bs-btn-hover-border-color: var(--primary);
+  --bs-btn-active-bg: var(--primary-light); --bs-btn-active-color: var(--primary); --bs-btn-active-border-color: var(--primary);
   --bs-btn-focus-shadow-rgb: 28, 96, 164;
-  border-width: 2px;
+}
+/* Neutral buttons: white with a gray border, gray-50 on hover. */
+.btn-light, .btn-outline-secondary {
+  --bs-btn-bg: var(--surface); --bs-btn-color: var(--text); --bs-btn-border-color: var(--input-border);
+  --bs-btn-hover-bg: var(--surface-alt); --bs-btn-hover-color: var(--text); --bs-btn-hover-border-color: var(--input-border);
+  --bs-btn-active-bg: var(--surface-alt); --bs-btn-active-color: var(--text); --bs-btn-active-border-color: var(--input-border);
 }
 .table { color: var(--text); }
 .dropdown-menu { background: var(--surface); border-color: var(--border); color: var(--text); }

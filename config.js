@@ -33,7 +33,26 @@ const config = {
   host: process.env.HOST || "127.0.0.1",
   port: Number(process.env.PORT || 3000),
   sessionTtlMs: Number(process.env.SESSION_TTL_HOURS || 8) * 60 * 60 * 1000,
+  // Only verifies password hashes written before each got its own salt;
+  // those are upgraded on the account's next sign-in.
   passwordSalt: process.env.PASSWORD_SALT || "usiams-demo-salt",
+  // The address this server is reached at, used in links sent by email.
+  // Defaults to the host and port it listens on.
+  publicUrl: (process.env.PUBLIC_URL || "").replace(/\/+$/, ""),
+  // HTTPS: set both to serve TLS directly from this process.
+  tls: {
+    certFile: process.env.TLS_CERT_FILE || "",
+    keyFile: process.env.TLS_KEY_FILE || ""
+  },
+  smtp: {
+    host: process.env.SMTP_HOST || "",
+    port: Number(process.env.SMTP_PORT || 587),
+    // true for port 465 (implicit TLS); false upgrades with STARTTLS.
+    secure: /^(1|true|yes)$/i.test(process.env.SMTP_SECURE || ""),
+    user: process.env.SMTP_USER || "",
+    password: process.env.SMTP_PASSWORD || "",
+    from: process.env.SMTP_FROM || "USIAMS <no-reply@localhost>"
+  },
   db: {
     host: process.env.DB_HOST || "127.0.0.1",
     port: Number(process.env.DB_PORT || 3306),

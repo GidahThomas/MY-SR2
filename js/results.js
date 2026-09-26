@@ -97,7 +97,7 @@
   function downloadTranscript() {
     const results = window.USIAMS.results.resultsForStudent(student.id).map(withCredits);
     const lines = [
-      "USIAMS - UNOFFICIAL ACADEMIC TRANSCRIPT (SIMULATED)",
+      "USIAMS - UNOFFICIAL ACADEMIC TRANSCRIPT",
       `Student: ${window.USIAMS.util.studentLabel(student, currentUser)} (${student.regNumber})`,
       `Programme: ${academic.getProgramme(student.programmeId).name}`,
       "",
