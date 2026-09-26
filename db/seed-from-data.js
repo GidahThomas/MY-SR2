@@ -29,7 +29,13 @@ const TABLES_IN_DEPENDENCY_ORDER = [
   "internship_records", "graduation_clearance", "alumni", "qa_flags", "calendar_events",
   "public_holidays", "elearning_materials", "elearning_assignments", "elearning_submissions",
   "admission_applications", "audit_logs",
-  "election_votes", "election_candidates", "election_positions", "elections"
+  "election_votes", "election_candidates", "election_positions", "elections",
+  // Issued control numbers belong to the students above; the payment
+  // methods and fee items they refer to are reference data from the
+  // migration and are kept.
+  "control_numbers",
+  // Per-user settings belong to the demo accounts being replaced.
+  "user_preferences"
 ];
 
 function hashPassword(password) {

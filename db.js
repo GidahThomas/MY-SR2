@@ -36,14 +36,18 @@ async function findUser(username) {
       u.full_name AS name,
       u.email,
       u.status,
+      u.department_id AS departmentId,
+      COALESCE(u.unit_id, d.unit_id) AS unitId,
       s.id AS studentId,
       GROUP_CONCAT(r.id ORDER BY r.id SEPARATOR ',') AS roles
     FROM users u
     LEFT JOIN students s ON s.email = u.email
+    LEFT JOIN departments d ON d.id = u.department_id
     LEFT JOIN user_roles ur ON ur.user_id = u.id
     LEFT JOIN roles r ON r.id = ur.role_id
     WHERE LOWER(u.username) = LOWER(?)
-    GROUP BY u.id, u.username, u.password_hash, u.full_name, u.email, u.status, s.id
+    GROUP BY u.id, u.username, u.password_hash, u.full_name, u.email, u.status,
+      u.department_id, u.unit_id, d.unit_id, s.id
     LIMIT 1
   `, [username]);
   const user = rows[0];
@@ -171,6 +175,351 @@ async function createStudentAccount({ id, username, passwordHash, fullName, emai
   }
 }
 
+/**
+ * A self-registered staff account. It is created Pending - sign-in only
+ * accepts Active accounts - so it stays unusable until an administrator
+ * approves it from Administration > Users.
+ */
+async function createStaffAccount({ id, username, passwordHash, fullName, email, role, departmentId, unitId }) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.execute(
+      `INSERT INTO users (id, username, password_hash, full_name, email, status, department_id, unit_id)
+       VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?)`,
+      [id, String(username || "").trim(), passwordHash, fullName, String(email || "").trim(),
+        departmentId || null, unitId || null]
+    );
+    await connection.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", [id, role]);
+    await connection.commit();
+    return { userId: id };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+/** Departments and organisational units a staff applicant can choose from. */
+async function registrationScopes() {
+  const departments = await query(
+    "SELECT id, name, unit_id AS unitId FROM departments WHERE status = 'Active' ORDER BY name"
+  );
+  const units = await query(
+    "SELECT id, name, unit_type AS type FROM organisational_units WHERE status = 'Active' ORDER BY name"
+  );
+  return { departments, units };
+}
+
+// ---------------------------------------------------------------------
+// Per-user preferences and university-wide settings
+// ---------------------------------------------------------------------
+function parseJson(value, fallback) {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value !== "string") return value;
+  try { return JSON.parse(value); } catch { return fallback; }
+}
+
+async function getPreferences(userId) {
+  const rows = await query("SELECT preferences FROM user_preferences WHERE user_id = ? LIMIT 1", [userId]);
+  return rows[0] ? parseJson(rows[0].preferences, {}) : {};
+}
+
+/** Merges `patch` into the user's stored preferences and returns the result. */
+async function savePreferences(userId, patch) {
+  const merged = { ...(await getPreferences(userId)), ...(patch || {}) };
+  await query(
+    `INSERT INTO user_preferences (user_id, preferences) VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE preferences = VALUES(preferences)`,
+    [userId, JSON.stringify(merged)]
+  );
+  return merged;
+}
+
+async function getSystemSettings() {
+  const rows = await query("SELECT setting_key AS settingKey, setting_value AS settingValue FROM system_settings");
+  return Object.fromEntries(rows.map(r => [r.settingKey, parseJson(r.settingValue, null)]));
+}
+
+async function saveSystemSettings(patch, userId) {
+  for (const [key, value] of Object.entries(patch || {})) {
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,59}$/.test(key)) continue;
+    await query(
+      `INSERT INTO system_settings (setting_key, setting_value, updated_by) VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by)`,
+      [key, JSON.stringify(value), userId || null]
+    );
+  }
+  return getSystemSettings();
+}
+
+// ---------------------------------------------------------------------
+// Uploaded files, stored in the database in chunks
+// ---------------------------------------------------------------------
+const FILE_CHUNK_BYTES = 512 * 1024;
+
+async function saveFile({ ownerUserId, studentId, purpose, name, mimeType, content }) {
+  const id = `FILE-${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.execute(
+      `INSERT INTO stored_files (id, owner_user_id, student_id, purpose, original_name, mime_type, size_bytes)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, ownerUserId || null, studentId || null, purpose, name, mimeType, content.length]
+    );
+    for (let i = 0, offset = 0; offset < content.length; i++, offset += FILE_CHUNK_BYTES) {
+      await connection.execute(
+        "INSERT INTO stored_file_chunks (file_id, chunk_index, data) VALUES (?, ?, ?)",
+        [id, i, content.subarray(offset, offset + FILE_CHUNK_BYTES)]
+      );
+    }
+    await connection.commit();
+    return { id, name, mimeType, size: content.length, url: `/api/files/${id}` };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function getFileInfo(id) {
+  const rows = await query(
+    `SELECT id, owner_user_id AS ownerUserId, student_id AS studentId, purpose, original_name AS name,
+            mime_type AS mimeType, size_bytes AS size, created_at AS createdAt
+     FROM stored_files WHERE id = ? LIMIT 1`, [String(id || "")]
+  );
+  return rows[0] || null;
+}
+
+async function getFileContent(id) {
+  const chunks = await query("SELECT data FROM stored_file_chunks WHERE file_id = ? ORDER BY chunk_index", [String(id || "")]);
+  return Buffer.concat(chunks.map(c => Buffer.from(c.data)));
+}
+
+// ---------------------------------------------------------------------
+// Control-number payments
+// ---------------------------------------------------------------------
+const CONTROL_NUMBER_DAYS = 7;
+
+async function paymentMethods() {
+  return query(
+    "SELECT id, name, channel, instructions FROM payment_methods WHERE status = 'Active' ORDER BY sort_order, name"
+  );
+}
+
+/** The student's tuition invoice and what is still owed on it. */
+async function tuitionBalance(studentId) {
+  const invoices = await query(
+    "SELECT id, description, amount_billed AS billed FROM invoices WHERE student_id = ? AND status <> 'Cancelled' ORDER BY issued_date LIMIT 1",
+    [studentId]
+  );
+  const invoice = invoices[0];
+  if (!invoice) return null;
+  const paid = await query(
+    "SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = ? AND status = 'Completed'",
+    [invoice.id]
+  );
+  const billed = Number(invoice.billed);
+  const balance = Math.max(0, billed - Number(paid[0].paid));
+  return { invoiceId: invoice.id, description: invoice.description, billed, balance };
+}
+
+/** Fee items on offer; for a student, tuition carries their outstanding balance. */
+async function feeItems(studentId) {
+  const items = await query(
+    "SELECT id, name, description, kind, amount FROM fee_items WHERE status = 'Active' ORDER BY sort_order, name"
+  );
+  const tuition = studentId ? await tuitionBalance(studentId) : null;
+  return items.map(item => {
+    const out = { ...item, amount: item.amount === null ? null : Number(item.amount) };
+    if (item.kind === "TUITION") {
+      out.amount = tuition ? tuition.balance : 0;
+      out.available = !!tuition && tuition.balance > 0;
+      out.note = !tuition ? "No tuition invoice has been issued yet."
+        : tuition.balance > 0 ? null : "Your tuition is fully paid.";
+    } else {
+      out.available = true;
+    }
+    return out;
+  });
+}
+
+function controlNumberRow(row) {
+  return row && {
+    controlNumber: row.controlNumber, studentId: row.studentId, feeItemId: row.feeItemId,
+    feeItemName: row.feeItemName, invoiceId: row.invoiceId, description: row.description,
+    amount: Number(row.amount), status: row.status, paymentMethodId: row.paymentMethodId,
+    paymentId: row.paymentId, createdAt: row.createdAt, expiresAt: row.expiresAt, paidAt: row.paidAt
+  };
+}
+
+const CONTROL_NUMBER_SELECT = `
+  SELECT c.control_number AS controlNumber, c.student_id AS studentId, c.fee_item_id AS feeItemId,
+         f.name AS feeItemName, c.invoice_id AS invoiceId, c.description, c.amount, c.status,
+         c.payment_method_id AS paymentMethodId, c.payment_id AS paymentId,
+         c.created_at AS createdAt, c.expires_at AS expiresAt, c.paid_at AS paidAt
+  FROM control_numbers c JOIN fee_items f ON f.id = c.fee_item_id`;
+
+async function expireControlNumbers() {
+  await query("UPDATE control_numbers SET status = 'Expired' WHERE status = 'Pending' AND expires_at < NOW()");
+}
+
+async function controlNumbersFor(studentId) {
+  await expireControlNumbers();
+  const rows = studentId
+    ? await query(`${CONTROL_NUMBER_SELECT} WHERE c.student_id = ? ORDER BY c.created_at DESC`, [studentId])
+    : await query(`${CONTROL_NUMBER_SELECT} ORDER BY c.created_at DESC LIMIT 200`);
+  return rows.map(controlNumberRow);
+}
+
+async function findControlNumber(controlNumber) {
+  await expireControlNumbers();
+  const rows = await query(`${CONTROL_NUMBER_SELECT} WHERE c.control_number = ? LIMIT 1`, [String(controlNumber || "")]);
+  return controlNumberRow(rows[0]);
+}
+
+/**
+ * Issues a control number for one fee item. A still-valid pending number for
+ * the same item and amount is returned instead of issuing a second one.
+ * Throws with a .status (422) when the item cannot be paid for.
+ */
+async function issueControlNumber({ studentId, feeItemId, amount }) {
+  const fail = (message) => Object.assign(new Error(message), { status: 422 });
+  const items = await query("SELECT id, name, kind, amount FROM fee_items WHERE id = ? AND status = 'Active' LIMIT 1", [String(feeItemId || "")]);
+  const item = items[0];
+  if (!item) throw fail("Choose what you are paying for.");
+
+  let invoiceId = null;
+  let due;
+  let description = item.name;
+  if (item.kind === "TUITION") {
+    const tuition = await tuitionBalance(studentId);
+    if (!tuition) throw fail("No tuition invoice has been issued yet.");
+    if (tuition.balance <= 0) throw fail("Your tuition is fully paid.");
+    invoiceId = tuition.invoiceId;
+    description = `${item.name} - ${tuition.description}`;
+    // Tuition may be paid in instalments: any amount up to the balance.
+    due = amount === undefined || amount === null || amount === "" ? tuition.balance : Math.round(Number(amount));
+    if (!Number.isFinite(due) || due <= 0 || due > tuition.balance) {
+      throw fail(`Enter an amount between 1 and ${tuition.balance.toLocaleString("en-US")} TZS.`);
+    }
+  } else {
+    due = Number(item.amount);
+  }
+
+  await expireControlNumbers();
+  const existing = await query(
+    `${CONTROL_NUMBER_SELECT} WHERE c.student_id = ? AND c.fee_item_id = ? AND c.amount = ? AND c.status = 'Pending' LIMIT 1`,
+    [studentId, item.id, due]
+  );
+  if (existing[0]) return { ...controlNumberRow(existing[0]), reused: true };
+
+  // GePG-style: 12 digits beginning with 99. Retry on the rare collision.
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const controlNumber = "99" + String(crypto.randomInt(0, 1e10)).padStart(10, "0");
+    try {
+      await query(
+        `INSERT INTO control_numbers (control_number, student_id, fee_item_id, invoice_id, description, amount, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ${CONTROL_NUMBER_DAYS} DAY))`,
+        [controlNumber, studentId, item.id, invoiceId, description, due]
+      );
+      return { ...(await findControlNumber(controlNumber)), reused: false };
+    } catch (error) {
+      if (error.code !== "ER_DUP_ENTRY") throw error;
+    }
+  }
+  throw new Error("Could not issue a unique control number.");
+}
+
+/**
+ * Records the payment for a pending control number, paid through one of the
+ * listed methods. In production this would be the payment gateway's callback;
+ * here it is the simulated confirmation.
+ */
+/**
+ * The number the money comes from: a Tanzanian mobile number for mobile
+ * money (stored as 255XXXXXXXXX), or a bank account number. Returns null
+ * when it is not valid for the channel.
+ */
+function normalizePayerAccount(channel, raw) {
+  const digits = String(raw || "").replace(/[\s+-]/g, "");
+  if (!/^\d+$/.test(digits)) return null;
+  if (channel === "Mobile Money") {
+    if (/^0[67]\d{8}$/.test(digits)) return "255" + digits.slice(1);
+    if (/^255[67]\d{8}$/.test(digits)) return digits;
+    return null;
+  }
+  return /^\d{8,20}$/.test(digits) ? digits : null;
+}
+
+/** 255712345678 -> 0712***678; bank accounts keep only the last 4 digits. */
+function maskPayerAccount(account) {
+  if (!account) return "";
+  if (/^255\d{9}$/.test(account)) { const local = "0" + account.slice(3); return local.slice(0, 4) + "***" + local.slice(-3); }
+  return "****" + account.slice(-4);
+}
+
+async function payControlNumber({ controlNumber, paymentMethodId, payerAccount, receivedBy }) {
+  const fail = (status, message) => Object.assign(new Error(message), { status });
+  const bill = await findControlNumber(controlNumber);
+  if (!bill) throw fail(404, "Control number not found.");
+  if (bill.status !== "Pending") throw fail(409, `This control number is ${bill.status.toLowerCase()}.`);
+  const methods = await query("SELECT id, name, channel FROM payment_methods WHERE id = ? AND status = 'Active' LIMIT 1", [String(paymentMethodId || "")]);
+  const method = methods[0];
+  if (!method) throw fail(422, "Choose a payment method.");
+  const account = normalizePayerAccount(method.channel, payerAccount);
+  if (!account) {
+    throw fail(422, method.channel === "Mobile Money"
+      ? `Enter the ${method.name} mobile number paying, e.g. 0712345678.`
+      : `Enter the ${method.name} account number paying (8-20 digits).`);
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    // Claim the bill first so two confirmations cannot both pay it.
+    const [claimed] = await connection.execute(
+      "UPDATE control_numbers SET status = 'Paid', paid_at = NOW(), payment_method_id = ? WHERE control_number = ? AND status = 'Pending'",
+      [method.id, bill.controlNumber]
+    );
+    if (claimed.affectedRows !== 1) throw fail(409, "This control number has already been paid.");
+    const paymentId = `PAY-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
+    await connection.execute(
+      `INSERT INTO payments (id, invoice_id, student_id, amount, payment_date, payment_method, payer_account, reference, control_number, fee_item_id, status, received_by)
+       VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'Completed', ?)`,
+      [paymentId, bill.invoiceId, bill.studentId, bill.amount, method.name, account, bill.controlNumber, bill.controlNumber, bill.feeItemId, receivedBy || null]
+    );
+    await connection.execute("UPDATE control_numbers SET payment_id = ? WHERE control_number = ?", [paymentId, bill.controlNumber]);
+    if (bill.invoiceId) {
+      await connection.execute(`
+        UPDATE invoices i SET status = CASE
+          WHEN (SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.invoice_id = i.id AND p.status = 'Completed') >= i.amount_billed THEN 'Paid'
+          ELSE 'Partially Paid' END
+        WHERE i.id = ?`, [bill.invoiceId]);
+    }
+    await connection.commit();
+    return { paymentId, controlNumber: bill.controlNumber, method: method.name, amount: bill.amount, payerAccount: maskPayerAccount(account) };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function passwordHashFor(userId) {
+  const rows = await query("SELECT password_hash AS passwordHash FROM users WHERE id = ? LIMIT 1", [userId]);
+  return rows[0] ? rows[0].passwordHash : null;
+}
+
+async function changePassword(userId, passwordHash) {
+  const [result] = await pool.execute("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, userId]);
+  return result.affectedRows === 1;
+}
+
 async function resetPassword({ username, email, passwordHash }) {
   const [result] = await pool.execute(
     "UPDATE users SET password_hash = ? WHERE LOWER(username) = LOWER(?) AND LOWER(email) = LOWER(?) AND status = 'Active'",
@@ -272,6 +621,9 @@ async function recordAudit({ userId, userName, userRole, action, entityType, ent
 
 module.exports = {
   query, health, hashPassword, findUser, findUserByEmail, recordLogin, createStudentAccount,
-  resetPassword, activeElection, votesCast, electionResults, castElectionVote,
+  createStaffAccount, registrationScopes, resetPassword,
+  getPreferences, savePreferences, getSystemSettings, saveSystemSettings, passwordHashFor, changePassword,
+  saveFile, getFileInfo, getFileContent,
+  paymentMethods, feeItems, tuitionBalance, controlNumbersFor, findControlNumber, issueControlNumber, payControlNumber, activeElection, votesCast, electionResults, castElectionVote,
   createAdmissionApplication, recordAudit
 };

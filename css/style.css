@@ -5,42 +5,43 @@
    ========================================================= */
 
 /* Professional, readable type system for the university application. */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 
 :root {
-  /* Brand */
-  --usiams-navy-950: #0a1730;
-  --usiams-navy-900: #0f2247;
-  --usiams-navy-800: #15305f;
-  --usiams-navy-700: #1b3a6b;
-  --usiams-navy-600: #234a86;
-  --usiams-blue-500: #2f6fd6;
-  --usiams-blue-400: #4f8bef;
-  --usiams-gold-500: #c9a227;
-  --usiams-gold-400: #ddb84a;
+  /* Brand - the primary blue scale (#1C60A4) with a lighter accent blue,
+     on Tailwind's gray neutrals. */
+  --usiams-navy-950: #051420;
+  --usiams-navy-900: #0a2741;
+  --usiams-navy-800: #103a62;
+  --usiams-navy-700: #164d83;
+  --usiams-navy-600: #1c60a4;
+  --usiams-blue-500: #2563eb;
+  --usiams-blue-400: #4e90fe;
+  --usiams-accent-500: #4e90fe;
+  --usiams-accent-400: #60a5fa;
 
   /* Semantic */
-  --primary: #1b3a6b;
-  --primary-dark: #0f2247;
-  --primary-light: #e8f0fc;
-  --accent: #c9a227;
+  --primary: #1c60a4;
+  --primary-dark: #164d83;
+  --primary-light: #e8f1fa;
+  --accent: #4e90fe;
   --success: #1a8b5e;
   --success-bg: #e6f6ef;
   --warning: #b5790a;
   --warning-bg: #fdf1de;
   --danger: #c0362c;
   --danger-bg: #fbe9e7;
-  --info: #2f6fd6;
+  --info: #2563eb;
   --info-bg: #eaf1fd;
 
   /* Neutrals - light theme */
-  --bg: #f4f6fb;
+  --bg: #f9fafb;
   --surface: #ffffff;
-  --surface-alt: #f8f9fc;
-  --border: #e2e6ee;
-  --text: #1c2333;
-  --text-muted: #667085;
-  --text-soft: #8a93a6;
+  --surface-alt: #f3f4f6;
+  --border: #e5e7eb;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --text-soft: #9ca3af;
 
   --sidebar-bg: var(--usiams-navy-900);
   --sidebar-bg-active: rgba(255,255,255,0.08);
@@ -48,16 +49,21 @@
   --sidebar-text-muted: rgba(255,255,255,0.5);
   --sidebar-border: rgba(255,255,255,0.08);
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
-  --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.12);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 
   --sidebar-w: 264px;
   --sidebar-w-collapsed: 76px;
   --navbar-h: 64px;
+
+  /* Bootstrap components that do not inherit the page font (tooltips,
+     popovers) read these, so point them at Mulish too. */
+  --bs-font-sans-serif: 'Mulish', 'Segoe UI', sans-serif;
+  --bs-body-font-family: 'Mulish', 'Segoe UI', sans-serif;
 
   color-scheme: light;
 }
@@ -72,7 +78,7 @@
   --text-muted: #9aa5b8;
   --text-soft: #6b7690;
 
-  --primary-light: #172a49;
+  --primary-light: #10263d;
   --success-bg: #10261d;
   --warning-bg: #2b220f;
   --danger-bg: #2b1613;
@@ -90,7 +96,7 @@ html, body {
 
 body {
   margin: 0;
-  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: 'Mulish', 'Segoe UI', sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 14.5px;
@@ -103,7 +109,7 @@ a { color: var(--usiams-blue-500); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Manrope', 'DM Sans', sans-serif;
+  font-family: 'Mulish', 'Segoe UI', sans-serif;
   font-weight: 700;
   letter-spacing: 0;
   color: var(--text);
@@ -163,16 +169,26 @@ h1, h2, h3, h4, h5, h6 {
    .brand-mark is the square logo badge, .brand-wordmark is the
    "USIAMS" text next to it (both on the sidebar and the login page). */
 .brand-mark, .brand-wordmark, .sidebar-brand .brand-text strong {
-  font-family: 'Manrope', 'DM Sans', sans-serif;
+  font-family: 'Mulish', 'Segoe UI', sans-serif;
   font-weight: 800;
+}
+
+/* The logo tile, wherever it appears (sidebar, login, apply). */
+.brand-mark {
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .sidebar-brand .brand-mark {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--usiams-gold-500), var(--usiams-gold-400));
-  color: var(--usiams-navy-950);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -217,7 +233,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 .sidebar-link i { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
 .sidebar-link:hover { background: rgba(255,255,255,.06); color: #fff; text-decoration: none; }
-.sidebar-link.active { background: var(--sidebar-bg-active); color: #fff; box-shadow: inset 3px 0 0 var(--usiams-gold-500); }
+.sidebar-link.active { background: var(--sidebar-bg-active); color: #fff; box-shadow: inset 3px 0 0 var(--usiams-accent-500); }
 .sidebar-link .badge-count { margin-left: auto; }
 
 .app-shell.sidebar-collapsed .sidebar-brand .brand-text,
@@ -409,7 +425,7 @@ h1, h2, h3, h4, h5, h6 {
 .usi-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
 .usi-card-header {
@@ -485,7 +501,7 @@ h1, h2, h3, h4, h5, h6 {
 .login-shell {
   min-height: 100vh;
   display: flex;
-  background: radial-gradient(circle at 20% 20%, var(--usiams-navy-700), var(--usiams-navy-950) 60%);
+  background: linear-gradient(to bottom right, var(--primary), rgba(28, 96, 164, .9), var(--accent));
 }
 .login-visual {
   flex: 1.1;
@@ -523,8 +539,9 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   max-width: 460px;
   border-radius: 1.125rem;
-  background: linear-gradient(160deg, var(--usiams-navy-700), var(--usiams-navy-900));
-  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.15);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.2);
   padding: 2.25rem 2rem 2rem;
   position: relative;
   z-index: 1;
@@ -549,16 +566,16 @@ h1, h2, h3, h4, h5, h6 {
   width: 64px; height: 64px; border-radius: 16px;
   background: rgba(255,255,255,.1);
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.7rem; color: var(--usiams-gold-500);
+  font-size: 1.7rem; color: #fff;
   margin: 0 auto 1.25rem;
 }
 .login-carousel-card h5 { color: #fff; font-size: 1.1rem; margin-bottom: .6rem; }
-.login-carousel-card p { color: rgba(255,255,255,.72); font-size: .85rem; margin: 0; }
+.login-carousel-card p { color: rgba(255,255,255,.9); font-size: .85rem; margin: 0; }
 .login-carousel-card .carousel-indicators { position: static; margin-top: .5rem; }
 .login-carousel-card .carousel-indicators [data-bs-target] {
   width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.35); border: none; opacity: 1;
 }
-.login-carousel-card .carousel-indicators .active { background: var(--usiams-gold-500); }
+.login-carousel-card .carousel-indicators .active { background: #fff; }
 .login-carousel-card .carousel-control-prev, .login-carousel-card .carousel-control-next {
   width: 6%; opacity: .6;
 }
@@ -602,8 +619,27 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--surface); color: var(--text); border-color: var(--border);
 }
 .form-control:focus, .form-select:focus {
-  border-color: var(--usiams-blue-500); box-shadow: 0 0 0 .2rem rgba(47,111,214,.15);
+  border-color: var(--primary); box-shadow: 0 0 0 .2rem rgba(28,96,164,.18);
   background: var(--surface); color: var(--text);
+}
+/* Buttons: solid primary with a lift on hover, and a white "secondary"
+   with a 2px primary border - rounded .5rem, semibold. */
+.btn { --bs-btn-border-radius: .5rem; --bs-btn-font-weight: 600; }
+.btn-primary {
+  --bs-btn-bg: var(--primary); --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--primary-dark); --bs-btn-hover-border-color: var(--primary-dark);
+  --bs-btn-active-bg: var(--primary-dark); --bs-btn-active-border-color: var(--primary-dark);
+  --bs-btn-disabled-bg: var(--primary); --bs-btn-disabled-border-color: var(--primary);
+  --bs-btn-focus-shadow-rgb: 28, 96, 164;
+  box-shadow: var(--shadow-md);
+}
+.btn-primary:hover { box-shadow: var(--shadow-lg); }
+.btn-outline-primary {
+  --bs-btn-color: var(--primary); --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--surface-alt); --bs-btn-hover-color: var(--primary); --bs-btn-hover-border-color: var(--primary);
+  --bs-btn-active-bg: var(--surface-alt); --bs-btn-active-color: var(--primary); --bs-btn-active-border-color: var(--primary);
+  --bs-btn-focus-shadow-rgb: 28, 96, 164;
+  border-width: 2px;
 }
 .table { color: var(--text); }
 .dropdown-menu { background: var(--surface); border-color: var(--border); color: var(--text); }

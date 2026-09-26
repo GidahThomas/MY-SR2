@@ -1,7 +1,8 @@
 /* =========================================================
    USIAMS - js/settings.js
    Personal settings page: profile summary, theme preference,
-   notification preferences and a simulated password change.
+   notification preferences and password change - all saved to the
+   database (user_preferences, users.password_hash).
    ========================================================= */
 (function (window) {
   "use strict";
@@ -50,8 +51,17 @@
       if (next.length < 8) { errorBox.textContent = "New password must be at least 8 characters long."; errorBox.classList.remove("d-none"); return; }
       if (next !== confirm) { errorBox.textContent = "New password and confirmation do not match."; errorBox.classList.remove("d-none"); return; }
       errorBox.classList.add("d-none");
-      document.getElementById("passwordForm").reset();
-      toast.show("success", "Password updated", "Your password has been changed (simulated - no backend is connected in this prototype).");
+      const submit = document.querySelector("#passwordForm [type=submit]");
+      submit.disabled = true;
+      window.USIAMS.api.request("/api/auth/change-password", {
+        method: "POST", body: { currentPassword: current, newPassword: next }
+      }).then(result => {
+        document.getElementById("passwordForm").reset();
+        toast.show("success", "Password updated", result.message || "Your password has been changed.");
+      }).catch(error => {
+        errorBox.textContent = error.message || "Your password could not be changed.";
+        errorBox.classList.remove("d-none");
+      }).finally(() => { submit.disabled = false; });
     });
   }
 

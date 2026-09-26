@@ -31,6 +31,7 @@
       </div>
       <div class="navbar-actions">
         <button type="button" class="navbar-icon-btn mobile-search-btn" id="mobileSearchBtn" title="Search" aria-label="Search"><i class="bi bi-search"></i></button>
+        <button type="button" class="navbar-icon-btn" id="helpBtn" title="Help: how to use this page" aria-label="Help for this page"><i class="bi bi-question-circle"></i></button>
         <button type="button" class="navbar-icon-btn" id="themeToggleBtn" title="Toggle theme" aria-label="Toggle dark mode">
           <i class="bi ${theme === "dark" ? "bi-sun" : "bi-moon-stars"}"></i>
         </button>

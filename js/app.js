@@ -10,12 +10,19 @@
 (function (global) {
   "use strict";
 
-  function applyTheme(theme) {
+  // The theme is saved to the user's preferences in the database; the
+  // localStorage copy only lets the next page paint in the right colours
+  // before the server has answered.
+  function applyTheme(theme, { save = true } = {}) {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("usiams.theme", theme);
     const icon = document.querySelector("#themeToggleBtn i");
     if (icon) icon.className = `bi ${theme === "dark" ? "bi-sun" : "bi-moon-stars"}`;
     document.dispatchEvent(new CustomEvent("usiams:themechange", { detail: { theme } }));
+    const api = global.USIAMS.api;
+    if (save && api && api.isHydrated() && api.getPreference("theme") !== theme) {
+      api.savePreference("theme", theme).catch(() => {});
+    }
   }
 
   function initTheme() {
@@ -50,12 +57,30 @@
       backdrop.className = "sidebar-backdrop";
       shell.appendChild(backdrop);
     }
+    // Use the theme saved to this account, whichever device it was set on.
+    const api = global.USIAMS.api;
+    const savedTheme = api && api.isHydrated() ? api.getPreference("theme") : null;
+    if (savedTheme && savedTheme !== document.documentElement.getAttribute("data-theme")) {
+      applyTheme(savedTheme, { save: false });
+    }
+
     global.USIAMS.sidebarComponent.renderSidebar("sidebarContainer", user, basePath);
     global.USIAMS.navbarComponent.renderNavbar("navbarContainer", user, basePath);
     mountFooter();
 
     if (shell && localStorage.getItem("usiams.sidebarCollapsed") === "1") {
       shell.classList.add("sidebar-collapsed");
+    }
+
+    // In-app help: the ? button's page guides and the first-sign-in tour.
+    // Loaded here so every signed-in page gets it without its own tag.
+    if (global.USIAMS.help) {
+      global.USIAMS.help.init(user);
+    } else {
+      const script = document.createElement("script");
+      script.src = basePath + "js/help.js";
+      script.onload = () => global.USIAMS.help && global.USIAMS.help.init(user);
+      document.body.appendChild(script);
     }
 
     // Read-only banner for QA officers on pages that would otherwise show

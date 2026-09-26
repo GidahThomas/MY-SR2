@@ -90,6 +90,12 @@ function waitForServer(timeoutMs = 15000) {
     failed++;
   } finally {
     server.kill();
+    // With USIAMS_AUDIT_WRITES=1 the server logs every write; keep that log.
+    if (process.env.USIAMS_AUDIT_LOG) fs.writeFileSync(process.env.USIAMS_AUDIT_LOG, serverLog);
+    // Leave the database as the demo dataset, not as the last suite left it:
+    // the interactions suite presses real Deactivate buttons, which otherwise
+    // left demo accounts unable to sign in after every test run.
+    try { reseed(); } catch (error) { console.error("USIAMS:", error.message); }
   }
 
   if (failed) {

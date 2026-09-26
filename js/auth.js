@@ -29,9 +29,19 @@
   const SESSION_KEY = "session.currentUser";
   const TOKEN_KEY = "session.token";
   const ROLE_PAGE_ALLOWLIST = {
-    LIBRARIAN: ["library.html", "notifications.html", "settings.html"],
-    HOSTEL_OFFICER: ["hostel.html", "notifications.html", "settings.html"]
+    LIBRARIAN: ["library.html", "notifications.html", "settings.html", "help.html"],
+    HOSTEL_OFFICER: ["hostel.html", "notifications.html", "settings.html", "help.html"]
   };
+
+  // The pages call the API with relative paths, so they only reach it when
+  // served by server.js itself. Say which of the two usual mistakes applies.
+  function unavailableMessage() {
+    if (window.location.protocol === "file:") {
+      return "USIAMS was opened as a file, so it cannot reach its backend. Run `npm start` and open the address it prints (for example http://127.0.0.1:8081).";
+    }
+    return "The USIAMS backend is not answering at " + window.location.origin +
+      ". Run `npm start` and open the address it prints - not Live Server or another static server.";
+  }
 
   async function login(username, password, remember) {
     try {
@@ -46,7 +56,7 @@
       storage.setStorage(SESSION_KEY, { ...result.user, loginAt: new Date().toISOString(), remember: !!remember });
       return { success: true, user: storage.getStorage(SESSION_KEY) };
     } catch (error) {
-      return { success: false, message: "The backend is unavailable. Start USIAMS with `npm start` and try again." };
+      return { success: false, message: unavailableMessage() };
     }
   }
 
@@ -82,13 +92,26 @@
   }
 
   /**
+   * The page to continue to after signing in, from login.html?next=...
+   * Only an app page (pages/<name>.html) is accepted, so the parameter
+   * cannot send anyone off-site.
+   */
+  function safeNext() {
+    const next = new URLSearchParams(window.location.search).get("next") || "";
+    return /^pages\/[a-z0-9-]+\.html$/.test(next) ? next : null;
+  }
+
+  /**
    * Call at the top of every authenticated page. Redirects to login if
    * no session exists, and optionally restricts the page to a set of roles.
    */
   function requireAuth(allowedRoles) {
     const user = getCurrentUser();
     if (!user) {
-      window.location.href = getBasePath() + "login.html";
+      // Come back to this page after signing in.
+      const path = window.location.pathname.replace(/\\/g, "/");
+      const next = /\/pages\//.test(path) ? "?next=" + encodeURIComponent("pages/" + path.split("/").pop()) : "";
+      window.location.href = getBasePath() + "login.html" + next;
       return null;
     }
     if (allowedRoles && allowedRoles.length && !allowedRoles.includes(user.role)) {
@@ -122,6 +145,6 @@
   }
 
   global.USIAMS = global.USIAMS || {};
-  global.USIAMS.auth = { login, logout, getCurrentUser, isAuthenticated, requireAuth, isReadOnlyRole, guardWrite, getBasePath };
+  global.USIAMS.auth = { login, logout, getCurrentUser, isAuthenticated, requireAuth, isReadOnlyRole, guardWrite, getBasePath, unavailableMessage, safeNext };
 
 })(window);

@@ -6,7 +6,13 @@
 (function (global) {
   "use strict";
 
-  const PALETTE = ["#2f6fd6", "#1a8b5e", "#c9a227", "#c0362c", "#8b5cf6", "#0891b2", "#b5790a", "#1b3a6b"];
+  const PALETTE = ["#1c60a4", "#1a8b5e", "#4e90fe", "#c0362c", "#8b5cf6", "#0891b2", "#b5790a", "#0a2741"];
+
+  // Charts draw on a canvas, which does not inherit the page font - set it
+  // here so labels, legends and tooltips use Mulish like the rest of USIAMS.
+  if (global.Chart && global.Chart.defaults) {
+    global.Chart.defaults.font.family = "'Mulish', 'Segoe UI', sans-serif";
+  }
 
   function isDark() {
     return document.documentElement.getAttribute("data-theme") === "dark";

@@ -111,7 +111,7 @@
         </div>
         <div class="usi-card-body">
           <p style="font-size:.85rem;">${util.escapeHtml(a.description)}</p>
-          ${submission ? `<p class="text-muted-usi" style="font-size:.78rem;">Submitted ${util.formatDate(submission.submittedDate)}: ${util.escapeHtml(submission.note)}</p>`
+          ${submission ? `<p class="text-muted-usi" style="font-size:.78rem;">Submitted ${util.formatDate(submission.submittedDate)}: ${util.escapeHtml(submission.note)}${global.USIAMS.api.files.isStored(submission.url) ? ` &middot; <a href="#" data-action="download-attachment" data-url="${util.escapeHtml(submission.url)}">download</a>` : ""}</p>`
             : `<button class="btn btn-sm btn-outline-primary" data-action="submit" data-id="${a.id}"><i class="bi bi-upload me-1"></i>Submit Assignment</button>`}
         </div>
       </div>`;
@@ -136,7 +136,7 @@
         const student = global.USIAMS.students.getStudent(s.studentId);
         return `<tr>
           <td>${student ? util.escapeHtml(util.studentLabel(student, currentUser)) : s.studentId}</td>
-          <td>${util.formatDate(s.submittedDate)}</td>
+          <td>${util.formatDate(s.submittedDate)}${global.USIAMS.api.files.isStored(s.url) ? `<div><a href="#" data-action="download-attachment" data-url="${util.escapeHtml(s.url)}" style="font-size:.78rem;"><i class="bi bi-download me-1"></i>Download work</a></div>` : ""}</td>
           <td><span class="status-badge status-${s.status.toLowerCase()}">${s.status}</span></td>
           <td>${s.score !== null ? `${s.score}/${assignment.maxScore}` : "-"}</td>
           <td>${s.status !== "Graded" ? `<button class="btn btn-sm btn-outline-primary" data-action="grade" data-id="${s.id}" data-max="${assignment.maxScore}"><i class="bi bi-check2-square"></i> Grade</button>` : ""}</td>
@@ -181,17 +181,31 @@
       <div class="modal fade" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Submit: ${util.escapeHtml(assignment.title)}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
-          <p class="text-muted-usi" style="font-size:.82rem;">This is a simulated submission for demonstration purposes - no real file upload occurs.</p>
+          <label class="form-label" for="submissionFileInput">Your work (file, up to 5 MB)</label>
+          <input type="file" class="form-control mb-3" id="submissionFileInput">
           <label class="form-label">Submission Note</label>
           <textarea class="form-control" id="submissionNoteInput" rows="4" placeholder="Describe your submission or paste a link to your work"></textarea>
         </div>
         <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="confirmSubmitBtn" style="background:var(--primary);border-color:var(--primary);">Submit</button></div>
       </div></div></div>
     `);
-    document.getElementById("confirmSubmitBtn").addEventListener("click", () => {
+    document.getElementById("confirmSubmitBtn").addEventListener("click", async () => {
       const note = document.getElementById("submissionNoteInput").value.trim();
-      if (!note) { toast.show("error", "Note required", "Please describe your submission."); return; }
-      submissionsOverlay.add({ id: util.uid("SUB"), assignmentId: assignment.id, studentId: currentUser.studentId, submittedDate: new Date().toISOString().slice(0, 10), note, score: null, status: "Submitted" });
+      const file = document.getElementById("submissionFileInput").files[0];
+      if (!note && !file) { toast.show("error", "Nothing to submit", "Attach your work or describe it in the note."); return; }
+      // The file itself is stored in the database; the submission keeps its URL.
+      let stored = null;
+      if (file) {
+        const btn = document.getElementById("confirmSubmitBtn");
+        btn.disabled = true;
+        try { stored = await global.USIAMS.api.files.upload(file, "submission"); }
+        catch (error) { btn.disabled = false; toast.show("error", "Upload failed", error.message); return; }
+      }
+      submissionsOverlay.add({
+        id: util.uid("SUB"), assignmentId: assignment.id, studentId: currentUser.studentId,
+        submittedDate: new Date().toISOString().slice(0, 10), note: note || (file ? `Submitted ${file.name}` : ""),
+        url: stored ? stored.url : null, score: null, status: "Submitted"
+      });
       modal.close();
       renderAssignments(currentUser);
       toast.show("success", "Assignment submitted", "Your submission has been recorded.");

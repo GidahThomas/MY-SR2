@@ -4,24 +4,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1C60A4">
+  <script src="js/open-via-server.js"></script>
   <title>USIAMS | One university, one connected experience</title>
   <meta name="description"
     content="USIAMS connects students, staff and university services in one clear academic experience.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <style>
     :root {
-      --ink: #10233f;
-      --muted: #617089;
-      --paper: #f5f7fb;
-      --gold: #d6ad3b;
-      --line: #d8e0eb;
-      --blue: #1c4f8f;
-      --blue-soft: #e8f0fb;
+      --primary: #1c60a4;
+      --primary-600: #164d83;
+      --primary-50: #e8f1fa;
+      --accent: #4e90fe;
+      --gray-900: #111827;
+      --gray-800: #1f2937;
+      --gray-700: #374151;
+      --gray-600: #4b5563;
+      --gray-500: #6b7280;
+      --gray-300: #d1d5db;
+      --gray-100: #f3f4f6;
+      --gray-50: #f9fafb;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, .1), 0 2px 4px -2px rgba(0, 0, 0, .1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -4px rgba(0, 0, 0, .1);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1);
     }
 
     * {
@@ -34,9 +45,10 @@
 
     body {
       margin: 0;
-      color: var(--ink);
-      background: var(--paper);
-      font-family: 'DM Sans', sans-serif;
+      color: var(--gray-900);
+      background: var(--gray-50);
+      font-family: 'Mulish', system-ui, sans-serif;
+      line-height: 1.5;
     }
 
     a {
@@ -44,454 +56,929 @@
       text-decoration: none;
     }
 
-    .landing-shell {
-      min-height: 100vh;
-      overflow: hidden;
-      background: linear-gradient(135deg, #f7f9fc 0%, #edf3fb 52%, #f8fafc 100%);
+    a:focus-visible,
+    button:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
     }
 
-    .landing-nav {
-      width: min(1180px, calc(100% - 48px));
+    .container {
+      width: 100%;
+      max-width: 80rem;
       margin: 0 auto;
-      display: flex;
+      padding: 0 1rem;
+    }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      padding: .75rem 1.5rem;
+      border: 2px solid transparent;
+      border-radius: .5rem;
+      font: 600 1rem 'Mulish', sans-serif;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all .2s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    .btn-sm {
+      padding: .5rem 1rem;
+      font-size: .875rem;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-600);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--gray-50);
+    }
+
+    .btn-hero {
+      padding: 1rem 2rem;
+      font-weight: 700;
+      font-size: 1.125rem;
+    }
+
+    .btn-white {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .btn-white:hover {
+      background: var(--gray-100);
+    }
+
+    .btn-outline-white {
+      border-color: #fff;
+      color: #fff;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn-outline-white:hover {
+      background: rgba(255, 255, 255, .1);
+    }
+
+    /* ---------- Top utility bar ---------- */
+    .topbar {
+      background: var(--gray-800);
+      color: #fff;
+      padding: .5rem 0;
+      font-size: .875rem;
+    }
+
+    .topbar .container {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .topbar a {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      transition: color .2s;
+    }
+
+    .topbar a:hover {
+      color: var(--accent);
+    }
+
+    /* ---------- Header ---------- */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #fff;
+      transition: box-shadow .3s;
+    }
+
+    .site-header.is-scrolled {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .header-row {
+      display: flex;
       justify-content: space-between;
-      padding: 22px 0;
-      border-bottom: 1px solid rgba(216, 224, 235, .7);
+      align-items: center;
+      height: 5rem;
     }
 
     .brand {
       display: inline-flex;
       align-items: center;
-      gap: 12px;
-      font-family: 'Manrope', sans-serif;
-      font-weight: 800;
-      letter-spacing: .02em;
+      gap: .75rem;
     }
 
     .brand-mark {
-      width: 42px;
-      height: 42px;
+      width: 3rem;
+      height: 3rem;
       display: grid;
       place-items: center;
-      border-radius: 10px;
-      background: var(--gold);
-      color: var(--ink);
-      font-size: .9rem;
-      box-shadow: 0 5px 12px rgba(16, 35, 63, .12);
+      border-radius: .75rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      font-weight: 800;
+      font-size: 1rem;
+      box-shadow: var(--shadow-md);
     }
 
-    .brand small {
+    .brand-name {
       display: block;
-      color: var(--muted);
-      font: 500 .68rem 'DM Sans', sans-serif;
-      letter-spacing: .04em;
+      font-weight: 800;
+      font-size: 1.25rem;
+      line-height: 1.1;
+      color: var(--primary);
     }
 
-    .nav-link {
-      color: var(--muted);
-      font-size: .9rem;
+    .brand-tag {
+      display: block;
+      color: var(--gray-500);
+      font-size: .75rem;
       font-weight: 600;
     }
 
-    .nav-link:hover {
-      color: var(--blue);
-    }
-
-    .nav-actions {
+    .main-nav {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 2rem;
     }
 
-    .button {
-      display: inline-flex;
+    .main-nav a,
+    .mobile-nav a.nav-item {
+      color: var(--gray-700);
+      font-weight: 500;
+      transition: color .2s;
+    }
+
+    .main-nav a:hover,
+    .mobile-nav a.nav-item:hover {
+      color: var(--primary);
+    }
+
+    .header-actions {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 9px;
-      min-height: 44px;
-      padding: 0 18px;
-      border: 1px solid transparent;
-      border-radius: 6px;
-      font-size: .88rem;
-      font-weight: 700;
-      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+      gap: 1rem;
     }
 
-    .button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(18, 35, 63, .12);
+    .menu-toggle {
+      display: none;
+      padding: .5rem;
+      border: 0;
+      border-radius: .5rem;
+      background: transparent;
+      color: var(--gray-700);
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
     }
 
-    .button-primary {
-      background: var(--blue);
+    .menu-toggle:hover {
+      background: var(--gray-100);
+    }
+
+    .mobile-nav {
+      display: none;
+      padding: 1rem 0;
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .mobile-nav a.nav-item {
+      display: block;
+      padding: .5rem 0;
+    }
+
+    .mobile-nav .mobile-actions {
+      display: flex;
+      gap: .75rem;
+      margin-top: .75rem;
+    }
+
+    .mobile-nav .mobile-actions .btn {
+      flex: 1;
+    }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      position: relative;
+      min-height: 600px;
+      height: calc(100vh - 7.25rem);
+      max-height: 900px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
       color: #fff;
+      background: linear-gradient(to bottom right, var(--primary), rgba(28, 96, 164, .9), var(--accent));
     }
 
-    .button-light {
-      background: #fff;
-      border-color: var(--line);
+    .hero .container {
+      position: relative;
+      z-index: 2;
     }
 
-    .landing-hero {
-      width: min(1180px, calc(100% - 48px));
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
-      align-items: center;
-      gap: 76px;
-      padding: 82px 0 64px;
+    .hero-content {
+      max-width: 48rem;
     }
 
-    .eyebrow {
+    .hero-eyebrow {
       display: inline-flex;
       align-items: center;
-      gap: 9px;
-      color: var(--blue);
-      font-size: .76rem;
-      font-weight: 800;
-      letter-spacing: .13em;
-      text-transform: uppercase;
+      gap: .5rem;
+      margin-bottom: 1.5rem;
+      padding: .5rem 1rem;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, .15);
+      backdrop-filter: blur(4px);
+      font-size: .875rem;
+      font-weight: 600;
     }
 
-    .eyebrow::before {
-      content: '';
-      width: 28px;
-      height: 2px;
-      background: var(--gold);
+    .hero h1 {
+      margin: 0 0 1.25rem;
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 700;
+      line-height: 1.1;
+      text-shadow: 0 25px 25px rgba(0, 0, 0, .15);
     }
 
-    h1 {
-      max-width: 680px;
-      margin: 18px 0 24px;
-      font: 800 clamp(2.7rem, 5vw, 4.6rem)/1.04 'Manrope', sans-serif;
-      letter-spacing: -.04em;
-    }
-
-    .hero-copy {
-      max-width: 560px;
-      margin: 0 0 30px;
-      color: var(--muted);
-      font-size: 1.04rem;
-      line-height: 1.75;
+    .hero-lead {
+      margin: 0 0 2.5rem;
+      color: rgba(255, 255, 255, .9);
+      font-size: clamp(1.125rem, 2vw, 1.5rem);
+      line-height: 1.625;
     }
 
     .hero-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 1rem;
     }
 
-    .hero-note {
+    .hero-stats {
       display: flex;
-      align-items: center;
-      gap: 9px;
-      margin-top: 28px;
-      color: var(--muted);
-      font-size: .82rem;
+      flex-wrap: wrap;
+      gap: .75rem;
+      margin-top: 3rem;
     }
 
-    .hero-note i {
-      color: #21855c;
-      font-size: 1rem;
+    .hero-stat {
+      padding: .625rem 1rem;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: .75rem;
+      background: rgba(255, 255, 255, .15);
+      backdrop-filter: blur(4px);
     }
 
-    .hero-panel {
-      position: relative;
-      min-height: 410px;
-      padding: 32px;
-      border: 1px solid rgba(255, 255, 255, .14);
-      border-radius: 8px;
-      background: var(--ink);
-      color: #fff;
-      box-shadow: 18px 18px 0 rgba(214, 173, 59, .25);
-    }
-
-    .hero-panel::before {
-      content: '';
-      position: absolute;
-      right: -30px;
-      top: -30px;
-      width: 110px;
-      height: 110px;
-      border: 1px solid rgba(214, 173, 59, .7);
-      border-radius: 50%;
-    }
-
-    .panel-kicker {
-      color: #bbcae0;
+    .hero-stat span {
+      display: block;
+      color: rgba(255, 255, 255, .6);
       font-size: .75rem;
+    }
+
+    .hero-stat strong {
+      font-size: 1.125rem;
       font-weight: 700;
-      letter-spacing: .11em;
+    }
+
+    /* Decorative white shapes along the hero's left and right edges. */
+    .hero-deco {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 20rem;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero-deco.left {
+      left: 0;
+    }
+
+    .hero-deco.right {
+      right: 0;
+      transform: scaleX(-1);
+    }
+
+    .hero-deco span {
+      position: absolute;
+      background: #fff;
+    }
+
+    .hero-deco .c1 { top: 0; left: 0; width: 5rem; height: 5rem; border-radius: 50%; opacity: .9; transform: translate(-50%, -50%); }
+    .hero-deco .c2 { top: 2rem; left: 1rem; width: 3rem; height: 3rem; border-radius: 50%; opacity: .7; }
+    .hero-deco .d1 { top: 33%; left: .5rem; width: 2.5rem; height: 2.5rem; opacity: .75; transform: rotate(45deg); }
+    .hero-deco .r1 { top: 33%; left: 2rem; width: 4rem; height: 4rem; border-radius: 50%; background: transparent; border: 4px solid #fff; opacity: .6; }
+    .hero-deco .c3 { top: 50%; left: 0; width: 3.5rem; height: 3.5rem; border-radius: 50%; opacity: .7; transform: translateX(-33%); }
+    .hero-deco .l1 { top: 50%; left: 1rem; width: 6rem; height: 4px; opacity: .7; transform: rotate(45deg); }
+    .hero-deco .l2 { top: 50%; left: .5rem; width: 5rem; height: 4px; opacity: .6; transform: translateY(2rem) rotate(-45deg); }
+    .hero-deco .d2 { bottom: 25%; left: 1.5rem; width: 3rem; height: 3rem; opacity: .7; transform: rotate(45deg); }
+    .hero-deco .r2 { bottom: 3rem; left: .5rem; width: 4rem; height: 4rem; border-radius: 50%; background: transparent; border: 4px solid #fff; opacity: .55; }
+    .hero-deco .c4 { bottom: 0; left: 0; width: 6rem; height: 6rem; border-radius: 50%; opacity: .85; transform: translate(-50%, 50%); }
+
+    /* ---------- Sections ---------- */
+    .section {
+      padding: 5rem 0;
+      /* Keep headings clear of the sticky header when jumped to. */
+      scroll-margin-top: 5rem;
+    }
+
+    .section-white {
+      background: #fff;
+    }
+
+    .section-head {
+      max-width: 42rem;
+      margin: 0 auto 3rem;
+      text-align: center;
+    }
+
+    .section-kicker {
+      display: inline-block;
+      margin-bottom: .75rem;
+      color: var(--primary);
+      font-size: .875rem;
+      font-weight: 700;
+      letter-spacing: .08em;
       text-transform: uppercase;
     }
 
-    .hero-panel h2 {
-      max-width: 350px;
-      margin: 18px 0 36px;
-      color: #fff;
-      font: 700 2rem/1.2 'Manrope', sans-serif;
+    .section-title {
+      margin: 0 0 1rem;
+      color: var(--gray-900);
+      font-size: 2.25rem;
+      font-weight: 700;
+      line-height: 2.5rem;
     }
 
-    .service-list {
-      display: grid;
-      gap: 13px;
-    }
-
-    .service {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 13px 0;
-      border-top: 1px solid rgba(255, 255, 255, .14);
-      color: #e1e9f5;
-      font-size: .9rem;
-    }
-
-    .service i {
-      width: 30px;
-      color: var(--gold);
-      font-size: 1.1rem;
-    }
-
-    .service strong {
-      display: block;
-      color: #fff;
-      font-size: .88rem;
-    }
-
-    .service span {
-      color: #aebdd2;
-      font-size: .77rem;
-    }
-
-    .quick-access {
-      width: min(1180px, calc(100% - 48px));
-      margin: 0 auto;
-      padding: 0 0 70px;
-    }
-
-    .quick-heading {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 24px;
-      margin-bottom: 18px;
-    }
-
-    .quick-heading h2 {
+    .section-lead {
       margin: 0;
-      font: 700 1.35rem 'Manrope', sans-serif;
-    }
-
-    .quick-heading p {
-      margin: 0;
-      color: var(--muted);
-      font-size: .84rem;
+      color: var(--gray-600);
+      font-size: 1.125rem;
     }
 
     .quick-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      gap: 1rem;
     }
 
     .quick-card {
-      display: flex;
-      align-items: center;
-      gap: 13px;
-      min-height: 82px;
-      padding: 16px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, .72);
-      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+      display: block;
+      padding: 1.25rem;
+      border: 1px solid var(--gray-100);
+      border-radius: 1rem;
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s;
     }
 
     .quick-card:hover {
-      transform: translateY(-3px);
-      border-color: #a9bddb;
-      box-shadow: 0 10px 24px rgba(16, 35, 63, .08);
-      text-decoration: none;
+      box-shadow: var(--shadow-md);
     }
 
-    .quick-card i {
-      width: 36px;
-      height: 36px;
+    .quick-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .75rem;
+    }
+
+    .icon-tile {
+      width: 2.5rem;
+      height: 2.5rem;
       display: grid;
       place-items: center;
-      border-radius: 8px;
-      background: var(--blue-soft);
-      color: var(--blue);
-      font-size: 1.05rem;
+      border-radius: .75rem;
+      background: var(--primary);
+      color: #fff;
+      font-size: 1.15rem;
+    }
+
+    .quick-card .bi-arrow-right {
+      color: var(--gray-300);
+      transition: color .2s;
+    }
+
+    .quick-card:hover .bi-arrow-right {
+      color: var(--primary);
     }
 
     .quick-card strong {
       display: block;
-      font-size: .84rem;
+      color: var(--gray-900);
+      font-size: 1.05rem;
+      font-weight: 700;
     }
 
-    .quick-card span {
+    .quick-card small {
       display: block;
-      margin-top: 2px;
-      color: var(--muted);
-      font-size: .72rem;
+      margin-top: .125rem;
+      color: var(--gray-500);
+      font-size: .875rem;
     }
 
-    .landing-footer {
-      width: min(1180px, calc(100% - 48px));
-      margin: 0 auto;
-      padding: 24px 0;
-      border-top: 1px solid var(--line);
-      color: var(--muted);
-      font-size: .78rem;
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
     }
 
-    @media (max-width: 900px) {
-      .quick-grid {
+    .card {
+      padding: 2rem 1.5rem;
+      border-radius: .75rem;
+      background: #fff;
+      box-shadow: var(--shadow-lg);
+      transition: box-shadow .3s;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-xl);
+    }
+
+    .card .icon-circle {
+      width: 3.5rem;
+      height: 3.5rem;
+      display: grid;
+      place-items: center;
+      margin-bottom: 1.25rem;
+      border-radius: 1rem;
+      background: rgba(28, 96, 164, .1);
+      color: var(--primary);
+      font-size: 1.5rem;
+    }
+
+    .card h3 {
+      margin: 0 0 .5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--gray-600);
+      line-height: 1.625;
+    }
+
+    /* ---------- Call-to-action banner ---------- */
+    .cta-banner {
+      position: relative;
+      overflow: hidden;
+      padding: 5rem 0;
+      color: #fff;
+      background: linear-gradient(to right, rgba(30, 58, 138, .95), rgba(37, 99, 235, .9)), var(--primary);
+    }
+
+    .cta-banner .blob {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .cta-banner .b1 { top: 2.5rem; left: 2.5rem; width: 5rem; height: 5rem; background: rgba(255, 255, 255, .1); filter: blur(24px); }
+    .cta-banner .b2 { bottom: 2.5rem; right: 2.5rem; width: 8rem; height: 8rem; background: rgba(78, 144, 254, .3); filter: blur(40px); }
+    .cta-banner .sq { position: absolute; top: 2.5rem; right: 5rem; width: 4rem; height: 4rem; border-radius: .75rem; background: rgba(78, 144, 254, .25); }
+
+    .cta-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    .cta-inner h2 {
+      margin: 0 0 .75rem;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    .cta-inner p {
+      max-width: 40rem;
+      margin: 0;
+      color: #f3f4f6;
+      font-size: 1.125rem;
+    }
+
+    /* ---------- Footer ---------- */
+    .site-footer {
+      background: var(--gray-900);
+      color: var(--gray-300);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      padding: 3rem 0;
+    }
+
+    .site-footer h4 {
+      margin: 0 0 1rem;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .site-footer .footer-brand {
+      display: block;
+      margin-bottom: .5rem;
+      color: #fff;
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+
+    .site-footer p {
+      margin: 0 0 1rem;
+      font-size: .875rem;
+    }
+
+    .site-footer ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: .875rem;
+    }
+
+    .site-footer li + li {
+      margin-top: .5rem;
+    }
+
+    .site-footer a:hover {
+      color: var(--accent);
+    }
+
+    .site-footer li i {
+      margin-right: .5rem;
+      color: var(--accent);
+    }
+
+    .footer-bottom {
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--gray-800);
+      font-size: .875rem;
+    }
+
+    .footer-bottom .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .footer-bottom nav {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    /* ---------- Responsive ---------- */
+    @media (min-width: 640px) {
+      .container {
+        padding: 0 1.5rem;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .container {
+        padding: 0 2rem;
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .hero-deco {
+        width: 10rem;
+        opacity: .6;
+      }
+    }
+
+    @media (max-width: 1023px) {
+      .quick-grid,
+      .feature-grid {
         grid-template-columns: repeat(2, 1fr);
       }
+
+      .footer-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .cta-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
 
-    @media (max-width: 800px) {
-
-      .landing-nav,
-      .landing-hero,
-      .quick-access,
-      .landing-footer {
-        width: min(100% - 32px, 560px);
-      }
-
-      .landing-nav {
-        padding: 16px 0;
-      }
-
-      .nav-link {
+    @media (max-width: 767px) {
+      .topbar,
+      .main-nav,
+      .header-actions,
+      .hero-deco,
+      .cta-banner .sq {
         display: none;
       }
 
-      .landing-hero {
-        display: block;
-        min-height: auto;
-        padding: 68px 0 60px;
-      }
-
-      .hero-copy {
-        font-size: 1rem;
-      }
-
-      .hero-panel {
-        margin-top: 56px;
-        min-height: auto;
-      }
-
-      h1 {
-        font-size: clamp(2.8rem, 13vw, 4.4rem);
-      }
-
-      .quick-heading {
+      .menu-toggle {
         display: block;
       }
 
-      .quick-heading p {
-        margin-top: 6px;
+      .mobile-nav.is-open {
+        display: block;
       }
-    }
 
-    @media (max-width: 520px) {
-      .quick-grid {
+      .hero {
+        height: auto;
+        min-height: 0;
+        padding: 4.5rem 0;
+      }
+
+      .hero-actions .btn {
+        flex: 1 1 100%;
+      }
+
+      .section,
+      .cta-banner {
+        padding: 3.5rem 0;
+      }
+
+      .section-title {
+        font-size: 1.875rem;
+        line-height: 2.25rem;
+      }
+
+      .footer-grid {
         grid-template-columns: 1fr;
       }
     }
 
-    @media (max-width: 420px) {
-      .nav-actions {
-        gap: 10px;
+    @media (max-width: 520px) {
+      .quick-grid,
+      .feature-grid {
+        grid-template-columns: 1fr;
       }
 
-      .nav-actions .button {
-        padding: 0 12px;
+      .brand-tag {
+        display: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
       }
 
-      .landing-hero {
-        padding-top: 52px;
-      }
-
-      .hero-panel {
-        padding: 24px;
-        box-shadow: 12px 12px 0 rgba(214, 173, 59, .25);
+      *,
+      *::before,
+      *::after {
+        transition: none !important;
       }
     }
   </style>
 </head>
 
 <body>
-  <main class="landing-shell">
-    <nav class="landing-nav" aria-label="Primary navigation">
-      <a class="brand" href="index.html" aria-label="USIAMS home">
-        <span class="brand-mark">US</span>
-        <span>USIAMS<small>University academic services</small></span>
-      </a>
-      <div class="nav-actions">
-        <a class="nav-link" href="#services">Services</a>
-        <a class="button button-light" href="login.html">Sign in <i class="bi bi-arrow-up-right"></i></a>
-      </div>
-    </nav>
+  <div class="topbar">
+    <div class="container">
+      <a href="login.html"><i class="bi bi-grid-1x2"></i> Student Portal</a>
+      <a href="login.html?next=pages/library.html"><i class="bi bi-book"></i> Library Services</a>
+      <a href="login.html?next=pages/documents.html"><i class="bi bi-file-earmark-arrow-down"></i> Forms &amp; Downloads</a>
+      <a href="login.html?next=pages/calendar.html"><i class="bi bi-calendar3"></i> Academic Calendar</a>
+    </div>
+  </div>
 
-    <section class="landing-hero" aria-labelledby="landing-title">
-      <div>
-        <span class="eyebrow">The university, connected</span>
-        <h1 id="landing-title">Your next chapter starts here.</h1>
-        <p class="hero-copy">A simpler way to move through university life. Access admissions, registration, results,
-          finance and support from one trusted academic platform.</p>
-        <div class="hero-actions">
-          <a class="button button-primary" href="login.html">Open student portal <i class="bi bi-arrow-right"></i></a>
-          <a class="button button-light" href="apply.html">Apply for admission</a>
+  <header class="site-header" id="siteHeader">
+    <div class="container">
+      <div class="header-row">
+        <a class="brand" href="index.html" aria-label="USIAMS home">
+          <span class="brand-mark">US</span>
+          <span><span class="brand-name">USIAMS</span><span class="brand-tag">University academic services</span></span>
+        </a>
+        <nav class="main-nav" aria-label="Primary navigation">
+          <a href="#top">Home</a>
+          <a href="#services">Services</a>
+          <a href="#why">Why USIAMS</a>
+          <a href="apply.html">Admissions</a>
+        </nav>
+        <div class="header-actions">
+          <a class="btn btn-secondary btn-sm" href="login.html">Login</a>
+          <a class="btn btn-primary btn-sm" href="apply.html">Apply Now</a>
         </div>
-        <p class="hero-note"><i class="bi bi-check-circle-fill"></i> Secure access for students, staff and university
-          partners</p>
+        <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false"
+          aria-controls="mobileNav"><i class="bi bi-list"></i></button>
       </div>
-
-      <aside class="hero-panel" id="services" aria-label="USIAMS services">
-        <span class="panel-kicker">One clear view</span>
-        <h2>Everything important, in one place.</h2>
-        <div class="service-list">
-          <div class="service"><i class="bi bi-mortarboard-fill"></i><span><strong>Admissions and student
-                records</strong>Applications, profiles and academic history</span></div>
-          <div class="service"><i class="bi bi-calendar3"></i><span><strong>Registration and timetable</strong>Courses,
-              schedules and attendance</span></div>
-          <div class="service"><i class="bi bi-bar-chart-fill"></i><span><strong>Results and academic
-                progress</strong>Grades, GPA and official reports</span></div>
-          <div class="service"><i class="bi bi-chat-square-text-fill"></i><span><strong>Requests and
-                support</strong>Announcements, documents and help</span></div>
+      <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+        <a class="nav-item" href="#top">Home</a>
+        <a class="nav-item" href="#services">Services</a>
+        <a class="nav-item" href="#why">Why USIAMS</a>
+        <a class="nav-item" href="apply.html">Admissions</a>
+        <div class="mobile-actions">
+          <a class="btn btn-secondary btn-sm" href="login.html">Login</a>
+          <a class="btn btn-primary btn-sm" href="apply.html">Apply Now</a>
         </div>
-      </aside>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-deco left" aria-hidden="true">
+        <span class="c1"></span><span class="c2"></span><span class="d1"></span><span class="r1"></span>
+        <span class="c3"></span><span class="l1"></span><span class="l2"></span><span class="d2"></span>
+        <span class="r2"></span><span class="c4"></span>
+      </div>
+      <div class="hero-deco right" aria-hidden="true">
+        <span class="c1"></span><span class="c2"></span><span class="d1"></span><span class="r1"></span>
+        <span class="c3"></span><span class="l1"></span><span class="l2"></span><span class="d2"></span>
+        <span class="r2"></span><span class="c4"></span>
+      </div>
+      <div class="container">
+        <div class="hero-content">
+          <span class="hero-eyebrow"><i class="bi bi-mortarboard-fill"></i> The university, connected</span>
+          <h1 id="hero-title">Your next chapter starts here.</h1>
+          <p class="hero-lead">A simpler way to move through university life. Access admissions, registration, results,
+            finance and support from one trusted academic platform.</p>
+          <div class="hero-actions">
+            <a class="btn btn-hero btn-white" href="login.html">Open student portal <i class="bi bi-arrow-right"></i></a>
+            <a class="btn btn-hero btn-outline-white" href="apply.html">Apply for admission</a>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat"><span>Admissions</span><strong>Apply online</strong></div>
+            <div class="hero-stat"><span>Results</span><strong>GPA &amp; transcripts</strong></div>
+            <div class="hero-stat"><span>Access</span><strong>Secure sign-in</strong></div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <section class="quick-access" aria-labelledby="quick-access-title">
-      <div class="quick-heading">
-        <div>
-          <h2 id="quick-access-title">Start with what you need</h2>
-          <p>Direct access to the most-used university services.</p>
+    <section class="section" id="services" aria-labelledby="services-title">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">Quick access</span>
+          <h2 class="section-title" id="services-title">Start with what you need</h2>
+          <p class="section-lead">Direct access to the most-used university services.</p>
         </div>
-      </div>
-      <div class="quick-grid">
-        <a class="quick-card" href="login.html"><i class="bi bi-grid-1x2-fill"></i><span><strong>Student
-              portal</strong><span>View your university services</span></span></a>
-        <a class="quick-card" href="apply.html"><i
-            class="bi bi-file-earmark-text-fill"></i><span><strong>Admissions</strong><span>Begin a new
-              application</span></span></a>
-        <a class="quick-card" href="login.html"><i
-            class="bi bi-megaphone-fill"></i><span><strong>Announcements</strong><span>Read the latest
-              notices</span></span></a>
-        <a class="quick-card" href="login.html"><i class="bi bi-question-circle-fill"></i><span><strong>Support
-              centre</strong><span>Requests and assistance</span></span></a>
+        <div class="quick-grid">
+          <a class="quick-card" href="login.html">
+            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-grid-1x2-fill"></i></span><i class="bi bi-arrow-right"></i></div>
+            <strong>Student portal</strong><small>View your university services</small>
+          </a>
+          <a class="quick-card" href="apply.html">
+            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-file-earmark-text-fill"></i></span><i class="bi bi-arrow-right"></i></div>
+            <strong>Admissions</strong><small>Begin a new application</small>
+          </a>
+          <a class="quick-card" href="login.html?next=pages/announcements.html">
+            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-megaphone-fill"></i></span><i class="bi bi-arrow-right"></i></div>
+            <strong>Announcements</strong><small>Read the latest notices</small>
+          </a>
+          <a class="quick-card" href="login.html?next=pages/requests.html">
+            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-question-circle-fill"></i></span><i class="bi bi-arrow-right"></i></div>
+            <strong>Support centre</strong><small>Requests and assistance</small>
+          </a>
+        </div>
       </div>
     </section>
 
-    <footer class="landing-footer">&copy; 2026 USIAMS. University Student Information and Academic Management System.
-    </footer>
+    <section class="section section-white" id="why" aria-labelledby="why-title">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">One clear view</span>
+          <h2 class="section-title" id="why-title">Everything important, in one place</h2>
+          <p class="section-lead">From your first application to graduation, every service works from the same record.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="card">
+            <span class="icon-circle"><i class="bi bi-mortarboard-fill"></i></span>
+            <h3>Admissions &amp; records</h3>
+            <p>Applications, student profiles and academic history kept together.</p>
+          </article>
+          <article class="card">
+            <span class="icon-circle"><i class="bi bi-calendar3"></i></span>
+            <h3>Registration &amp; timetable</h3>
+            <p>Course registration, class schedules and attendance.</p>
+          </article>
+          <article class="card">
+            <span class="icon-circle"><i class="bi bi-bar-chart-fill"></i></span>
+            <h3>Results &amp; progress</h3>
+            <p>Grades, GPA and official academic reports as soon as they are published.</p>
+          </article>
+          <article class="card">
+            <span class="icon-circle"><i class="bi bi-chat-square-text-fill"></i></span>
+            <h3>Requests &amp; support</h3>
+            <p>Announcements, documents and help from university offices.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-banner" aria-labelledby="cta-title">
+      <span class="blob b1" aria-hidden="true"></span>
+      <span class="blob b2" aria-hidden="true"></span>
+      <span class="sq" aria-hidden="true"></span>
+      <div class="container">
+        <div class="cta-inner">
+          <div>
+            <h2 id="cta-title">Ready to begin?</h2>
+            <p>Apply for admission online, or sign in to continue where you left off.</p>
+          </div>
+          <div class="hero-actions">
+            <a class="btn btn-hero btn-white" href="apply.html">Apply Now <i class="bi bi-arrow-right"></i></a>
+            <a class="btn btn-hero btn-outline-white" href="login.html">Login</a>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <span class="footer-brand">USIAMS</span>
+          <p>University Student Information and Academic Management System - one connected experience for students,
+            staff and partners.</p>
+        </div>
+        <div>
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="apply.html">Admission</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="#why">Why USIAMS</a></li>
+            <li><a href="login.html?next=pages/announcements.html">Announcements</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Connect With Us</h4>
+          <ul>
+            <li><a href="login.html">Student Portal</a></li>
+            <li><a href="apply.html">Apply Online</a></li>
+            <li><a href="login.html?next=pages/requests.html">Support Centre</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Contact Us</h4>
+          <ul>
+            <li><i class="bi bi-envelope"></i><a href="mailto:admin@usiams.ac.tz">admin@usiams.ac.tz</a></li>
+            <li><i class="bi bi-clock"></i>Mon - Fri, 08:00 - 16:00</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container">
+        <span>&copy; 2026 USIAMS. All rights reserved.</span>
+        <nav aria-label="Footer">
+          <a href="login.html">Student Portal</a>
+          <a href="apply.html">Apply Online</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var header = document.getElementById("siteHeader");
+      var toggle = document.getElementById("menuToggle");
+      var mobileNav = document.getElementById("mobileNav");
+
+      window.addEventListener("scroll", function () {
+        header.classList.toggle("is-scrolled", window.scrollY > 8);
+      }, { passive: true });
+
+      toggle.addEventListener("click", function () {
+        var open = mobileNav.classList.toggle("is-open");
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+        toggle.innerHTML = open ? '<i class="bi bi-x-lg"></i>' : '<i class="bi bi-list"></i>';
+      });
+
+      mobileNav.addEventListener("click", function (event) {
+        if (event.target.closest("a")) {
+          mobileNav.classList.remove("is-open");
+          toggle.setAttribute("aria-expanded", "false");
+          toggle.innerHTML = '<i class="bi bi-list"></i>';
+        }
+      });
+    })();
+  </script>
 </body>
 
 </html>

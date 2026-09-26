@@ -146,3 +146,30 @@ table.usi-table tbody tr:last-child td { border-bottom: none; }
 
 .password-toggle-wrap { position: relative; }
 .password-toggle-btn { position: absolute; right: .7rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-soft); }
+
+/* =========================================================
+   In-app help: page guides (? button, Help Centre) and the
+   first-sign-in welcome tour - see js/help.js.
+   ========================================================= */
+.help-steps { padding-left: 1.25rem; margin: 0; }
+.help-steps li { margin-bottom: .6rem; line-height: 1.5; }
+.help-steps li::marker { color: var(--primary); font-weight: 700; }
+#helpPanel { width: min(420px, 100vw); background: var(--surface); color: var(--text); }
+
+.tour-layer { position: fixed; inset: 0; z-index: 2000; }
+.tour-layer.tour-dim { background: rgba(10, 23, 48, .55); }
+.tour-spotlight {
+  position: fixed; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(10, 23, 48, .55), 0 0 0 3px var(--accent);
+  transition: top .25s ease, left .25s ease, width .25s ease, height .25s ease;
+}
+.tour-card {
+  position: fixed; background: var(--surface); color: var(--text);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 1rem 1.1rem;
+  transition: top .25s ease, left .25s ease;
+}
+.tour-title { font-weight: 800; font-size: 1.05rem; margin-bottom: .35rem; color: var(--primary); }
+.tour-body { font-size: .9rem; line-height: 1.55; color: var(--text); }
+.tour-footer { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .9rem; }
+.tour-count { font-size: .75rem; color: var(--text-muted); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .tour-spotlight, .tour-card { transition: none; } }

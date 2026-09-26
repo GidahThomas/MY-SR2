@@ -78,14 +78,23 @@
     return true;
   }
 
-  function saveDocuments() {
-    const files = document.getElementById("psDocFiles").files;
-    if (!files.length && !currentStudent.documentsSubmitted) { fieldError("Please select at least one document to upload (simulated - no file is actually stored)."); return false; }
+  // Each document is uploaded and stored in the database; the student
+  // record keeps the list of names and download URLs.
+  async function saveDocuments() {
+    const files = Array.from(document.getElementById("psDocFiles").files);
+    if (!files.length && !currentStudent.documentsSubmitted) { fieldError("Please select at least one document to upload."); return false; }
     if (files.length) {
-      global.USIAMS.students.updateStudent(currentStudent.id, {
-        documentsSubmitted: true,
-        documentNames: Array.from(files).map(f => f.name)
-      });
+      const stored = [];
+      try {
+        for (const file of files) {
+          const saved = await global.USIAMS.api.files.upload(file, "profile");
+          stored.push({ name: file.name, url: saved.url });
+        }
+      } catch (error) {
+        fieldError(error.message || "Your documents could not be uploaded.");
+        return false;
+      }
+      global.USIAMS.students.updateStudent(currentStudent.id, { documentsSubmitted: true, documentNames: stored });
       refreshStudent();
     }
     return true;
@@ -93,9 +102,13 @@
 
   const SAVERS = { personal: savePersonal, emergency: saveEmergency, academic: saveAcademic, documents: saveDocuments };
 
-  function goNext() {
+  async function goNext(event) {
     clearError();
-    if (!SAVERS[STEPS[stepIndex]]()) return;
+    const nextBtn = event && event.currentTarget;
+    if (nextBtn) nextBtn.disabled = true;
+    const saved = await SAVERS[STEPS[stepIndex]]();
+    if (nextBtn) nextBtn.disabled = false;
+    if (!saved) return;
     if (stepIndex === STEPS.length - 1) {
       toast.show("success", "Profile complete", "Thank you - your profile is now 100% complete.");
       setTimeout(() => { window.location.href = "student-dashboard.html"; }, 900);
@@ -120,8 +133,12 @@
     const ad = currentStudent.admission || {};
     document.getElementById("psSchool").value = ad.previousSchool && ad.previousSchool !== "-" ? ad.previousSchool : "";
     document.getElementById("psQualification").value = ad.entryQualification || "";
-    document.getElementById("psDocStatus").textContent = currentStudent.documentsSubmitted
-      ? `Already submitted: ${(currentStudent.documentNames || []).join(", ") || "on file"}`
+    // documentNames holds { name, url } for uploaded files (older records: plain names).
+    const docs = (currentStudent.documentNames || []).map(d => typeof d === "string" ? { name: d } : d);
+    document.getElementById("psDocStatus").innerHTML = currentStudent.documentsSubmitted
+      ? `Already submitted: ${docs.map(d => d.url
+          ? `<a href="#" data-action="download-attachment" data-url="${util.escapeHtml(d.url)}" data-name="${util.escapeHtml(d.name)}">${util.escapeHtml(d.name)}</a>`
+          : util.escapeHtml(d.name)).join(", ") || "on file"}`
       : "No documents submitted yet.";
   }
 

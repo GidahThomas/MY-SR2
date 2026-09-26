@@ -1,7 +1,7 @@
 /* =========================================================
    USIAMS - js/requests.js
    Requests module: students submit and track requests; staff
-   view, progress and resolve them. Backed by localStorage.
+   view, progress and resolve them. Saved to the database through the API.
    ========================================================= */
 (function (window) {
   "use strict";
@@ -52,7 +52,7 @@
         <div class="modal-header"><h5 class="modal-title">${req.id} - ${util.escapeHtml(req.type)}</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
           <p>${util.escapeHtml(req.description)}</p>
-          ${req.attachment ? `<p class="text-muted-usi" style="font-size:.8rem;"><i class="bi bi-paperclip me-1"></i>${util.escapeHtml(req.attachment)}</p>` : ""}
+          ${req.attachment ? `<p class="text-muted-usi" style="font-size:.8rem;"><i class="bi bi-paperclip me-1"></i>${req.attachmentUrl ? `<a href="#" data-action="download-attachment" data-url="${util.escapeHtml(req.attachmentUrl)}" data-name="${util.escapeHtml(req.attachment)}">${util.escapeHtml(req.attachment)}</a>` : util.escapeHtml(req.attachment)}</p>` : ""}
           <h6 class="mt-3">Timeline</h6>
           <ul class="usi-timeline">
             ${req.timeline.map(t => `<li><span class="tl-dot ${t.status === "REJECTED" ? "rej" : t.status === "RESOLVED" || t.status === "CLOSED" ? "done" : "warn"}"></span>
@@ -106,13 +106,19 @@
         <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="submitReqBtn" style="background:var(--primary);border-color:var(--primary);">Submit Request</button></div>
       </div></div></div>
     `);
-    document.getElementById("submitReqBtn").addEventListener("click", () => {
+    document.getElementById("submitReqBtn").addEventListener("click", async () => {
       const desc = document.getElementById("reqDesc").value.trim();
       if (!desc) { document.getElementById("reqFormError").textContent = "Please provide a description for your request."; document.getElementById("reqFormError").classList.remove("d-none"); return; }
       const file = document.getElementById("reqFile").files[0];
+      // The attachment itself is stored in the database; the request keeps its URL.
+      let stored = null;
+      if (file) {
+        try { stored = await window.USIAMS.api.files.upload(file, "request"); }
+        catch (error) { document.getElementById("reqFormError").textContent = error.message; document.getElementById("reqFormError").classList.remove("d-none"); return; }
+      }
       const newReq = {
         id: util.uid("REQ"), studentId: currentUser.studentId, type: document.getElementById("reqType").value,
-        description: desc, attachment: file ? file.name : null, status: "PENDING", createdAt: new Date().toISOString(),
+        description: desc, attachment: file ? file.name : null, attachmentUrl: stored ? stored.url : null, status: "PENDING", createdAt: new Date().toISOString(),
         timeline: [{ status: "PENDING", date: new Date().toISOString(), note: "Request submitted by student." }]
       };
       const list = all(); list.push(newReq); save(list);

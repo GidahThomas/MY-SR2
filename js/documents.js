@@ -41,7 +41,13 @@
         </tbody>
       </table></div>`;
 
-    container.querySelectorAll("[data-action='download']").forEach(b => b.addEventListener("click", () => toast.show("info", "Download simulated", "This is a demo document - no real file is stored.")));
+    container.querySelectorAll("[data-action='download']").forEach(b => b.addEventListener("click", () => {
+      const doc = all().find(d => d.id === b.dataset.id);
+      const files = global.USIAMS.api.files;
+      // Demo records from the seed data were never uploaded, so have no file.
+      if (!doc || !files.isStored(doc.url)) { toast.show("info", "No file stored", "This record has no uploaded file."); return; }
+      files.download(doc.url, doc.name).catch(error => toast.show("error", "Download failed", error.message));
+    }));
     container.querySelectorAll("[data-action='delete']").forEach(b => b.addEventListener("click", () => {
       if (!global.USIAMS.auth.guardWrite("delete documents")) return;
       save(all().filter(d => d.id !== b.dataset.id));
@@ -71,18 +77,30 @@
     fileInput.addEventListener("change", () => {
       document.getElementById("fileNamePreview").textContent = fileInput.files[0] ? `Selected: ${fileInput.files[0].name}` : "";
     });
-    document.getElementById("uploadSaveBtn").addEventListener("click", () => {
-      if (!fileInput.files[0]) { toast.show("error", "No file selected", "Please choose a file to upload."); return; }
+    document.getElementById("uploadSaveBtn").addEventListener("click", async () => {
+      const file = fileInput.files[0];
+      if (!file) { toast.show("error", "No file selected", "Please choose a file to upload."); return; }
+      const btn = document.getElementById("uploadSaveBtn");
+      btn.disabled = true;
+      let stored;
+      try {
+        // The file itself goes into the database; the document row keeps its URL.
+        stored = await global.USIAMS.api.files.upload(file, "document");
+      } catch (error) {
+        btn.disabled = false;
+        toast.show("error", "Upload failed", error.message);
+        return;
+      }
       const list = all();
       list.push({
         id: util.uid("DOC"), studentId: currentUser.studentId || "STU-0001",
-        name: fileInput.files[0].name, type: document.getElementById("docType").value,
+        name: file.name, type: document.getElementById("docType").value, url: stored.url,
         uploadDate: new Date().toISOString().slice(0, 10), status: "Pending"
       });
       save(list);
       modal.close();
       render();
-      toast.show("success", "Document uploaded", "Your document has been submitted for verification.");
+      toast.show("success", "Document uploaded", "Your document has been saved and submitted for verification.");
     });
   }
 

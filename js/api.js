@@ -194,8 +194,120 @@
     // session would still carry the seed copy of the staff-only registers in
     // memory, and any stray render would show demo data as if it were real.
     for (const resource of result.withheld || []) setList(resource, []);
+    preferences = result.preferences || {};
+    systemSettings = result.systemSettings || {};
     hydrated = true;
     return result;
+  }
+
+  // ---- Uploaded files -------------------------------------------------------
+  // Files are stored in the database (POST /api/files); records keep the
+  // returned download URL. Downloads need the session token, so they are
+  // fetched and handed to the browser as a blob.
+  const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
+  function readAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+      reader.onerror = () => reject(new Error("The file could not be read."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadFile(file, purpose) {
+    if (!file) throw new Error("Choose a file to upload.");
+    if (file.size > MAX_UPLOAD_BYTES) throw new Error(`${file.name} is larger than 5 MB.`);
+    const data = await readAsBase64(file);
+    const result = await request("/api/files", {
+      method: "POST", body: { name: file.name, type: file.type, purpose, data }
+    });
+    return result.data; // { id, name, mimeType, size, url }
+  }
+
+  async function downloadFile(url, fallbackName) {
+    const response = await fetch(url, { headers: token() ? { Authorization: "Bearer " + token() } : {} });
+    if (!response.ok) {
+      let message = "The file could not be downloaded.";
+      try { message = (await response.json()).message || message; } catch { /* not JSON */ }
+      throw new Error(message);
+    }
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename\*=UTF-8''([^;]+)/);
+    const name = match ? decodeURIComponent(match[1]) : (fallbackName || "download");
+    const blobUrl = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = blobUrl; link.download = name;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  }
+
+  /** True for a URL of a file stored in the database. */
+  function isStoredFile(url) { return /^\/api\/files\/[A-Z0-9-]+$/.test(String(url || "")); }
+
+  // Any link marked data-action="download-attachment" (request and complaint
+  // attachments, assignment submissions...) downloads its stored file.
+  if (global.document) {
+    global.document.addEventListener("click", event => {
+      const link = event.target.closest && event.target.closest("[data-action='download-attachment']");
+      if (!link) return;
+      event.preventDefault();
+      downloadFile(link.dataset.url, link.dataset.name).catch(error => {
+        if (USIAMS.toast) USIAMS.toast.show("error", "Download failed", error.message);
+      });
+    });
+  }
+
+  // ---- Preferences and system settings -----------------------------------
+  // Held in the database (user_preferences / system_settings), loaded with
+  // the bootstrap and read synchronously from these copies.
+  let preferences = {};
+  let systemSettings = {};
+
+  function getPreference(key, fallback = null) {
+    return Object.prototype.hasOwnProperty.call(preferences, key) ? preferences[key] : fallback;
+  }
+
+  /** Saves one of the signed-in user's preferences to the database. */
+  function savePreference(key, value) {
+    preferences[key] = value;
+    return request("/api/me/preferences", { method: "PUT", body: { [key]: value } })
+      .catch(error => { notifyError(error); throw error; });
+  }
+
+  function saveSystemSettings(value) {
+    const changed = {};
+    for (const [key, v] of Object.entries(value || {})) if (JSON.stringify(systemSettings[key]) !== JSON.stringify(v)) changed[key] = v;
+    Object.assign(systemSettings, value);
+    if (!Object.keys(changed).length) return Promise.resolve(systemSettings);
+    return request("/api/settings/system", { method: "PUT", body: changed })
+      .then(result => { systemSettings = result.data; return systemSettings; })
+      .catch(error => { notifyError(error); throw error; });
+  }
+
+  // Keys pages still read and write through USIAMS.storage that belong in
+  // the database but are not list resources.
+  const BYLAWS_KEY = /^bylawsAcknowledged\.(.+)$/;
+  function bridgedGet(key, fallback) {
+    if (key === "preferences") return { ...(fallback || {}), ...getPreference("notifications", {}) };
+    if (key === "systemSettings") return { ...(fallback || {}), ...systemSettings };
+    const bylaws = key.match(BYLAWS_KEY);
+    if (bylaws) {
+      const student = listOf("students").find(s => s.id === bylaws[1]);
+      return student ? !!student.bylawsAcknowledgedAt : fallback;
+    }
+    return undefined;
+  }
+  function bridgedSet(key, value) {
+    if (key === "preferences") { savePreference("notifications", value); return true; }
+    if (key === "systemSettings") { saveSystemSettings(value); return true; }
+    const bylaws = key.match(BYLAWS_KEY);
+    if (bylaws) {
+      const stamp = value ? new Date().toISOString().slice(0, 19).replace("T", " ") : null;
+      apiStore("students").update(bylaws[1], { bylawsAcknowledgedAt: stamp });
+      return true;
+    }
+    return undefined;
   }
 
   // ---- Write-through -------------------------------------------------
@@ -285,12 +397,16 @@
     storage.getStorage = function (key, fallback = null) {
       const resource = RESOURCE_BY_KEY[key];
       if (resource) return listOf(resource).slice();
+      const bridged = bridgedGet(key, fallback);
+      if (bridged !== undefined) return bridged;
       return localGet.call(storage, key, fallback);
     };
 
     storage.setStorage = function (key, value) {
       const resource = RESOURCE_BY_KEY[key];
       if (resource && Array.isArray(value)) return syncList(resource, value);
+      const bridged = bridgedSet(key, value);
+      if (bridged !== undefined) return bridged;
       return localSet.call(storage, key, value);
     };
 
@@ -319,7 +435,7 @@
   // ---- Page bootstrap -------------------------------------------------
   function showFatal(message) {
     document.body.innerHTML =
-      '<div style="max-width:640px;margin:15vh auto;padding:2rem;font-family:system-ui,sans-serif;text-align:center">' +
+      '<div style="max-width:640px;margin:15vh auto;padding:2rem;font-family:Mulish,system-ui,sans-serif;text-align:center">' +
       '<h1 style="font-size:1.25rem;margin-bottom:.75rem">USIAMS is unavailable</h1>' +
       '<p style="color:#666;line-height:1.6">' + message + "</p>" +
       '<p style="margin-top:1.5rem"><a href="' + basePath() + 'login.html">Return to sign in</a></p></div>';
@@ -381,6 +497,8 @@
 
   USIAMS.api = {
     request, hydrate, reload, flush, boot, apiStore,
+    getPreference, savePreference, getSystemSettings: () => ({ ...systemSettings }), saveSystemSettings,
+    files: { upload: uploadFile, download: downloadFile, isStored: isStoredFile, MAX_BYTES: MAX_UPLOAD_BYTES },
     get: path => request(path),
     isHydrated: () => hydrated,
     resourceFor: key => RESOURCE_BY_KEY[key] || null,

@@ -25,19 +25,30 @@
           <button class="btn btn-outline-secondary" id="viewInvoiceBtn"><i class="bi bi-receipt me-1"></i>View Invoice</button>
           <button class="btn btn-primary write-action" data-write-action id="makePaymentBtn" style="background:var(--primary);border-color:var(--primary);"><i class="bi bi-credit-card me-1"></i>Make Payment</button>
         </div>
-        <div class="no-print" id="adminFinanceSection"><button class="btn btn-outline-secondary" id="exportFinanceCsvBtn"><i class="bi bi-download me-1"></i>Export CSV</button></div>
+        <div class="no-print" id="adminFinanceActions"><button class="btn btn-outline-secondary" id="exportFinanceCsvBtn"><i class="bi bi-download me-1"></i>Export CSV</button></div>
       </div>
 
       <div class="dash-grid-stats" id="statGrid"></div>
 
       <div id="studentFinanceSection">
         <div id="financeBalanceAlert" class="alert d-none mb-3" role="alert"></div>
+        <div class="usi-card mb-3">
+          <div class="usi-card-header"><h3>GePG Control Numbers</h3><span class="text-muted-usi" style="font-size:.8rem;">Government payments. Valid for 7 days - pay through the Government Payments (GePG) option of any listed method.</span></div>
+          <div class="usi-card-body">
+            <div class="usi-table-wrap">
+              <table class="usi-table">
+                <thead><tr><th>GePG Control Number</th><th>Paying For</th><th>Amount</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+                <tbody id="controlNumbersBody"><tr><td colspan="6" class="text-muted-usi">Loading...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
         <div class="usi-card">
           <div class="usi-card-header"><h3>Payment History</h3></div>
           <div class="usi-card-body">
             <div class="usi-table-wrap">
               <table class="usi-table">
-                <thead><tr><th>Date</th><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Receipt</th></tr></thead>
+                <thead><tr><th>Date</th><th>GePG Control Number</th><th>Paid For</th><th>Method</th><th>Amount</th><th>Status</th><th>Receipt</th></tr></thead>
                 <tbody id="paymentHistoryBody"></tbody>
               </table>
             </div>

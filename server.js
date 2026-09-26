@@ -20,6 +20,28 @@ const { RESOURCES, READ_ONLY_ROLES } = require("./db/resources");
 const ROOT = __dirname;
 const sessions = new Map();
 
+// Roles a visitor may request on the public Create Account form, and the
+// scope each needs. A student account is usable at once; every staff role
+// is created Pending and waits for an administrator. University and System
+// Admin are deliberately absent - only an existing administrator can grant
+// those, from Administration > Users.
+const SELF_REGISTER_ROLES = {
+  STUDENT: { label: "Student", scope: "programme" },
+  LECTURER: { label: "Lecturer", scope: "department" },
+  ACADEMIC_ADVISOR: { label: "Academic Advisor", scope: "department" },
+  HEAD_OF_DEPARTMENT: { label: "Head of Department", scope: "department" },
+  DEPARTMENT_ADMIN: { label: "Department Admin", scope: "department" },
+  COLLEGE_ADMIN: { label: "College Admin", scope: "unit", unitType: "College" },
+  INSTITUTE_ADMIN: { label: "Institute Admin", scope: "unit", unitType: "Institute" },
+  SCHOOL_ADMIN: { label: "School Admin", scope: "unit", unitType: "School" },
+  EXAMINATION_OFFICER: { label: "Examination Officer" },
+  FINANCE_OFFICER: { label: "Finance Officer" },
+  REGISTRATION_OFFICER: { label: "Registration Officer" },
+  QUALITY_ASSURANCE_OFFICER: { label: "Quality Assurance Officer" },
+  LIBRARIAN: { label: "Librarian" },
+  HOSTEL_OFFICER: { label: "Hostel Officer" }
+};
+
 // ---------------------------------------------------------------------
 // Session helpers
 // ---------------------------------------------------------------------
@@ -44,7 +66,10 @@ function publicUser(account) {
     roles: account.roles || [account.role],
     roleLabel: String(account.role || "").toLowerCase().split("_")
       .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" "),
-    studentId: account.studentId || null
+    studentId: account.studentId || null,
+    // The department / organisational unit a scoped admin manages.
+    departmentId: account.departmentId || null,
+    unitId: account.unitId || null
   };
 }
 
@@ -85,12 +110,12 @@ function clientIp(req) {
   return (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress || null;
 }
 
-function readBody(req) {
+function readBody(req, maxBytes = 1024 * 1024) {
   return new Promise((resolve, reject) => {
     let raw = "";
     req.on("data", chunk => {
       raw += chunk;
-      if (raw.length > 1024 * 1024) req.destroy();
+      if (raw.length > maxBytes) req.destroy();
     });
     req.on("end", () => {
       try { resolve(raw ? JSON.parse(raw) : {}); }
@@ -202,6 +227,60 @@ async function accountChangeRefusal({ operation, targetId, patch, actor }) {
   return null;
 }
 
+// Admins below university level manage accounts only inside their own scope:
+// the roles they may grant, and the departments those accounts belong to.
+// University and System Admin are not listed - they manage every account.
+const SCOPED_ACCOUNT_MANAGERS = {
+  DEPARTMENT_ADMIN: { scope: "department", roles: ["LECTURER", "ACADEMIC_ADVISOR"] },
+  HEAD_OF_DEPARTMENT: { scope: "department", roles: ["LECTURER", "ACADEMIC_ADVISOR"] },
+  COLLEGE_ADMIN: { scope: "unit", roles: ["LECTURER", "ACADEMIC_ADVISOR", "HEAD_OF_DEPARTMENT", "DEPARTMENT_ADMIN"] },
+  INSTITUTE_ADMIN: { scope: "unit", roles: ["LECTURER", "ACADEMIC_ADVISOR", "HEAD_OF_DEPARTMENT", "DEPARTMENT_ADMIN"] },
+  SCHOOL_ADMIN: { scope: "unit", roles: ["LECTURER", "ACADEMIC_ADVISOR", "HEAD_OF_DEPARTMENT", "DEPARTMENT_ADMIN"] }
+};
+
+/**
+ * Returns a refusal message when a scoped admin's account change reaches
+ * outside their department / unit, or null when it is allowed. On create it
+ * also fills in the account's unit from its department. Full admins always
+ * get null here.
+ */
+async function scopedAccountRefusal({ actor, operation, body, existing }) {
+  const rule = SCOPED_ACCOUNT_MANAGERS[actor.role];
+  if (!rule) return null;
+  if (operation === "delete") return "Only a University or System Admin can delete accounts. Deactivate it instead.";
+
+  const scopeId = rule.scope === "department" ? actor.departmentId : actor.unitId;
+  if (!scopeId) return `Your account is not linked to a ${rule.scope}, so it cannot manage users. Ask a University Admin to set it.`;
+
+  async function departmentInScope(departmentId) {
+    const rows = await repo.query("SELECT id, unit_id AS unitId FROM departments WHERE id = ? LIMIT 1", [String(departmentId || "")]);
+    const department = rows[0];
+    if (!department) return null;
+    const allowed = rule.scope === "department" ? department.id === scopeId : department.unitId === scopeId;
+    return allowed ? department : null;
+  }
+  const allowedRoles = rule.roles.map(r => r.toLowerCase().replace(/_/g, " ")).join(", ");
+
+  if (operation === "update") {
+    if (!rule.roles.includes(existing.role) || !(await departmentInScope(existing.departmentId))) {
+      return "You can only manage accounts in your own " + rule.scope + ".";
+    }
+  }
+  const role = operation === "create" ? body.role : (body.role || existing.role);
+  if (!rule.roles.includes(role)) return `You can only create or assign these roles: ${allowedRoles}.`;
+
+  if (operation === "create" || body.departmentId !== undefined) {
+    const department = await departmentInScope(body.departmentId);
+    if (!department) {
+      return rule.scope === "department"
+        ? "You can only add accounts to your own department."
+        : "Choose a department in your own " + ({ COLLEGE_ADMIN: "college", INSTITUTE_ADMIN: "institute", SCHOOL_ADMIN: "school" }[actor.role] || "unit") + ".";
+    }
+    body.unitId = department.unitId;
+  }
+  return null;
+}
+
 function denyWrite(res, user) {
   const message = READ_ONLY_ROLES.includes(user.role)
     ? `${publicUser(user).roleLabel} has read-only access and cannot modify records.`
@@ -212,11 +291,31 @@ function denyWrite(res, user) {
 // ---------------------------------------------------------------------
 // Resource API: /api/data/:resource[/:id]
 // ---------------------------------------------------------------------
+/**
+ * Fields in a write that no column stores. The repository silently ignores
+ * them, so data typed into a form could be lost without anyone noticing.
+ */
+function droppedFields(resource, body) {
+  const flat = resource.transformIn ? resource.transformIn({ ...(body || {}) }) : (body || {});
+  const stored = new Set([
+    ...Object.keys(resource.fields), ...Object.keys(resource.writeOnly || {}),
+    ...Object.keys(resource.extraSelect || {}), ...(resource.derivedFields || [])
+  ]);
+  return Object.keys(flat).filter(key => !stored.has(key));
+}
+
 async function handleResourceRoute(req, res, url, session) {
   const [, , , name, id] = url.pathname.split("/");
   const resource = RESOURCES[name];
   if (!resource) { sendJson(res, 404, { success: false, message: "Unknown resource." }); return; }
   const { user } = session;
+
+  // Development check (USIAMS_AUDIT_WRITES=1): log every write's outcome and
+  // any fields that would be dropped, to prove all data reaches the database.
+  const audit = process.env.USIAMS_AUDIT_WRITES && req.method !== "GET" ? { dropped: [] } : null;
+  if (audit) {
+    res.on("finish", () => console.log(`[write-audit] ${req.method} ${name} ${res.statusCode} role=${user.role} dropped=${audit.dropped.join(",") || "-"}`));
+  }
 
   if (req.method === "GET") {
     if (!canRead(resource, user.role)) {
@@ -234,6 +333,7 @@ async function handleResourceRoute(req, res, url, session) {
 
   if (req.method === "POST") {
     const body = await readBody(req);
+    if (audit) audit.dropped = droppedFields(resource, body);
     const ownerField = ownerFieldOf(resource);
     // A student may only file records against their own identity.
     const owner = ownerField ? body[ownerField] : undefined;
@@ -259,6 +359,10 @@ async function handleResourceRoute(req, res, url, session) {
       return;
     }
 
+    if (name === "users") {
+      const refusal = await scopedAccountRefusal({ actor: user, operation: "create", body });
+      if (refusal) { sendJson(res, 403, { success: false, message: refusal }); return; }
+    }
     const created = await repo.create(name, body);
     await db.recordAudit({
       userId: user.id, userName: user.name, userRole: user.role, action: "CREATE",
@@ -273,12 +377,48 @@ async function handleResourceRoute(req, res, url, session) {
     const existing = await repo.getById(name, id);
     if (!existing) { sendJson(res, 404, { success: false, message: "Record not found." }); return; }
     const ownerField = ownerFieldOf(resource);
+
+    // A student editing their own record (Complete My Profile, By-Laws
+    // acknowledgement): only the fields the resource opens to students.
+    if (user.role === "STUDENT" && resource.studentUpdatableFields) {
+      if (!ownerField || existing[ownerField] !== user.studentId) { denyWrite(res, user); return; }
+      const body = await readBody(req);
+      if (audit) audit.dropped = droppedFields(resource, body);
+      const flat = resource.transformIn ? resource.transformIn({ ...body }) : { ...body };
+      const derived = resource.derivedFields || [];
+      // Pages often send a whole nested block (e.g. admission) back; fields in
+      // it that are unchanged are fine. Only an actual change is refused.
+      const normalize = value => {
+        const text = value === null || value === undefined ? "" : String(value);
+        return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : text; // dates may come back with a time part
+      };
+      const same = (a, b) => normalize(a) === normalize(b);
+      const refused = Object.keys(flat).filter(key => key !== "id" && !derived.includes(key) &&
+        !resource.studentUpdatableFields.includes(key) && !same(flat[key], existing[key]));
+      if (refused.length) {
+        sendJson(res, 403, { success: false, message: `Students cannot change: ${refused.join(", ")}.` });
+        return;
+      }
+      const patch = {};
+      for (const key of resource.studentUpdatableFields) if (flat[key] !== undefined) patch[key] = flat[key];
+      const updated = await repo.update(name, id, patch);
+      await db.recordAudit({
+        userId: user.id, userName: user.name, userRole: user.role, action: "UPDATE",
+        entityType: name, entityId: id, ip: clientIp(req)
+      });
+      sendJson(res, 200, { success: true, data: updated });
+      return;
+    }
+
     if (!canWrite(resource, user, { owner: ownerField ? existing[ownerField] : undefined, operation: "update" })) { denyWrite(res, user); return; }
     const body = await readBody(req);
+    if (audit) audit.dropped = droppedFields(resource, body);
     // The owner of a record can never be reassigned through an update.
     if (ownerField) delete body[ownerField];
     delete body.id;
     if (name === "users") {
+      const scoped = await scopedAccountRefusal({ actor: user, operation: "update", body, existing });
+      if (scoped) { sendJson(res, 403, { success: false, message: scoped }); return; }
       const refusal = await accountChangeRefusal({ operation: "update", targetId: id, patch: body, actor: user });
       if (refusal) { sendJson(res, 409, { success: false, message: refusal }); return; }
     }
@@ -301,6 +441,8 @@ async function handleResourceRoute(req, res, url, session) {
     const ownerField = ownerFieldOf(resource);
     if (!canWrite(resource, user, { owner: ownerField ? existing[ownerField] : undefined, operation: "delete" })) { denyWrite(res, user); return; }
     if (name === "users") {
+      const scoped = await scopedAccountRefusal({ actor: user, operation: "delete" });
+      if (scoped) { sendJson(res, 403, { success: false, message: scoped }); return; }
       const refusal = await accountChangeRefusal({ operation: "delete", targetId: id, actor: user });
       if (refusal) { sendJson(res, 409, { success: false, message: refusal }); return; }
     }
@@ -343,6 +485,78 @@ const BOOTSTRAP_ALIASES = {
   registrations: "seedRegistrations", calendar: "academicCalendar", holidays: "publicHolidays"
 };
 
+// ---------------------------------------------------------------------
+// Control-number payments: /api/finance/...
+// A student picks what to pay for and is issued a control number at once,
+// then pays through one of the payment methods listed here. Finance staff
+// can see every control number and act for any student.
+// ---------------------------------------------------------------------
+const FINANCE_STAFF = ["FINANCE_OFFICER", "UNIVERSITY_ADMIN", "SYSTEM_ADMIN"];
+
+async function handleFinanceRoute(req, res, url, session) {
+  const { user } = session;
+  const isStaff = FINANCE_STAFF.includes(user.role);
+  const parts = url.pathname.split("/").filter(Boolean); // ["api", "finance", ...]
+
+  // The student a request is about: students always act for themselves.
+  function studentFor(requested) {
+    if (user.role === "STUDENT") return user.studentId || null;
+    return isStaff && requested ? String(requested) : null;
+  }
+  const fail = (status, message) => sendJson(res, status, { success: false, message });
+
+  try {
+    if (req.method === "GET" && parts[2] === "payment-methods" && parts.length === 3) {
+      sendJson(res, 200, { success: true, data: await db.paymentMethods() });
+      return;
+    }
+
+    if (req.method === "GET" && parts[2] === "fee-items" && parts.length === 3) {
+      sendJson(res, 200, { success: true, data: await db.feeItems(studentFor(url.searchParams.get("studentId"))) });
+      return;
+    }
+
+    if (parts[2] === "control-numbers" && parts.length === 3) {
+      if (req.method === "GET") {
+        if (user.role !== "STUDENT" && !isStaff) { fail(403, "Your role cannot view control numbers."); return; }
+        const studentId = user.role === "STUDENT" ? user.studentId : url.searchParams.get("studentId");
+        sendJson(res, 200, { success: true, data: await db.controlNumbersFor(studentId || null) });
+        return;
+      }
+      if (req.method === "POST") {
+        const body = await readBody(req);
+        const studentId = studentFor(body.studentId);
+        if (!studentId) { fail(user.role === "STUDENT" ? 422 : 403, user.role === "STUDENT" ? "Your account is not linked to a student record." : "Only students and finance staff can request control numbers."); return; }
+        const bill = await db.issueControlNumber({ studentId, feeItemId: body.feeItemId, amount: body.amount });
+        if (!bill.reused) {
+          await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "CREATE", entityType: "control_numbers", entityId: bill.controlNumber, ip: clientIp(req) });
+        }
+        sendJson(res, bill.reused ? 200 : 201, { success: true, data: bill });
+        return;
+      }
+    }
+
+    // POST /api/finance/control-numbers/:controlNumber/pay
+    if (req.method === "POST" && parts[2] === "control-numbers" && parts[4] === "pay" && parts.length === 5) {
+      const bill = await db.findControlNumber(parts[3]);
+      if (!bill || (user.role === "STUDENT" ? bill.studentId !== user.studentId : !isStaff)) { fail(404, "Control number not found."); return; }
+      const body = await readBody(req);
+      const paid = await db.payControlNumber({
+        controlNumber: bill.controlNumber, paymentMethodId: body.paymentMethodId, payerAccount: body.payerAccount,
+        receivedBy: isStaff ? user.id : null
+      });
+      await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "CREATE", entityType: "payments", entityId: paid.paymentId, ip: clientIp(req) });
+      sendJson(res, 201, { success: true, data: paid });
+      return;
+    }
+
+    fail(404, "Resource not found.");
+  } catch (error) {
+    if (error.status) { fail(error.status, error.message); return; }
+    throw error;
+  }
+}
+
 async function handleBootstrap(req, res, session) {
   const { user } = session;
   const scope = scopeFor(user);
@@ -354,7 +568,48 @@ async function handleBootstrap(req, res, session) {
     const rows = await repo.list(name, { scope });
     data[BOOTSTRAP_ALIASES[name] || name] = rows;
   }
-  sendJson(res, 200, { success: true, user, data, withheld: skipped, generatedAt: new Date().toISOString() });
+  // The signed-in user's own settings and the university-wide ones, so pages
+  // can read them synchronously like the rest of the data.
+  const [preferences, systemSettings] = await Promise.all([db.getPreferences(user.id), db.getSystemSettings()]);
+  sendJson(res, 200, {
+    success: true, user, data, preferences, systemSettings,
+    withheld: skipped, generatedAt: new Date().toISOString()
+  });
+}
+
+// ---------------------------------------------------------------------
+// Settings: /api/me/preferences (each user's own) and
+// /api/settings/system (university-wide; admins change them).
+// ---------------------------------------------------------------------
+const SYSTEM_SETTINGS_EDITORS = ["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"];
+
+// What an upload is for, and the per-file limit.
+const FILE_PURPOSES = ["document", "request", "complaint", "submission", "profile"];
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
+async function handleSettingsRoute(req, res, url, session) {
+  const { user } = session;
+  if (url.pathname === "/api/me/preferences") {
+    if (req.method === "GET") { sendJson(res, 200, { success: true, data: await db.getPreferences(user.id) }); return; }
+    if (req.method === "PUT" || req.method === "PATCH") {
+      const body = await readBody(req);
+      if (!body || typeof body !== "object" || Array.isArray(body)) { sendJson(res, 422, { success: false, message: "Send preferences as an object." }); return; }
+      sendJson(res, 200, { success: true, data: await db.savePreferences(user.id, body) });
+      return;
+    }
+  }
+  if (url.pathname === "/api/settings/system") {
+    if (req.method === "GET") { sendJson(res, 200, { success: true, data: await db.getSystemSettings() }); return; }
+    if (req.method === "PUT" || req.method === "PATCH") {
+      if (!SYSTEM_SETTINGS_EDITORS.includes(user.role)) { denyWrite(res, user); return; }
+      const body = await readBody(req);
+      const saved = await db.saveSystemSettings(body, user.id);
+      await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "UPDATE", entityType: "system_settings", entityId: Object.keys(body || {}).join(",").slice(0, 60), ip: clientIp(req) });
+      sendJson(res, 200, { success: true, data: saved });
+      return;
+    }
+  }
+  sendJson(res, 404, { success: false, message: "Resource not found." });
 }
 
 // ---------------------------------------------------------------------
@@ -407,7 +662,8 @@ function isPublicPath(relativePath) {
 }
 
 function serveStatic(req, res, pathname) {
-  const requested = pathname === "/" ? "/login.html" : pathname;
+  // The public home page is the front door; it links on to login and apply.
+  const requested = pathname === "/" ? "/index.html" : pathname;
   const filePath = path.resolve(ROOT, `.${requested}`);
   const relativePath = path.relative(ROOT, filePath);
   if (relativePath.startsWith("..") || path.isAbsolute(relativePath) || !isPublicPath(relativePath) ||
@@ -421,7 +677,9 @@ function serveStatic(req, res, pathname) {
     sendJson(res, 404, { success: false, message: "Resource not found." });
     return;
   }
-  res.writeHead(200, { "Content-Type": `${contentType(filePath)}; charset=utf-8` });
+  // no-cache: the browser re-checks every file, so an edited page or script
+  // is picked up on the next reload instead of a stale copy being reused.
+  res.writeHead(200, { "Content-Type": `${contentType(filePath)}; charset=utf-8`, "Cache-Control": "no-cache" });
   fs.createReadStream(filePath).pipe(res);
 }
 
@@ -446,7 +704,13 @@ async function handleApi(req, res, url) {
     try {
       const { username, password } = await readBody(req);
       const account = await db.findUser(String(username || ""));
-      if (!account || !safeEqual(account.passwordHash, db.hashPassword(String(password || ""))) || account.status !== "Active" || !account.role) {
+      const passwordMatches = !!account && safeEqual(account.passwordHash, db.hashPassword(String(password || "")));
+      // Only someone who knows the password learns the account is waiting.
+      if (passwordMatches && account.status === "Pending") {
+        sendJson(res, 403, { success: false, message: "Your account request is awaiting approval by a university administrator. You can sign in once it is approved." });
+        return;
+      }
+      if (!passwordMatches || account.status !== "Active" || !account.role) {
         await db.recordAudit({
           userName: String(username || "").slice(0, 80), action: "LOGIN", entityType: "Session",
           status: "Failed", ip: clientIp(req)
@@ -472,12 +736,18 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/auth/register") {
     try {
-      const { username, fullName, email, password, programmeId } = await readBody(req);
+      const { username, fullName, email, password, programmeId, role, departmentId, unitId } = await readBody(req);
       const normalizedUsername = String(username || "").trim().toLowerCase();
       const normalizedEmail = String(email || "").trim().toLowerCase();
       const normalizedName = String(fullName || "").trim();
       const plainPassword = String(password || "");
       const normalizedProgramme = String(programmeId || "").trim();
+      const requestedRole = String(role || "STUDENT").trim().toUpperCase();
+      const roleRule = SELF_REGISTER_ROLES[requestedRole];
+      if (!roleRule) {
+        sendJson(res, 422, { success: false, message: "That role cannot be requested here. Ask a university administrator to create the account." });
+        return;
+      }
       if (!/^[a-z0-9._-]{3,80}$/.test(normalizedUsername)) {
         sendJson(res, 422, { success: false, message: "Username must be 3-80 characters and use letters, numbers, dots, underscores, or hyphens." });
         return;
@@ -486,19 +756,55 @@ async function handleApi(req, res, url) {
         sendJson(res, 422, { success: false, message: "Enter a full name, valid email, and password of at least 8 characters." });
         return;
       }
-      // A student account is only usable with a student record behind it, and
-      // that record needs a programme - it determines the department and the
-      // registration number.
-      if (!normalizedProgramme) {
-        sendJson(res, 422, { success: false, message: "Choose the programme you are joining." });
-        return;
-      }
       if (await db.findUser(normalizedUsername)) {
         sendJson(res, 409, { success: false, message: "That username is already registered." });
         return;
       }
       if (await db.findUserByEmail(normalizedEmail)) {
         sendJson(res, 409, { success: false, message: "That email address is already registered." });
+        return;
+      }
+
+      // Staff roles: created Pending, scoped to the department or unit the
+      // role works within.
+      if (requestedRole !== "STUDENT") {
+        const { departments, units } = await db.registrationScopes();
+        let scopedDepartment = null;
+        let scopedUnit = null;
+        if (roleRule.scope === "department") {
+          scopedDepartment = departments.find(d => d.id === String(departmentId || "").trim());
+          if (!scopedDepartment) {
+            sendJson(res, 422, { success: false, message: "Choose the department you work in." });
+            return;
+          }
+        } else if (roleRule.scope === "unit") {
+          scopedUnit = units.find(u => u.id === String(unitId || "").trim() && u.type === roleRule.unitType);
+          if (!scopedUnit) {
+            sendJson(res, 422, { success: false, message: `Choose the ${roleRule.unitType.toLowerCase()} you work in.` });
+            return;
+          }
+        }
+        const id = accountId();
+        await db.createStaffAccount({
+          id, username: normalizedUsername, passwordHash: db.hashPassword(plainPassword),
+          fullName: normalizedName, email: normalizedEmail, role: requestedRole,
+          departmentId: scopedDepartment && scopedDepartment.id,
+          unitId: scopedUnit ? scopedUnit.id : scopedDepartment && scopedDepartment.unitId
+        });
+        await db.recordAudit({ userId: id, userName: normalizedName, userRole: requestedRole, action: "REGISTER", entityType: "User", entityId: id, ip: clientIp(req) });
+        sendJson(res, 201, {
+          success: true,
+          pending: true,
+          message: `Your ${roleRule.label} account request has been sent. A university administrator must approve it before you can sign in.`
+        });
+        return;
+      }
+
+      // A student account is only usable with a student record behind it, and
+      // that record needs a programme - it determines the department and the
+      // registration number.
+      if (!normalizedProgramme) {
+        sendJson(res, 422, { success: false, message: "Choose the programme you are joining." });
         return;
       }
       const id = accountId();
@@ -582,6 +888,25 @@ async function handleApi(req, res, url) {
   }
 
   // The public application form needs the programme list before sign-in.
+  // What the public Create Account form offers: the roles that may be
+  // requested, and the departments and units staff roles are scoped to.
+  if (req.method === "GET" && url.pathname === "/api/public/registration-options") {
+    const { departments, units } = await db.registrationScopes();
+    const roles = Object.entries(SELF_REGISTER_ROLES).map(([id, rule]) => ({
+      id, label: rule.label, scope: rule.scope || null, unitType: rule.unitType || null,
+      needsApproval: id !== "STUDENT"
+    }));
+    sendJson(res, 200, {
+      success: true,
+      data: {
+        roles,
+        departments: departments.map(({ id, name }) => ({ id, name })),
+        units
+      }
+    });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/public/programmes") {
     const programmes = await repo.query(
       "SELECT id, code, name, level, department_id AS departmentId FROM programmes WHERE status = 'Active' ORDER BY name"
@@ -591,6 +916,27 @@ async function handleApi(req, res, url) {
   }
 
   // ---- Everything below requires a session -------------------------
+  // Settings > Change Password: the signed-in user proves the current
+  // password, then the new one replaces it in the database.
+  if (req.method === "POST" && url.pathname === "/api/auth/change-password") {
+    const session = requireUser(req, res);
+    if (!session) return;
+    const { user } = session;
+    const { currentPassword, newPassword } = await readBody(req);
+    const next = String(newPassword || "");
+    const storedHash = await db.passwordHashFor(user.id);
+    if (!storedHash || !safeEqual(storedHash, db.hashPassword(String(currentPassword || "")))) {
+      sendJson(res, 422, { success: false, message: "Your current password is not correct." });
+      return;
+    }
+    if (next.length < 8) { sendJson(res, 422, { success: false, message: "New password must be at least 8 characters long." }); return; }
+    if (next === String(currentPassword || "")) { sendJson(res, 422, { success: false, message: "Choose a password different from your current one." }); return; }
+    await db.changePassword(user.id, db.hashPassword(next));
+    await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "UPDATE", entityType: "password", entityId: user.id, ip: clientIp(req) });
+    sendJson(res, 200, { success: true, message: "Your password has been changed." });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/auth/me") {
     const session = requireUser(req, res);
     if (session) sendJson(res, 200, { success: true, user: session.user });
@@ -619,6 +965,60 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/dashboard/summary") {
     const session = requireUser(req, res);
     if (session) await handleDashboardSummary(req, res, session);
+    return;
+  }
+
+  // Uploaded files: stored in the database; other records hold the
+  // /api/files/<id> URL. Students reach only their own files; staff
+  // (who review documents and mark submissions) can open any.
+  if (url.pathname === "/api/files" && req.method === "POST") {
+    const session = requireUser(req, res);
+    if (!session) return;
+    const { user } = session;
+    let body;
+    try { body = await readBody(req, 8 * 1024 * 1024); }
+    catch { sendJson(res, 413, { success: false, message: "The file is too large. The limit is 5 MB." }); return; }
+    const purpose = String(body.purpose || "");
+    if (!FILE_PURPOSES.includes(purpose)) { sendJson(res, 422, { success: false, message: "Unknown upload purpose." }); return; }
+    const name = String(body.name || "").replace(/[\\/:*?"<>|\r\n]+/g, "_").trim().slice(0, 200);
+    const content = Buffer.from(String(body.data || ""), "base64");
+    if (!name || !content.length) { sendJson(res, 422, { success: false, message: "Choose a file to upload." }); return; }
+    if (content.length > MAX_UPLOAD_BYTES) { sendJson(res, 413, { success: false, message: "The file is too large. The limit is 5 MB." }); return; }
+    const mimeType = /^[\w.+-]+\/[\w.+-]+$/.test(String(body.type || "")) ? String(body.type) : "application/octet-stream";
+    const saved = await db.saveFile({ ownerUserId: user.id, studentId: user.studentId || null, purpose, name, mimeType, content });
+    await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "CREATE", entityType: "stored_files", entityId: saved.id, ip: clientIp(req) });
+    sendJson(res, 201, { success: true, data: saved });
+    return;
+  }
+
+  if (req.method === "GET" && /^\/api\/files\/[A-Z0-9-]+$/.test(url.pathname)) {
+    const session = requireUser(req, res);
+    if (!session) return;
+    const { user } = session;
+    const info = await db.getFileInfo(url.pathname.split("/").pop());
+    const allowed = info && (user.role !== "STUDENT" || info.ownerUserId === user.id || (info.studentId && info.studentId === user.studentId));
+    if (!allowed) { sendJson(res, 404, { success: false, message: "File not found." }); return; }
+    const content = await db.getFileContent(info.id);
+    res.writeHead(200, {
+      "Content-Type": info.mimeType,
+      "Content-Length": content.length,
+      "Content-Disposition": `attachment; filename="${info.name.replace(/"/g, "")}"; filename*=UTF-8''${encodeURIComponent(info.name)}`,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff"
+    });
+    res.end(content);
+    return;
+  }
+
+  if (url.pathname === "/api/me/preferences" || url.pathname === "/api/settings/system") {
+    const session = requireUser(req, res);
+    if (session) await handleSettingsRoute(req, res, url, session);
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/finance/")) {
+    const session = requireUser(req, res);
+    if (session) await handleFinanceRoute(req, res, url, session);
     return;
   }
 
@@ -705,8 +1105,25 @@ const server = http.createServer(async (req, res) => {
   serveStatic(req, res, url.pathname);
 });
 
-server.listen(config.port, config.host, () => {
+server.on("error", error => {
+  if (error.code === "EADDRINUSE") {
+    console.error(`USIAMS could not start: port ${config.port} is already in use.`);
+    console.error(`USIAMS may already be running - open http://${config.host}:${config.port}`);
+    console.error("Otherwise stop the other program, or start on another port with: set PORT=3001 && npm start");
+  } else {
+    console.error("USIAMS could not start:", error.message);
+  }
+  process.exit(1);
+});
+
+server.listen(config.port, config.host, async () => {
   console.log(`USIAMS running at http://${config.host}:${config.port}`);
+  // Report the database state up front; otherwise a stopped MySQL only
+  // shows up later as a failed sign-in.
+  if (!(await db.health())) {
+    console.error(`USIAMS cannot reach MySQL at ${config.db.host}:${config.db.port} (database "${config.db.database}").`);
+    console.error("Start MySQL and check DB_* in .env - pages will load but sign-in will fail until it is reachable.");
+  }
 });
 
 module.exports = { server };

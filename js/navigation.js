@@ -16,12 +16,12 @@
   const ALL_ROLES = Object.keys(global.USIAMS.data.roles);
   const NOT_STUDENT = ALL_ROLES.filter(r => r !== "STUDENT");
   const DUTY_MENU = {
-    LECTURER: ["Dashboard", "Courses", "Results", "Attendance", "Timetable", "E-Learning", "Notifications", "Announcements", "Academic Calendar", "Staff Directory", "Settings"],
-    FINANCE_OFFICER: ["Dashboard", "Finance", "Notifications", "Announcements", "Academic Calendar", "Reports", "Settings"],
-    REGISTRATION_OFFICER: ["Dashboard", "Students", "Academics", "Courses", "Registration", "Results", "Documents", "Admissions", "Graduation", "Notifications", "Announcements", "Academic Calendar", "Reports", "Settings"],
-    LIBRARIAN: ["Dashboard", "Library", "Notifications", "Settings"],
-    HOSTEL_OFFICER: ["Dashboard", "Hostel", "Notifications", "Settings"],
-    QUALITY_ASSURANCE_OFFICER: ["Dashboard", "Students", "Academics", "Courses", "Registration", "Results", "Attendance", "Timetable", "Notifications", "Announcements", "Academic Calendar", "Quality Assurance", "Reports", "Audit Logs", "Settings"]
+    LECTURER: ["Dashboard", "Courses", "Results", "Attendance", "Timetable", "E-Learning", "Notifications", "Announcements", "Academic Calendar", "Staff Directory", "Settings", "Help Centre"],
+    FINANCE_OFFICER: ["Dashboard", "Finance", "Notifications", "Announcements", "Academic Calendar", "Reports", "Settings", "Help Centre"],
+    REGISTRATION_OFFICER: ["Dashboard", "Students", "Academics", "Courses", "Registration", "Results", "Documents", "Admissions", "Graduation", "Notifications", "Announcements", "Academic Calendar", "Reports", "Settings", "Help Centre"],
+    LIBRARIAN: ["Dashboard", "Library", "Notifications", "Settings", "Help Centre"],
+    HOSTEL_OFFICER: ["Dashboard", "Hostel", "Notifications", "Settings", "Help Centre"],
+    QUALITY_ASSURANCE_OFFICER: ["Dashboard", "Students", "Academics", "Courses", "Registration", "Results", "Attendance", "Timetable", "Notifications", "Announcements", "Academic Calendar", "Quality Assurance", "Reports", "Audit Logs", "Settings", "Help Centre"]
   };
 
   function dashboardHrefFor(role) {
@@ -70,9 +70,10 @@
       { section: "Governance" },
       { label: "Quality Assurance", icon: "bi-patch-check", href: "pages/quality-assurance.html", roles: ["UNIVERSITY_ADMIN", "QUALITY_ASSURANCE_OFFICER", "HEAD_OF_DEPARTMENT", "COLLEGE_ADMIN", "INSTITUTE_ADMIN", "SCHOOL_ADMIN", "SYSTEM_ADMIN"] },
       { label: "Reports", icon: "bi-bar-chart-line", href: "pages/reports.html", roles: NOT_STUDENT },
-      { label: "Administration", icon: "bi-gear-wide-connected", href: "pages/administration.html", roles: ["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"] },
+      { label: "Administration", icon: "bi-gear-wide-connected", href: "pages/administration.html", roles: ["UNIVERSITY_ADMIN", "SYSTEM_ADMIN", "DEPARTMENT_ADMIN", "HEAD_OF_DEPARTMENT", "COLLEGE_ADMIN", "INSTITUTE_ADMIN", "SCHOOL_ADMIN"] },
       { label: "Audit Logs", icon: "bi-shield-lock", href: "pages/audit-logs.html", roles: ["UNIVERSITY_ADMIN", "QUALITY_ASSURANCE_OFFICER", "SYSTEM_ADMIN", "EXAMINATION_OFFICER"] },
-      { label: "Settings", icon: "bi-sliders", href: "pages/settings.html", roles: ALL_ROLES }
+      { label: "Settings", icon: "bi-sliders", href: "pages/settings.html", roles: ALL_ROLES },
+      { label: "Help Centre", icon: "bi-question-circle", href: "pages/help.html", roles: ALL_ROLES }
     ];
   }
 
@@ -136,6 +137,7 @@
     "administration.html": "Administration",
     "audit-logs.html": "Audit Logs",
     "settings.html": "Settings",
+    "help.html": "Help Centre",
     "403.html": "Access Denied",
     "404.html": "Page Not Found",
     "500.html": "System Error"

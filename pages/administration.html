@@ -37,6 +37,13 @@
             <div class="usi-card-body">
               <div class="table-toolbar">
                 <div class="search-box"><i class="bi bi-search"></i><input type="search" class="form-control" id="userSearchInput" placeholder="Search users"></div>
+                <select class="form-select" id="userRoleFilter" aria-label="Show users with role" style="max-width:240px;"></select>
+                <select class="form-select" id="userStatusFilter" aria-label="Show users with status" style="max-width:170px;">
+                  <option value="">All statuses</option>
+                  <option value="Active">Active</option>
+                  <option value="Pending">Pending approval</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
                 <button class="btn btn-primary write-action ms-auto" data-write-action id="addUserBtn" style="background:var(--primary);border-color:var(--primary);"><i class="bi bi-plus-lg me-1"></i>Add User</button>
               </div>
               <div id="usersTableContainer"></div>
@@ -129,7 +136,7 @@
 <script src="../js/audit-logs.js"></script>
 <script src="../js/administration.js"></script>
 <script>
-  USIAMS.boot(["UNIVERSITY_ADMIN","SYSTEM_ADMIN"], (user) => {
+  USIAMS.boot(["UNIVERSITY_ADMIN","SYSTEM_ADMIN","DEPARTMENT_ADMIN","HEAD_OF_DEPARTMENT","COLLEGE_ADMIN","INSTITUTE_ADMIN","SCHOOL_ADMIN"], (user) => {
     USIAMS.administrationPage.initPage(user);
   });
 </script>

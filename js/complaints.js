@@ -1,7 +1,7 @@
 /* =========================================================
    USIAMS - js/complaints.js
    Complaints module: students submit and track; staff view,
-   assign, escalate, respond and resolve. Backed by localStorage.
+   assign, escalate, respond and resolve. Saved to the database through the API.
    ========================================================= */
 (function (window) {
   "use strict";
@@ -54,6 +54,7 @@
         <div class="modal-body">
           <p>${util.escapeHtml(c.description)}</p>
           <p><span class="status-badge priority-${c.priority.toLowerCase()}">${c.priority} PRIORITY</span> ${c.assignedTo ? `&bull; Assigned to ${util.escapeHtml(c.assignedTo)}` : ""}</p>
+          ${c.attachment ? `<p class="text-muted-usi" style="font-size:.8rem;"><i class="bi bi-paperclip me-1"></i>${c.attachmentUrl ? `<a href="#" data-action="download-attachment" data-url="${util.escapeHtml(c.attachmentUrl)}" data-name="${util.escapeHtml(c.attachment)}">${util.escapeHtml(c.attachment)}</a>` : util.escapeHtml(c.attachment)}</p>` : ""}
           <h6 class="mt-3">Timeline</h6>
           <ul class="usi-timeline">
             ${c.timeline.map(t => `<li><span class="tl-dot ${t.status === "REJECTED" ? "rej" : t.status === "RESOLVED" || t.status === "CLOSED" ? "done" : "warn"}"></span>
@@ -115,14 +116,21 @@
         <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="submitCmpBtn" style="background:var(--primary);border-color:var(--primary);">Submit Complaint</button></div>
       </div></div></div>
     `);
-    document.getElementById("submitCmpBtn").addEventListener("click", () => {
+    document.getElementById("submitCmpBtn").addEventListener("click", async () => {
       const desc = document.getElementById("cmpDesc").value.trim();
       if (!desc) { document.getElementById("cmpFormError").textContent = "Please describe your complaint."; document.getElementById("cmpFormError").classList.remove("d-none"); return; }
       const file = document.getElementById("cmpFile").files[0];
+      // The attachment itself is stored in the database; the complaint keeps its URL.
+      let stored = null;
+      if (file) {
+        try { stored = await window.USIAMS.api.files.upload(file, "complaint"); }
+        catch (error) { document.getElementById("cmpFormError").textContent = error.message; document.getElementById("cmpFormError").classList.remove("d-none"); return; }
+      }
       const recipient = document.getElementById("cmpRecipient").value;
       const newCmp = {
         id: util.uid("CMP"), studentId: currentUser.studentId, category: document.getElementById("cmpCategory").value,
         priority: document.getElementById("cmpPriority").value, description: desc, attachment: file ? file.name : null,
+        attachmentUrl: stored ? stored.url : null,
         status: "PENDING", assignedTo: recipient, createdAt: new Date().toISOString(),
         timeline: [{ status: "PENDING", date: new Date().toISOString(), note: `Complaint submitted by student, routed to ${recipient}.` }]
       };

@@ -269,7 +269,8 @@
     { label: "Generate Reports", icon: "bi-bar-chart-line", href: "reports.html", roles: ["UNIVERSITY_ADMIN", "ACADEMIC_ADVISOR", "DEPARTMENT_ADMIN", "HEAD_OF_DEPARTMENT", "COLLEGE_ADMIN", "INSTITUTE_ADMIN", "SCHOOL_ADMIN", "EXAMINATION_OFFICER", "FINANCE_OFFICER", "REGISTRATION_OFFICER", "QUALITY_ASSURANCE_OFFICER", "SYSTEM_ADMIN", "LECTURER", "LIBRARIAN", "HOSTEL_OFFICER"] },
     { label: "Academic Calendar", icon: "bi-calendar3", href: "calendar.html", roles: null },
     { label: "Audit Logs", icon: "bi-shield-lock", href: "audit-logs.html", roles: ["UNIVERSITY_ADMIN", "QUALITY_ASSURANCE_OFFICER", "SYSTEM_ADMIN", "EXAMINATION_OFFICER"] },
-    { label: "Administration", icon: "bi-gear-wide-connected", href: "administration.html", roles: ["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"] }
+    { label: "Administration", icon: "bi-gear-wide-connected", href: "administration.html", roles: ["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"] },
+    { label: "Manage Users", icon: "bi-person-plus", href: "administration.html", roles: ["DEPARTMENT_ADMIN", "HEAD_OF_DEPARTMENT", "COLLEGE_ADMIN", "INSTITUTE_ADMIN", "SCHOOL_ADMIN"] }
   ];
 
   function renderAdminDashboard(user) {

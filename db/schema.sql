@@ -61,7 +61,7 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   full_name VARCHAR(160) NOT NULL,
   email VARCHAR(180) NOT NULL UNIQUE,
-  status ENUM('Active', 'Inactive', 'Suspended') NOT NULL DEFAULT 'Active',
+  status ENUM('Active', 'Inactive', 'Suspended', 'Pending') NOT NULL DEFAULT 'Active',
   department_id VARCHAR(40) NULL,
   last_login_at DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

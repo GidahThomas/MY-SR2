@@ -251,3 +251,169 @@ SET @sql := IF(@fk_exists = 0,
   'ALTER TABLE users ADD CONSTRAINT fk_users_unit FOREIGN KEY (unit_id) REFERENCES organisational_units(id) ON DELETE SET NULL',
   'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ---------------------------------------------------------
+-- Self-registered staff accounts wait for an administrator's
+-- approval before they can sign in.
+-- ---------------------------------------------------------
+ALTER TABLE users
+  MODIFY COLUMN status ENUM('Active', 'Inactive', 'Suspended', 'Pending') NOT NULL DEFAULT 'Active';
+
+-- ---------------------------------------------------------
+-- Control-number payments (GePG style). A student chooses what
+-- to pay for, is issued a control number for it straight away,
+-- then pays through one of the listed payment methods.
+-- Payment methods and fee items are reference data: edit these
+-- rows to change what students are offered.
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS payment_methods (
+  id VARCHAR(40) PRIMARY KEY,
+  name VARCHAR(80) NOT NULL,
+  channel ENUM('Mobile Money', 'Bank') NOT NULL,
+  instructions VARCHAR(500) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active'
+) ENGINE=InnoDB;
+
+INSERT IGNORE INTO payment_methods (id, name, channel, instructions, sort_order) VALUES
+  ('MPESA', 'M-Pesa', 'Mobile Money', 'Dial *150*00#, choose Pay by M-Pesa, then Government Payments (GePG), and enter the GePG control number and amount.', 1),
+  ('TIGOPESA', 'Tigo Pesa', 'Mobile Money', 'Dial *150*01#, choose Pay Bills, then Government Payments (GePG), and enter the GePG control number and amount.', 2),
+  ('AIRTELMONEY', 'Airtel Money', 'Mobile Money', 'Dial *150*60#, choose Make Payments, then Government Payments (GePG), and enter the GePG control number and amount.', 3),
+  ('HALOPESA', 'HaloPesa', 'Mobile Money', 'Dial *150*88#, choose Payments, then Government Payments (GePG), and enter the GePG control number and amount.', 4),
+  ('CRDB', 'CRDB Bank', 'Bank', 'Government payment (GePG): pay at any CRDB branch or CRDB Wakala agent, or in SimBanking choose Government Payments (GePG), quoting the GePG control number.', 5),
+  ('NMB', 'NMB Bank', 'Bank', 'Government payment (GePG): pay at any NMB branch or NMB Wakala agent, or in NMB Mkononi choose Government Payments (GePG), quoting the GePG control number.', 6),
+  ('NBC', 'NBC Bank', 'Bank', 'Government payment (GePG): pay at any NBC branch or agent, or in NBC Kiganjani choose Government Payments (GePG), quoting the GePG control number.', 7);
+
+CREATE TABLE IF NOT EXISTS fee_items (
+  id VARCHAR(40) PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  description VARCHAR(255) NULL,
+  -- TUITION is billed from the student's invoice (the outstanding balance);
+  -- FIXED items cost the amount below.
+  kind ENUM('TUITION', 'FIXED') NOT NULL DEFAULT 'FIXED',
+  amount DECIMAL(14,2) NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active'
+) ENGINE=InnoDB;
+
+INSERT IGNORE INTO fee_items (id, name, description, kind, amount, sort_order) VALUES
+  ('TUITION', 'Tuition fee', 'Outstanding balance on your tuition invoice for this academic year.', 'TUITION', NULL, 1),
+  ('REGISTRATION', 'Registration fee', 'Annual registration fee.', 'FIXED', 50000, 2),
+  ('EXAMINATION', 'Examination fee', 'Examination fee for the academic year.', 'FIXED', 40000, 3),
+  ('SUPPLEMENTARY', 'Supplementary examination', 'Fee per supplementary examination.', 'FIXED', 30000, 4),
+  ('ACCOMMODATION', 'Accommodation fee', 'Hostel accommodation for one semester.', 'FIXED', 250000, 5),
+  ('TRANSCRIPT', 'Academic transcript', 'One official academic transcript.', 'FIXED', 20000, 6),
+  ('ID_CARD', 'Student ID card replacement', 'Replacement for a lost or damaged student ID card.', 'FIXED', 10000, 7),
+  ('GRADUATION', 'Graduation fee', 'Gown, certificate and graduation ceremony.', 'FIXED', 60000, 8);
+
+CREATE TABLE IF NOT EXISTS control_numbers (
+  control_number VARCHAR(20) PRIMARY KEY,
+  student_id VARCHAR(40) NOT NULL,
+  fee_item_id VARCHAR(40) NOT NULL,
+  invoice_id VARCHAR(40) NULL,
+  description VARCHAR(255) NOT NULL,
+  amount DECIMAL(14,2) NOT NULL,
+  status ENUM('Pending', 'Paid', 'Expired', 'Cancelled') NOT NULL DEFAULT 'Pending',
+  payment_method_id VARCHAR(40) NULL,
+  payment_id VARCHAR(40) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  paid_at DATETIME NULL,
+  INDEX idx_control_numbers_student (student_id, status),
+  CONSTRAINT fk_control_numbers_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+  CONSTRAINT fk_control_numbers_item FOREIGN KEY (fee_item_id) REFERENCES fee_items(id),
+  CONSTRAINT fk_control_numbers_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+  CONSTRAINT fk_control_numbers_method FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id)
+) ENGINE=InnoDB;
+
+-- Payments for anything other than tuition have no invoice; each payment
+-- records the control number it settled.
+ALTER TABLE payments
+  MODIFY COLUMN invoice_id VARCHAR(40) NULL;
+ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS control_number VARCHAR(20) NULL AFTER reference;
+ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS fee_item_id VARCHAR(40) NULL AFTER control_number;
+
+-- The mobile number or bank account the payment was made from.
+ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS payer_account VARCHAR(30) NULL AFTER payment_method;
+
+-- Every university payment is a government payment through GePG, the
+-- Government Electronic Payment Gateway. Keep existing installs' method
+-- instructions in step with the rows above (INSERT IGNORE never updates).
+UPDATE payment_methods SET instructions = 'Dial *150*00#, choose Pay by M-Pesa, then Government Payments (GePG), and enter the GePG control number and amount.' WHERE id = 'MPESA';
+UPDATE payment_methods SET instructions = 'Dial *150*01#, choose Pay Bills, then Government Payments (GePG), and enter the GePG control number and amount.' WHERE id = 'TIGOPESA';
+UPDATE payment_methods SET instructions = 'Dial *150*60#, choose Make Payments, then Government Payments (GePG), and enter the GePG control number and amount.' WHERE id = 'AIRTELMONEY';
+UPDATE payment_methods SET instructions = 'Dial *150*88#, choose Payments, then Government Payments (GePG), and enter the GePG control number and amount.' WHERE id = 'HALOPESA';
+UPDATE payment_methods SET instructions = 'Government payment (GePG): pay at any CRDB branch or CRDB Wakala agent, or in SimBanking choose Government Payments (GePG), quoting the GePG control number.' WHERE id = 'CRDB';
+UPDATE payment_methods SET instructions = 'Government payment (GePG): pay at any NMB branch or NMB Wakala agent, or in NMB Mkononi choose Government Payments (GePG), quoting the GePG control number.' WHERE id = 'NMB';
+UPDATE payment_methods SET instructions = 'Government payment (GePG): pay at any NBC branch or agent, or in NBC Kiganjani choose Government Payments (GePG), quoting the GePG control number.' WHERE id = 'NBC';
+
+-- ---------------------------------------------------------
+-- Everything a user sets is kept in the database, not the browser.
+-- ---------------------------------------------------------
+-- Per-user settings: notification preferences, theme, whether the
+-- welcome tour has been seen. One JSON document per user.
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id VARCHAR(40) PRIMARY KEY,
+  preferences JSON NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user_preferences_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- University-wide settings from Administration > System Settings.
+CREATE TABLE IF NOT EXISTS system_settings (
+  setting_key VARCHAR(60) PRIMARY KEY,
+  setting_value JSON NOT NULL,
+  updated_by VARCHAR(40) NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES
+  ('maintenanceMode', 'false'), ('selfRegistration', 'false'), ('emailNotifications', 'true');
+
+-- A student's acknowledgement of the By-Laws, and the documents named in
+-- Complete My Profile.
+ALTER TABLE students
+  ADD COLUMN IF NOT EXISTS bylaws_acknowledged_at DATETIME NULL,
+  ADD COLUMN IF NOT EXISTS documents_submitted TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS document_names JSON NULL;
+
+-- ---------------------------------------------------------
+-- Uploaded files are stored in the database itself: documents,
+-- request/complaint attachments, assignment submissions and the
+-- documents from Complete My Profile. Rows elsewhere point at a
+-- file through its download URL, /api/files/<id>.
+-- ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS stored_files (
+  id VARCHAR(40) PRIMARY KEY,
+  owner_user_id VARCHAR(40) NULL,
+  student_id VARCHAR(40) NULL,
+  purpose VARCHAR(40) NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  mime_type VARCHAR(120) NOT NULL,
+  size_bytes INT NOT NULL,
+  content LONGBLOB NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_stored_files_owner (owner_user_id),
+  INDEX idx_stored_files_student (student_id),
+  CONSTRAINT fk_stored_files_owner FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+ALTER TABLE service_requests
+  ADD COLUMN IF NOT EXISTS attachment_url VARCHAR(255) NULL AFTER attachment;
+ALTER TABLE complaints
+  ADD COLUMN IF NOT EXISTS attachment_url VARCHAR(255) NULL AFTER attachment;
+
+-- File contents are kept in 512 KB chunks so uploads work under the
+-- default max_allowed_packet (1 MB) without reconfiguring MySQL.
+ALTER TABLE stored_files
+  MODIFY COLUMN content LONGBLOB NULL;
+CREATE TABLE IF NOT EXISTS stored_file_chunks (
+  file_id VARCHAR(40) NOT NULL,
+  chunk_index INT NOT NULL,
+  data MEDIUMBLOB NOT NULL,
+  PRIMARY KEY (file_id, chunk_index),
+  CONSTRAINT fk_stored_file_chunks_file FOREIGN KEY (file_id) REFERENCES stored_files(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

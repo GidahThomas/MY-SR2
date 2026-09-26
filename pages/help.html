@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help Centre - USIAMS</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/print.css">
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <aside class="app-sidebar" id="sidebarContainer"></aside>
+  <div class="app-main">
+    <header class="app-navbar" id="navbarContainer"></header>
+    <main class="app-content">
+
+      <div class="page-header">
+        <div><h1>Help Centre</h1><p id="helpSubtitle">How to use USIAMS, step by step.</p></div>
+        <div class="d-flex gap-2 no-print">
+          <button type="button" class="btn btn-primary" id="startTourBtn"><i class="bi bi-signpost-2 me-1"></i>Start the tour</button>
+        </div>
+      </div>
+
+      <div class="usi-card mb-3">
+        <div class="usi-card-header"><h3><i class="bi bi-rocket-takeoff me-2"></i>Getting started</h3></div>
+        <div class="usi-card-body">
+          <ol class="help-steps" id="gettingStarted"></ol>
+        </div>
+      </div>
+
+      <div class="usi-card mb-3">
+        <div class="usi-card-header">
+          <h3><i class="bi bi-book me-2"></i>How do I...?</h3>
+          <div class="search-box" style="max-width:320px;"><i class="bi bi-search"></i><input type="search" class="form-control" id="helpSearch" placeholder="Search guides, e.g. pay, register, results" aria-label="Search guides"></div>
+        </div>
+        <div class="usi-card-body">
+          <div class="accordion" id="helpGuides"></div>
+          <div class="empty-state d-none" id="helpNoResults"><i class="bi bi-search"></i>No guide matches that. Try another word, or ask through Requests.</div>
+        </div>
+      </div>
+
+      <div class="usi-card">
+        <div class="usi-card-header"><h3><i class="bi bi-chat-left-dots me-2"></i>Common questions</h3></div>
+        <div class="usi-card-body">
+          <div class="accordion" id="helpFaq"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/storage.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../components/toast.js"></script>
+<script src="../components/modal.js"></script>
+<script src="../data/grading-system.js"></script>
+<script src="../data/academic-structure.js"></script>
+<script src="../data/courses.js"></script>
+<script src="../data/users.js"></script>
+<script src="../data/students.js"></script>
+<script src="../data/results.js"></script>
+<script src="../data/registrations.js"></script>
+<script src="../data/finance.js"></script>
+<script src="../data/attendance.js"></script>
+<script src="../data/timetable.js"></script>
+<script src="../data/requests.js"></script>
+<script src="../data/complaints.js"></script>
+<script src="../data/notifications.js"></script>
+<script src="../data/calendar.js"></script>
+<script src="../data/announcements.js"></script>
+<script src="../data/documents.js"></script>
+<script src="../data/internship.js"></script>
+<script src="../data/graduation.js"></script>
+<script src="../data/alumni.js"></script>
+<script src="../data/library.js"></script>
+<script src="../data/hostel.js"></script>
+<script src="../data/elearning.js"></script>
+<script src="../data/admissions.js"></script>
+<script src="../data/qa-flags.js"></script>
+<script src="../data/audit-logs.js"></script>
+<script src="../js/gpa.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/search.js"></script>
+<script src="../js/notifications.js"></script>
+<script src="../js/qa.js"></script>
+<script src="../components/table.js"></script>
+<script src="../components/cards.js"></script>
+<script src="../components/sidebar.js"></script>
+<script src="../components/navbar.js"></script>
+<script src="../js/help.js"></script>
+<script src="../js/app.js"></script>
+<script>
+  USIAMS.boot(null, (user) => {
+    const { escapeHtml } = USIAMS.util;
+    const isStudent = user.role === "STUDENT";
+    document.getElementById("helpSubtitle").textContent =
+      `Guides for your role (${user.roleLabel || user.role}): what each page is for and how to do each task.`;
+
+    // Getting started - the basics every new user needs.
+    const basics = [
+      "Use the menu on the left to open any service. On a phone, tap the menu button at the top left.",
+      "Your Dashboard is your home page: it summarises what needs your attention.",
+      "On any page, click the ? button in the top bar for step-by-step help with that page.",
+      "The bell shows new notifications; the moon/sun button switches dark mode.",
+      "Change your password in Settings. If you were given a temporary password, change it now.",
+      isStudent
+        ? "Start with Complete My Profile, read the Student By-Laws, register for your courses and pay your fees."
+        : "Your menu only shows the pages your role uses. Ask an administrator if you need access to more.",
+      "Sign out from the menu under your name (top right) when you finish, especially on a shared computer."
+    ];
+    document.getElementById("gettingStarted").innerHTML = basics.map(b => `<li>${escapeHtml(b)}</li>`).join("");
+
+    // One accordion item per page this role can open.
+    const guides = USIAMS.help.guidesFor(user);
+    const base = USIAMS.auth.getBasePath();
+    const list = document.getElementById("helpGuides");
+    list.innerHTML = guides.map((g, i) => `
+      <div class="accordion-item" data-search="${escapeHtml((g.title + " " + g.intro + " " + g.steps.join(" ")).toLowerCase())}">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guide${i}" aria-expanded="false" aria-controls="guide${i}">
+            <span><strong>${escapeHtml(g.title)}</strong><span class="text-muted-usi d-block" style="font-size:.8rem;">${escapeHtml(g.intro)}</span></span>
+          </button>
+        </h2>
+        <div id="guide${i}" class="accordion-collapse collapse" data-bs-parent="#helpGuides">
+          <div class="accordion-body">
+            <ol class="help-steps">${g.steps.map(s => `<li>${escapeHtml(s)}</li>`).join("")}</ol>
+            ${g.page !== "help.html" ? `<a class="btn btn-sm btn-outline-primary mt-2" href="${base}pages/${g.page}">Go to this page <i class="bi bi-arrow-right"></i></a>` : ""}
+          </div>
+        </div>
+      </div>`).join("");
+
+    const search = document.getElementById("helpSearch");
+    search.addEventListener("input", () => {
+      const words = search.value.toLowerCase().split(/\s+/).filter(Boolean);
+      let shown = 0;
+      list.querySelectorAll(".accordion-item").forEach(item => {
+        const match = words.every(w => item.dataset.search.includes(w));
+        item.classList.toggle("d-none", !match);
+        if (match) shown++;
+      });
+      document.getElementById("helpNoResults").classList.toggle("d-none", shown > 0);
+    });
+
+    // Questions new users ask.
+    const faq = [
+      ["I forgot my password.", "On the sign-in page click Forgot Password? Click Here, enter your username and account email, and choose a new password."],
+      ["My new account says it is awaiting approval.", "Staff accounts created from the sign-in page must be approved by a university administrator. You can sign in once it is approved."],
+      ...(isStudent ? [
+        ["How do I pay university fees?", "Every payment is a government payment through GePG. Open Finance > Make Payment, choose what you are paying for, and pay the GePG control number using the Government Payments (GePG) option of your mobile money or bank."],
+        ["My control number expired.", "GePG control numbers are valid for 7 days. Open Finance > Make Payment and choose the item again to get a new one."],
+        ["I paid but my balance did not change.", "Only tuition payments reduce the tuition balance. Other fees (transcript, accommodation...) are separate. Check Payment History for the payment and its receipt."],
+        ["I cannot find a course to register for.", "Available Courses only lists courses open to your programme and year. Ask your Academic Advisor through Requests."]
+      ] : [
+        ["How do I add a user?", "Open Administration > Users, click Add User, choose the role first, then fill in the details. Only administrators see this."],
+        ["A page I need is not in my menu.", "Each role sees only its own pages. Ask a University or System Admin to change your role if you need more access."]
+      ]),
+      ["Who do I ask for help?", "Use Requests to ask the right office, or Complaints if something went wrong."]
+    ];
+    document.getElementById("helpFaq").innerHTML = faq.map(([q, a], i) => `
+      <div class="accordion-item">
+        <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq${i}" aria-expanded="false" aria-controls="faq${i}">${escapeHtml(q)}</button></h2>
+        <div id="faq${i}" class="accordion-collapse collapse" data-bs-parent="#helpFaq"><div class="accordion-body">${escapeHtml(a)}</div></div>
+      </div>`).join("");
+
+    document.getElementById("startTourBtn").addEventListener("click", () => USIAMS.help.startTour(user));
+  });
+</script>
+</body>
+</html>

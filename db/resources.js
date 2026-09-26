@@ -75,10 +75,22 @@ const RESOURCES = {
       year: "study_year", status: "status", email: "email", phone: "phone", address: "address",
       emergencyContactName: "emergency_contact_name", emergencyContactRelation: "emergency_contact_relation",
       emergencyContactPhone: "emergency_contact_phone", admissionDate: "admission_date",
-      entryQualification: "entry_qualification", previousSchool: "previous_school", photo: "photo_url"
+      entryQualification: "entry_qualification", previousSchool: "previous_school", photo: "photo_url",
+      bylawsAcknowledgedAt: "bylaws_acknowledged_at", documentsSubmitted: "documents_submitted",
+      documentNames: "document_names"
     },
+    jsonFields: ["documentNames"],
     read: EVERYONE,
     write: [...ADMINS, "REGISTRATION_OFFICER"],
+    // A student may update only these fields, and only on their own record
+    // (Complete My Profile, the By-Laws acknowledgement). Everything else -
+    // programme, status, registration number - stays with the registry.
+    studentUpdatableFields: [
+      "phone", "address", "dob", "emergencyContactName", "emergencyContactRelation", "emergencyContactPhone",
+      "previousSchool", "entryQualification", "documentsSubmitted", "documentNames", "bylawsAcknowledgedAt"
+    ],
+    // Sent back by the page but rebuilt from columns on every read.
+    derivedFields: ["fullName", "emergencyContact", "admission"],
     ownerField: "id",
     order: "registration_number",
     // The columns are flat, but the modules read a student the way the
@@ -286,7 +298,8 @@ const RESOURCES = {
     idPrefix: "PAY",
     fields: {
       id: "id", invoiceId: "invoice_id", studentId: "student_id", amount: "amount",
-      date: "payment_date", method: "payment_method", reference: "reference", status: "status", receivedBy: "received_by"
+      date: "payment_date", method: "payment_method", reference: "reference", status: "status", receivedBy: "received_by",
+      controlNumber: "control_number", feeItemId: "fee_item_id", payerAccount: "payer_account"
     },
     read: EVERYONE,
     write: ["FINANCE_OFFICER", ...ADMINS],
@@ -300,7 +313,7 @@ const RESOURCES = {
     fields: {
       id: "id", studentId: "student_id", submittedBy: "submitted_by", type: "request_type",
       subject: "subject", description: "description", status: "status", priority: "priority",
-      attachment: "attachment", timeline: "timeline", assignedTo: "assigned_to", createdAt: "created_at"
+      attachment: "attachment", attachmentUrl: "attachment_url", timeline: "timeline", assignedTo: "assigned_to", createdAt: "created_at"
     },
     read: EVERYONE,
     write: [...ADMINS, "REGISTRATION_OFFICER", "FINANCE_OFFICER"],
@@ -316,7 +329,7 @@ const RESOURCES = {
     fields: {
       id: "id", submittedBy: "submitted_by", studentId: "student_id", category: "category",
       subject: "subject", description: "description", status: "status", priority: "priority",
-      attachment: "attachment", assignedTo: "assigned_office", timeline: "timeline", createdAt: "created_at"
+      attachment: "attachment", attachmentUrl: "attachment_url", assignedTo: "assigned_office", timeline: "timeline", createdAt: "created_at"
     },
     read: EVERYONE,
     write: [...ADMINS, "REGISTRATION_OFFICER"],
@@ -674,7 +687,11 @@ const RESOURCES = {
     },
     // Account records are administrative; students never list other accounts.
     read: STAFF,
-    write: ["SYSTEM_ADMIN", "UNIVERSITY_ADMIN"],
+    // Department, college, institute and school admins may manage accounts
+    // too, but only inside their own scope - see scopedAccountRefusal in
+    // server.js, which every users write passes through.
+    write: ["SYSTEM_ADMIN", "UNIVERSITY_ADMIN", "DEPARTMENT_ADMIN", "HEAD_OF_DEPARTMENT",
+      "COLLEGE_ADMIN", "INSTITUTE_ADMIN", "SCHOOL_ADMIN"],
     order: "username"
   }
 };

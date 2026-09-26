@@ -89,7 +89,12 @@
   function balanceForStudent(studentId) {
     const invoice = invoiceForStudent(studentId);
     if (!invoice) return { billed: 0, paid: 0, balance: 0 };
-    const paid = paymentsForStudent(studentId).reduce((s, p) => s + p.amount, 0);
+    // Only payments against the tuition invoice reduce it - a transcript or
+    // accommodation fee paid by control number is a separate charge.
+    const paid = paymentsForStudent(studentId)
+      .filter(p => !p.invoiceId || p.invoiceId === invoice.id)
+      .filter(p => !p.feeItemId || p.feeItemId === "TUITION")
+      .reduce((s, p) => s + Number(p.amount), 0);
     return { billed: invoice.amountBilled, paid, balance: invoice.amountBilled - paid };
   }
   function allPayments() {
