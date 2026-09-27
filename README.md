@@ -65,7 +65,7 @@ The demo data (students, courses, results and so on) comes without any logins; i
 
 ## Hosting
 
-To put USIAMS online on cPanel hosting (Setup Node.js App), follow [DEPLOY-CPANEL.md](DEPLOY-CPANEL.md).
+USIAMS is deployed on **Vercel**, live at **https://unicollege.vercel.app** (and at https://unicollege.ac.tz once that domain is registered). [DEPLOY.md](DEPLOY.md) covers the database, settings, deploying and updates.
 
 ## Configuration
 
@@ -74,7 +74,7 @@ All settings live in `.env`; `.env.example` lists each one with an explanation.
 | Setting | Purpose |
 |---|---|
 | `HOST`, `PORT` | Where the server listens. Use `HOST=0.0.0.0` to let other computers on the network connect. |
-| `DB_*` | Database connection. |
+| `DB_*` | Database connection. `DB_SSL=on` (and `DB_SSL_CA` if the provider has its own certificate) for a cloud database. |
 | `SESSION_TTL_HOURS` | How long a sign-in lasts at most (default 8). |
 | `SESSION_IDLE_MINUTES` | A sign-in also ends after this long without activity (default 60). |
 | `PUBLIC_URL` | The site's address, used in links sent by email and in the link preview WhatsApp and social media show. |
@@ -85,8 +85,8 @@ All settings live in `.env`; `.env.example` lists each one with an explanation.
 | `SMTP_*` | Mail server for password-reset links and admission decisions. Without it, emails are kept in the `outbound_messages` table and printed to the server console. |
 | `REMINDERS` | `off` disables the daily timetable reminders. |
 | `GEPG_SIMULATION` | `on` lets students confirm their own payment (demos only). Off by default: finance staff confirm payments. |
-| `TRUST_PROXY` | `on` only behind a reverse proxy that sets `X-Forwarded-For` (cPanel, nginx). The last address in that header is used, since earlier ones can be written by the visitor. |
-| `TZ` | Time zone for reminders, e.g. `Africa/Dar_es_Salaam`, if the server is not on local time. |
+| `TRUST_PROXY` | `on` only behind a proxy that sets `X-Forwarded-For` (Vercel, nginx). The last address in that header is used, since earlier ones can be written by the visitor. |
+| `APP_TIMEZONE` | Time zone for reminders, e.g. `Africa/Dar_es_Salaam`, if the server is not on local time. |
 
 ## npm scripts
 
@@ -104,6 +104,7 @@ All settings live in `.env`; `.env.example` lists each one with an explanation.
 
 ```
 server.js            HTTP server, REST API, authorisation, security headers
+api/index.js         Vercel entry point (runs server.js); see vercel.json
 config.js            reads .env
 page-includes.js     the stylesheets, scripts and app frame every page shares
 rate-limit.js        limits on sign-in and public form attempts

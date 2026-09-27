@@ -14,22 +14,8 @@ const { loadSeedData } = require(path.join(__dirname, "..", "db", "load-seed-dat
 
 const { check, finish, call, login } = require("./helpers");
 
-// Fields the API deliberately does not return.
+// Fields the API deliberately does not return, by dataset name.
 const WITHHELD = { users: ["password"] };
-
-const ALIASES = {
-  attendanceSummary: "attendance", books: "seedBooks", loans: "seedLoans",
-  requests: "seedRequests", complaints: "seedComplaints", announcements: "seedAnnouncements",
-  notifications: "seedNotifications", documents: "seedDocuments", internships: "seedInternships",
-  graduation: "seedGraduation", materials: "seedMaterials", assignments: "seedAssignments",
-  submissions: "seedSubmissions", applications: "seedApplications", auditLogs: "seedAuditLogs",
-  registrations: "seedRegistrations", calendar: "academicCalendar", holidays: "publicHolidays",
-  hostelAllocations: "seedAllocations", students: "students", courses: "courses",
-  programmes: "programmes", departments: "departments", orgUnits: "orgUnits",
-  semesters: "semesters", academicYears: "academicYears", timetable: "timetable",
-  results: "results", invoices: "invoices", payments: "payments", alumni: "alumni",
-  qaFlags: "qaFlags", users: "users"
-};
 
 function keysOf(list) {
   const keys = new Set();
@@ -46,11 +32,11 @@ function keysOf(list) {
 
   console.log("== Every field the modules read is still served ==");
   let drifted = [];
-  for (const [resource, alias] of Object.entries(ALIASES)) {
+  // The bootstrap is keyed by the names the seed files use.
+  for (const [alias, apiList] of Object.entries(boot.json.data)) {
     const seedList = seed[alias];
-    const apiList = boot.json.data[alias];
     if (!seedList || !seedList.length || !apiList) continue;
-    const lost = [...keysOf(seedList)].filter(k => !keysOf(apiList).has(k) && !(WITHHELD[resource] || []).includes(k));
+    const lost = [...keysOf(seedList)].filter(k => !keysOf(apiList).has(k) && !(WITHHELD[alias] || []).includes(k));
     if (lost.length) drifted.push(`${alias}: ${lost.join(", ")}`);
   }
   check("no dataset lost a field", drifted.length === 0, drifted.join(" | "));

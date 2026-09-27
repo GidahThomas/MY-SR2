@@ -9,8 +9,7 @@
      npm run create-admin -- --username jdoe --email jdoe@university.ac.tz --name "Jane Doe"
      [--password <at least 12 characters>] [--role UNIVERSITY_ADMIN]
 
-   Hosts without a terminal (cPanel's "Run JS script" button cannot pass
-   arguments) can set ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_NAME and,
+   Where arguments cannot be passed, set ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_NAME and,
    optionally, ADMIN_PASSWORD / ADMIN_ROLE in the environment or .env
    instead; arguments win when both are given.
 

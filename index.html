@@ -6,32 +6,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#1C60A4">
   <script src="js/open-via-server.js"></script>
+  <!-- Animations are only set up when scripts run; without them every
+       section is simply shown. -->
+  <script>document.documentElement.classList.add("js");</script>
   <title>USIAMS | One university, one connected experience</title>
   <meta name="description"
     content="USIAMS connects students, staff and university services in one clear academic experience.">
   <!-- include: site-meta -->
-  <link
-    href="assets/vendor/mulish/mulish.css"
-    rel="stylesheet">
+  <link href="assets/vendor/mulish/mulish.css" rel="stylesheet">
   <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.css">
   <style>
     :root {
       --primary: #1c60a4;
+      --primary-700: #134677;
       --primary-600: #164d83;
-      --primary-50: #e8f1fa;
+      --primary-100: #d6e6f7;
+      --primary-50: #edf4fb;
       --accent: #4e90fe;
-      --gray-900: #111827;
-      --gray-800: #1f2937;
-      --gray-700: #374151;
-      --gray-600: #4b5563;
-      --gray-500: #6b7280;
-      --gray-300: #d1d5db;
-      --gray-100: #f3f4f6;
-      --gray-50: #f9fafb;
-      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, .1), 0 2px 4px -2px rgba(0, 0, 0, .1);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -4px rgba(0, 0, 0, .1);
-      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1);
+      --gold: #f5b83d;
+      --green: #16a34a;
+      --gray-900: #0f172a;
+      --gray-800: #1e293b;
+      --gray-700: #334155;
+      --gray-600: #475569;
+      --gray-500: #64748b;
+      --gray-300: #cbd5e1;
+      --gray-200: #e2e8f0;
+      --gray-100: #f1f5f9;
+      --gray-50: #f8fafc;
+      --radius: 1rem;
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, .06);
+      --shadow-md: 0 6px 16px -4px rgba(15, 23, 42, .1), 0 2px 4px -2px rgba(15, 23, 42, .06);
+      --shadow-lg: 0 18px 36px -12px rgba(15, 23, 42, .18);
+      --shadow-xl: 0 28px 60px -18px rgba(15, 23, 42, .3);
+      --ease: cubic-bezier(.22, 1, .36, 1);
     }
 
     * {
@@ -42,12 +50,23 @@
       scroll-behavior: smooth;
     }
 
+    /* Clear, even text: a slightly larger base size, dark body copy on light
+       backgrounds and smoothing so Mulish renders crisply. */
     body {
       margin: 0;
+      color: var(--gray-700);
+      background: #fff;
+      font-family: 'Mulish', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-size: 1.0625rem;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    h1, h2, h3, h4 {
       color: var(--gray-900);
-      background: var(--gray-50);
-      font-family: 'Mulish', system-ui, sans-serif;
-      line-height: 1.5;
+      letter-spacing: -.015em;
     }
 
     a {
@@ -56,16 +75,17 @@
     }
 
     a:focus-visible,
-    button:focus-visible {
+    button:focus-visible,
+    summary:focus-visible {
       outline: 3px solid var(--accent);
       outline-offset: 3px;
     }
 
     .container {
       width: 100%;
-      max-width: 80rem;
+      max-width: 78rem;
       margin: 0 auto;
-      padding: 0 1rem;
+      padding: 0 1.25rem;
     }
 
     .skip-link {
@@ -77,7 +97,7 @@
       border-radius: .5rem;
       background: var(--primary);
       color: #fff;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .skip-link:focus {
@@ -88,24 +108,41 @@
       outline: none;
     }
 
+    /* Anything a menu link jumps to stops below the sticky header. */
+    [id] {
+      scroll-margin-top: 5rem;
+    }
+
     /* ---------- Buttons ---------- */
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: .5rem;
-      padding: .75rem 1.5rem;
+      padding: .75rem 1.4rem;
       border: 2px solid transparent;
-      border-radius: .5rem;
-      font: 600 1rem 'Mulish', sans-serif;
+      border-radius: .75rem;
+      font: 700 1rem/1.2 'Mulish', sans-serif;
       white-space: nowrap;
       cursor: pointer;
-      transition: all .2s cubic-bezier(.4, 0, .2, 1);
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease), background-color .2s, color .2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn i {
+      transition: transform .25s var(--ease);
+    }
+
+    .btn:hover .bi-arrow-right {
+      transform: translateX(4px);
     }
 
     .btn-sm {
-      padding: .5rem 1rem;
-      font-size: .875rem;
+      padding: .55rem 1.05rem;
+      font-size: .9375rem;
     }
 
     .btn-primary {
@@ -121,44 +158,43 @@
 
     .btn-secondary {
       background: #fff;
-      border-color: var(--primary);
+      border-color: var(--primary-100);
       color: var(--primary);
     }
 
     .btn-secondary:hover {
-      background: var(--gray-50);
+      border-color: var(--primary);
+      background: var(--primary-50);
     }
 
     .btn-hero {
-      padding: 1rem 2rem;
-      font-weight: 700;
-      font-size: 1.125rem;
+      padding: 1rem 1.75rem;
+      font-size: 1.0625rem;
     }
 
     .btn-white {
       background: #fff;
-      color: var(--primary);
+      color: var(--primary-700);
       box-shadow: var(--shadow-xl);
     }
 
     .btn-white:hover {
-      background: var(--gray-100);
+      background: var(--primary-50);
     }
 
     .btn-outline-white {
-      border-color: #fff;
+      border-color: rgba(255, 255, 255, .85);
       color: #fff;
-      box-shadow: var(--shadow-lg);
     }
 
     .btn-outline-white:hover {
-      background: rgba(255, 255, 255, .1);
+      background: rgba(255, 255, 255, .12);
     }
 
     /* ---------- Top utility bar ---------- */
     .topbar {
-      background: var(--gray-800);
-      color: #fff;
+      background: var(--gray-900);
+      color: #e2e8f0;
       padding: .5rem 0;
       font-size: .875rem;
     }
@@ -167,17 +203,21 @@
       display: flex;
       justify-content: flex-end;
       align-items: center;
-      gap: 1.5rem;
+      gap: 1.75rem;
     }
 
     .topbar a {
       display: inline-flex;
       align-items: center;
-      gap: .35rem;
+      gap: .4rem;
       transition: color .2s;
     }
 
     .topbar a:hover {
+      color: #fff;
+    }
+
+    .topbar i {
       color: var(--accent);
     }
 
@@ -186,19 +226,28 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: #fff;
-      transition: box-shadow .3s;
+      background: rgba(255, 255, 255, .92);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      backdrop-filter: saturate(180%) blur(12px);
+      border-bottom: 1px solid transparent;
+      transition: box-shadow .3s, border-color .3s;
     }
 
     .site-header.is-scrolled {
-      box-shadow: var(--shadow-lg);
+      border-color: var(--gray-200);
+      box-shadow: var(--shadow-md);
     }
 
     .header-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      height: 5rem;
+      height: 4.75rem;
+      transition: height .3s var(--ease);
+    }
+
+    .site-header.is-scrolled .header-row {
+      height: 4rem;
     }
 
     .brand {
@@ -208,61 +257,90 @@
     }
 
     .brand-mark {
-      width: 3rem;
-      height: 3rem;
+      width: 2.9rem;
+      height: 2.9rem;
       display: grid;
       place-items: center;
-      border-radius: .75rem;
+      border-radius: .8rem;
       background: linear-gradient(135deg, var(--primary), var(--accent));
       color: #fff;
       font-weight: 800;
       font-size: 1rem;
       box-shadow: var(--shadow-md);
+      transition: transform .4s var(--ease);
+    }
+
+    .brand:hover .brand-mark {
+      transform: rotate(-8deg) scale(1.05);
     }
 
     .brand-logo {
-      width: 3rem;
-      height: 3rem;
+      width: 2.9rem;
+      height: 2.9rem;
       object-fit: contain;
     }
 
     .brand-name {
       display: block;
+      color: var(--primary);
       font-weight: 800;
       font-size: 1.25rem;
       line-height: 1.1;
-      color: var(--primary);
     }
 
     .brand-tag {
       display: block;
-      color: var(--gray-500);
-      font-size: .75rem;
+      color: var(--gray-600);
+      font-size: .8125rem;
       font-weight: 600;
     }
 
     .main-nav {
       display: flex;
       align-items: center;
-      gap: 2rem;
+      gap: .25rem;
     }
 
-    .main-nav a,
-    .mobile-nav a.nav-item {
+    .main-nav a {
+      position: relative;
+      padding: .5rem .8rem;
       color: var(--gray-700);
-      font-weight: 500;
+      font-weight: 600;
+      font-size: .98rem;
       transition: color .2s;
     }
 
-    .main-nav a:hover,
-    .mobile-nav a.nav-item:hover {
+    /* An underline that grows from the centre on hover. */
+    .main-nav a::after {
+      content: "";
+      position: absolute;
+      left: .8rem;
+      right: .8rem;
+      bottom: .2rem;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--primary);
+      transform: scaleX(0);
+      transition: transform .3s var(--ease);
+    }
+
+    .main-nav a:hover {
+      color: var(--primary);
+    }
+
+    .main-nav a:hover::after,
+    .main-nav a.is-current::after {
+      transform: scaleX(1);
+    }
+
+    .main-nav a.is-current {
       color: var(--primary);
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: .75rem;
     }
 
     .menu-toggle {
@@ -271,8 +349,8 @@
       border: 0;
       border-radius: .5rem;
       background: transparent;
-      color: var(--gray-700);
-      font-size: 1.5rem;
+      color: var(--gray-800);
+      font-size: 1.6rem;
       line-height: 1;
       cursor: pointer;
     }
@@ -283,19 +361,28 @@
 
     .mobile-nav {
       display: none;
-      padding: 1rem 0;
+      padding: .75rem 0 1.25rem;
       border-top: 1px solid var(--gray-100);
     }
 
     .mobile-nav a.nav-item {
-      display: block;
-      padding: .5rem 0;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .7rem .25rem;
+      color: var(--gray-800);
+      font-weight: 600;
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .mobile-nav a.nav-item i {
+      color: var(--primary);
     }
 
     .mobile-nav .mobile-actions {
       display: flex;
       gap: .75rem;
-      margin-top: .75rem;
+      margin-top: 1rem;
     }
 
     .mobile-nav .mobile-actions .btn {
@@ -305,23 +392,36 @@
     /* ---------- Hero ---------- */
     .hero {
       position: relative;
-      min-height: 600px;
-      height: calc(100vh - 7.25rem);
-      max-height: 900px;
-      display: flex;
-      align-items: center;
       overflow: hidden;
+      padding: 5.5rem 0 6.5rem;
       color: #fff;
-      background: linear-gradient(to bottom right, var(--primary), rgba(28, 96, 164, .9), var(--accent));
+      background:
+        radial-gradient(60rem 30rem at 85% -10%, rgba(78, 144, 254, .55), transparent 60%),
+        radial-gradient(40rem 26rem at -10% 110%, rgba(245, 184, 61, .18), transparent 60%),
+        linear-gradient(135deg, var(--primary-700), var(--primary) 55%, #2f78d0);
+    }
+
+    /* A faint grid behind the hero text. */
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .06) 1px, transparent 1px);
+      background-size: 48px 48px;
+      -webkit-mask-image: radial-gradient(ellipse at 30% 40%, #000 20%, transparent 75%);
+      mask-image: radial-gradient(ellipse at 30% 40%, #000 20%, transparent 75%);
+      pointer-events: none;
     }
 
     .hero .container {
       position: relative;
       z-index: 2;
-    }
-
-    .hero-content {
-      max-width: 48rem;
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      align-items: center;
+      gap: 3.5rem;
     }
 
     .hero-eyebrow {
@@ -329,29 +429,40 @@
       align-items: center;
       gap: .5rem;
       margin-bottom: 1.5rem;
-      padding: .5rem 1rem;
-      border: 1px solid rgba(255, 255, 255, .2);
+      padding: .45rem 1rem;
+      border: 1px solid rgba(255, 255, 255, .25);
       border-radius: 9999px;
-      background: rgba(255, 255, 255, .15);
-      -webkit-backdrop-filter: blur(4px);
-      backdrop-filter: blur(4px);
-      font-size: .875rem;
-      font-weight: 600;
+      background: rgba(255, 255, 255, .12);
+      font-size: .9375rem;
+      font-weight: 700;
+    }
+
+    .hero-eyebrow i {
+      color: var(--gold);
     }
 
     .hero h1 {
       margin: 0 0 1.25rem;
-      font-size: clamp(2.5rem, 6vw, 4.5rem);
-      font-weight: 700;
-      line-height: 1.1;
-      text-shadow: 0 25px 25px rgba(0, 0, 0, .15);
+      color: #fff;
+      font-size: clamp(2.5rem, 5.4vw, 4.1rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -.025em;
+    }
+
+    .hero h1 .highlight {
+      background: linear-gradient(90deg, #fff, #cfe2ff 40%, var(--gold));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     .hero-lead {
-      margin: 0 0 2.5rem;
-      color: rgba(255, 255, 255, .9);
-      font-size: clamp(1.125rem, 2vw, 1.5rem);
-      line-height: 1.625;
+      max-width: 38rem;
+      margin: 0 0 2.25rem;
+      color: rgba(255, 255, 255, .94);
+      font-size: clamp(1.125rem, 1.8vw, 1.3rem);
+      line-height: 1.6;
     }
 
     .hero-actions {
@@ -362,267 +473,306 @@
 
     .hero-signup {
       margin: 1.25rem 0 0;
-      color: rgba(255, 255, 255, .9);
+      color: rgba(255, 255, 255, .92);
+      font-size: 1rem;
     }
 
     .hero-signup a {
-      font-weight: 700;
+      font-weight: 800;
       text-decoration: underline;
-      text-underline-offset: 3px;
+      text-decoration-color: var(--gold);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 4px;
     }
 
-    .hero-stats {
+    .hero-points {
       display: flex;
       flex-wrap: wrap;
-      gap: .75rem;
-      margin-top: 2.25rem;
+      gap: .75rem 1.5rem;
+      margin: 2.25rem 0 0;
+      padding: 0;
+      list-style: none;
+      font-size: .98rem;
+      font-weight: 600;
     }
 
-    .hero-stat {
-      padding: .625rem 1rem;
-      border: 1px solid rgba(255, 255, 255, .2);
-      border-radius: .75rem;
-      background: rgba(255, 255, 255, .15);
-      -webkit-backdrop-filter: blur(4px);
-      backdrop-filter: blur(4px);
+    .hero-points li {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
     }
 
-    .hero-stat span {
-      display: block;
-      color: rgba(255, 255, 255, .85);
-      font-size: .75rem;
+    .hero-points i {
+      color: var(--gold);
     }
 
-    .hero-stat strong {
-      font-size: 1.125rem;
-      font-weight: 700;
+    /* The portal preview beside the hero text. */
+    .preview {
+      position: relative;
     }
 
-    /* Decorative white shapes along the hero's left and right edges. */
-    .hero-deco {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 20rem;
-      pointer-events: none;
+    .preview-card {
+      position: relative;
       z-index: 1;
-    }
-
-    .hero-deco.left {
-      left: 0;
-    }
-
-    .hero-deco.right {
-      right: 0;
-      transform: scaleX(-1);
-    }
-
-    .hero-deco span {
-      position: absolute;
+      padding: 1.5rem;
+      border-radius: 1.5rem;
       background: #fff;
+      color: var(--gray-700);
+      box-shadow: var(--shadow-xl);
     }
 
-    .hero-deco .c1 { top: 0; left: 0; width: 5rem; height: 5rem; border-radius: 50%; opacity: .9; transform: translate(-50%, -50%); }
-    .hero-deco .c2 { top: 2rem; left: 1rem; width: 3rem; height: 3rem; border-radius: 50%; opacity: .7; }
-    .hero-deco .d1 { top: 33%; left: .5rem; width: 2.5rem; height: 2.5rem; opacity: .75; transform: rotate(45deg); }
-    .hero-deco .r1 { top: 33%; left: 2rem; width: 4rem; height: 4rem; border-radius: 50%; background: transparent; border: 4px solid #fff; opacity: .6; }
-    .hero-deco .c3 { top: 50%; left: 0; width: 3.5rem; height: 3.5rem; border-radius: 50%; opacity: .7; transform: translateX(-33%); }
-    .hero-deco .l1 { top: 50%; left: 1rem; width: 6rem; height: 4px; opacity: .7; transform: rotate(45deg); }
-    .hero-deco .l2 { top: 50%; left: .5rem; width: 5rem; height: 4px; opacity: .6; transform: translateY(2rem) rotate(-45deg); }
-    .hero-deco .d2 { bottom: 25%; left: 1.5rem; width: 3rem; height: 3rem; opacity: .7; transform: rotate(45deg); }
-    .hero-deco .r2 { bottom: 3rem; left: .5rem; width: 4rem; height: 4rem; border-radius: 50%; background: transparent; border: 4px solid #fff; opacity: .55; }
-    .hero-deco .c4 { bottom: 0; left: 0; width: 6rem; height: 6rem; border-radius: 50%; opacity: .85; transform: translate(-50%, 50%); }
+    .preview-head {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .preview-avatar {
+      width: 2.75rem;
+      height: 2.75rem;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--primary-50);
+      color: var(--primary);
+      font-size: 1.25rem;
+    }
+
+    .preview-head strong {
+      display: block;
+      color: var(--gray-900);
+      font-size: 1.05rem;
+    }
+
+    .preview-head small {
+      color: var(--gray-500);
+      font-size: .875rem;
+    }
+
+    .preview-row {
+      display: flex;
+      align-items: center;
+      gap: .85rem;
+      padding: .8rem .9rem;
+      border-radius: .9rem;
+      background: var(--gray-50);
+    }
+
+    .preview-row + .preview-row {
+      margin-top: .65rem;
+    }
+
+    .preview-row .icon-tile {
+      flex: 0 0 auto;
+    }
+
+    .preview-row strong {
+      display: block;
+      color: var(--gray-900);
+      font-size: .98rem;
+    }
+
+    .preview-row small {
+      display: block;
+      color: var(--gray-600);
+      font-size: .875rem;
+    }
+
+    .preview-row .status {
+      margin-left: auto;
+      padding: .2rem .6rem;
+      border-radius: 9999px;
+      background: #dcfce7;
+      color: #166534;
+      font-size: .8125rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .preview-float {
+      position: absolute;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      padding: .7rem 1rem;
+      border-radius: .9rem;
+      background: #fff;
+      color: var(--gray-900);
+      font-size: .9375rem;
+      font-weight: 700;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .preview-float i {
+      font-size: 1.2rem;
+    }
+
+    .preview-float.one {
+      top: -1.25rem;
+      right: -1rem;
+    }
+
+    .preview-float.one i {
+      color: var(--gold);
+    }
+
+    .preview-float.two {
+      bottom: -1.25rem;
+      left: -1.5rem;
+    }
+
+    .preview-float.two i {
+      color: var(--green);
+    }
+
+    /* Soft glowing shapes drifting behind the hero. */
+    .orb {
+      position: absolute;
+      z-index: 0;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(2px);
+    }
+
+    .orb.o1 { top: 12%; right: 6%; width: 7rem; height: 7rem; background: rgba(255, 255, 255, .1); }
+    .orb.o2 { bottom: 10%; left: 44%; width: 4rem; height: 4rem; background: rgba(245, 184, 61, .25); }
+    .orb.o3 { top: 18%; left: -2rem; width: 10rem; height: 10rem; border: 2px solid rgba(255, 255, 255, .15); background: transparent; }
+
+    /* The wave at the foot of the hero. */
+    .hero-wave {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      z-index: 1;
+      display: block;
+      width: 100%;
+      height: 70px;
+    }
 
     /* ---------- Sections ---------- */
     .section {
-      padding: 5rem 0;
-      /* Keep headings clear of the sticky header when jumped to. */
-      scroll-margin-top: 5rem;
+      padding: 5.5rem 0;
+      scroll-margin-top: 4.5rem;
     }
 
-    .section-white {
-      background: #fff;
+    .section-tint {
+      background: var(--gray-50);
     }
 
     .section-head {
-      max-width: 42rem;
-      margin: 0 auto 3rem;
+      max-width: 44rem;
+      margin: 0 auto 3.25rem;
       text-align: center;
     }
 
+    /* Section labels in ordinary sentence case, set as a small pill. */
     .section-kicker {
-      display: inline-block;
-      margin-bottom: .75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      margin-bottom: 1rem;
+      padding: .35rem .9rem;
+      border-radius: 9999px;
+      background: var(--primary-50);
       color: var(--primary);
-      font-size: .875rem;
+      font-size: .9375rem;
       font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
     }
 
     .section-title {
       margin: 0 0 1rem;
-      color: var(--gray-900);
-      font-size: 2.25rem;
-      font-weight: 700;
-      line-height: 2.5rem;
+      font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+      font-weight: 800;
+      line-height: 1.15;
     }
 
     .section-lead {
       margin: 0;
       color: var(--gray-600);
-      font-size: 1.125rem;
-    }
-
-    .quick-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-    }
-
-    .quick-card {
-      display: block;
-      padding: 1.25rem;
-      border: 1px solid var(--gray-100);
-      border-radius: 1rem;
-      background: #fff;
-      box-shadow: var(--shadow-sm);
-      transition: box-shadow .2s;
-    }
-
-    .quick-card:hover {
-      box-shadow: var(--shadow-md);
-    }
-
-    .quick-card-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: .75rem;
-    }
-
-    .icon-tile {
-      width: 2.5rem;
-      height: 2.5rem;
-      display: grid;
-      place-items: center;
-      border-radius: .75rem;
-      background: var(--primary);
-      color: #fff;
       font-size: 1.15rem;
     }
 
-    .quick-card .bi-arrow-right {
-      color: var(--gray-300);
-      transition: color .2s;
+    .icon-tile {
+      width: 2.75rem;
+      height: 2.75rem;
+      display: grid;
+      place-items: center;
+      border-radius: .8rem;
+      background: var(--primary);
+      color: #fff;
+      font-size: 1.2rem;
+      transition: transform .35s var(--ease);
     }
 
-    .quick-card:hover .bi-arrow-right {
+    .icon-tile.soft {
+      background: var(--primary-50);
       color: var(--primary);
+    }
+
+    .icon-tile.gold { background: #fef3c7; color: #b45309; }
+    .icon-tile.green { background: #dcfce7; color: #15803d; }
+
+    /* ---------- 1. Quick access ---------- */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+
+    .quick-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.35rem 1.4rem;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease), border-color .3s;
+    }
+
+    .quick-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--primary-100);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .quick-card:hover .icon-tile {
+      transform: rotate(-8deg) scale(1.08);
     }
 
     .quick-card strong {
       display: block;
       color: var(--gray-900);
-      font-size: 1.05rem;
-      font-weight: 700;
+      font-size: 1.08rem;
+      font-weight: 800;
     }
 
     .quick-card small {
       display: block;
-      margin-top: .125rem;
-      color: var(--gray-500);
-      font-size: .875rem;
-    }
-
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
-    }
-
-    .card {
-      padding: 2rem 1.5rem;
-      border-radius: .75rem;
-      background: #fff;
-      box-shadow: var(--shadow-lg);
-      transition: box-shadow .3s;
-    }
-
-    .card:hover {
-      box-shadow: var(--shadow-xl);
-    }
-
-    .card .icon-circle {
-      width: 3.5rem;
-      height: 3.5rem;
-      display: grid;
-      place-items: center;
-      margin-bottom: 1.25rem;
-      border-radius: 1rem;
-      background: rgba(28, 96, 164, .1);
-      color: var(--primary);
-      font-size: 1.5rem;
-    }
-
-    .card h3 {
-      margin: 0 0 .5rem;
-      font-size: 1.25rem;
-      font-weight: 700;
-    }
-
-    .card p {
-      margin: 0;
-      color: var(--gray-600);
-      line-height: 1.625;
-    }
-
-    /* ---------- Announcements ---------- */
-    /* One to three cards, centred, so a short list does not leave a gap. */
-    .news-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 24rem));
-      justify-content: center;
-      gap: 1.5rem;
-    }
-
-    .news-card {
-      display: flex;
-      flex-direction: column;
-      padding: 1.5rem;
-      border: 1px solid var(--gray-100);
-      border-left: 4px solid var(--primary);
-      border-radius: .75rem;
-      background: #fff;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .news-card time {
-      color: var(--primary);
-      font-size: .8125rem;
-      font-weight: 700;
-    }
-
-    .news-card h3 {
-      margin: .375rem 0 .5rem;
-      font-size: 1.125rem;
-      font-weight: 700;
-    }
-
-    .news-card p {
-      margin: 0;
       color: var(--gray-600);
       font-size: .9375rem;
     }
 
-    .muted-note {
-      grid-column: 1 / -1;
-      margin: 0;
-      color: var(--gray-500);
-      text-align: center;
+    .quick-card .bi-arrow-right {
+      margin-left: auto;
+      color: var(--gray-300);
+      font-size: 1.2rem;
+      transition: color .25s, transform .3s var(--ease);
     }
 
-    /* ---------- Admissions ---------- */
+    .quick-card:hover .bi-arrow-right {
+      color: var(--primary);
+      transform: translateX(4px);
+    }
+
+    /* ---------- 4. Admissions ---------- */
     .admissions-grid {
       display: grid;
       grid-template-columns: 1.1fr 1fr;
@@ -632,7 +782,8 @@
 
     .panel {
       padding: 2rem;
-      border-radius: 1rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 1.25rem;
       background: #fff;
       box-shadow: var(--shadow-md);
     }
@@ -640,10 +791,10 @@
     .panel h3 {
       display: flex;
       align-items: center;
-      gap: .5rem;
+      gap: .6rem;
       margin: 0 0 1rem;
-      font-size: 1.25rem;
-      font-weight: 700;
+      font-size: 1.3rem;
+      font-weight: 800;
     }
 
     .panel h3 i {
@@ -657,10 +808,11 @@
 
     .admission-window {
       display: flex;
-      gap: .5rem;
+      gap: .6rem;
       margin: 0 0 1.25rem;
-      padding: .875rem 1rem;
-      border-radius: .5rem;
+      padding: .9rem 1rem;
+      border-left: 4px solid var(--primary);
+      border-radius: .6rem;
       background: var(--primary-50);
       color: var(--gray-800);
     }
@@ -670,31 +822,39 @@
     }
 
     .level-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .75rem;
-      margin: 0 0 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+      gap: .85rem;
+      margin: 0 0 1.75rem;
       padding: 0;
       list-style: none;
     }
 
     .level-list li {
-      padding: .75rem 1rem;
-      border-radius: .75rem;
+      padding: 1rem;
+      border: 1px solid var(--gray-200);
+      border-radius: .9rem;
       background: var(--gray-50);
-      border: 1px solid var(--gray-100);
+      transition: transform .3s var(--ease), border-color .3s;
+    }
+
+    .level-list li:hover {
+      transform: translateY(-3px);
+      border-color: var(--primary-100);
     }
 
     .level-list strong {
       display: block;
       color: var(--primary);
-      font-size: 1.5rem;
-      line-height: 1.2;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.1;
     }
 
     .level-list span {
-      color: var(--gray-600);
-      font-size: .875rem;
+      color: var(--gray-700);
+      font-size: .9375rem;
+      font-weight: 600;
     }
 
     .campus-photo {
@@ -703,7 +863,7 @@
       aspect-ratio: 16 / 9;
       object-fit: cover;
       margin-bottom: 1.5rem;
-      border-radius: .75rem;
+      border-radius: .9rem;
     }
 
     .date-list {
@@ -714,8 +874,9 @@
 
     .date-list li {
       display: flex;
+      align-items: center;
       gap: 1rem;
-      padding: .875rem 0;
+      padding: .9rem 0;
       border-bottom: 1px solid var(--gray-100);
     }
 
@@ -724,64 +885,140 @@
     }
 
     .date-badge {
-      flex: 0 0 3.5rem;
-      height: 3.5rem;
+      flex: 0 0 3.75rem;
+      height: 3.75rem;
       display: grid;
       place-content: center;
-      border-radius: .75rem;
-      background: var(--primary-50);
-      color: var(--primary);
+      border-radius: .9rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
       text-align: center;
       line-height: 1.1;
+      box-shadow: var(--shadow-md);
     }
 
     .date-badge strong {
-      font-size: 1.25rem;
+      font-size: 1.35rem;
+      font-weight: 800;
     }
 
     .date-badge span {
-      font-size: .6875rem;
+      font-size: .8125rem;
       font-weight: 700;
-      text-transform: uppercase;
     }
 
     .date-list h4 {
-      margin: 0 0 .125rem;
-      font-size: 1rem;
-      font-weight: 700;
+      margin: 0 0 .15rem;
+      font-size: 1.05rem;
+      font-weight: 800;
     }
 
     .date-list p {
       margin: 0;
       color: var(--gray-600);
-      font-size: .875rem;
+      font-size: .9375rem;
     }
 
     .text-link {
       display: inline-flex;
       align-items: center;
-      gap: .375rem;
+      gap: .4rem;
       margin-top: 1rem;
       color: var(--primary);
+      font-weight: 800;
+    }
+
+    .text-link i {
+      transition: transform .25s var(--ease);
+    }
+
+    .text-link:hover i {
+      transform: translateX(4px);
+    }
+
+    /* ---------- 5. News ---------- */
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 24rem));
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    .news-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: 1.6rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 1.1rem;
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+
+    .news-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+    }
+
+    .news-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .news-card time {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      color: var(--primary);
+      font-size: .9rem;
       font-weight: 700;
     }
 
-    .text-link:hover {
-      text-decoration: underline;
+    .news-card h3 {
+      margin: .5rem 0 .5rem;
+      font-size: 1.2rem;
+      font-weight: 800;
+      line-height: 1.3;
     }
 
-    /* ---------- FAQ ---------- */
+    .news-card p {
+      margin: 0;
+      color: var(--gray-600);
+      font-size: 1rem;
+    }
+
+    .muted-note {
+      grid-column: 1 / -1;
+      margin: 0;
+      color: var(--gray-500);
+      text-align: center;
+    }
+
+    /* ---------- 6. FAQ ---------- */
     .faq-list {
-      max-width: 48rem;
+      max-width: 50rem;
       margin: 0 auto;
     }
 
     .faq-list details {
-      margin-bottom: .75rem;
-      border: 1px solid var(--gray-100);
-      border-radius: .75rem;
+      margin-bottom: .85rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 1rem;
       background: #fff;
       box-shadow: var(--shadow-sm);
+      transition: box-shadow .3s, border-color .3s;
+    }
+
+    .faq-list details[open] {
+      border-color: var(--primary-100);
+      box-shadow: var(--shadow-md);
     }
 
     .faq-list summary {
@@ -789,7 +1026,9 @@
       justify-content: space-between;
       align-items: center;
       gap: 1rem;
-      padding: 1.125rem 1.25rem;
+      padding: 1.15rem 1.35rem;
+      color: var(--gray-900);
+      font-size: 1.05rem;
       font-weight: 700;
       cursor: pointer;
       list-style: none;
@@ -800,29 +1039,35 @@
     }
 
     .faq-list summary::after {
-      content: "+";
+      content: "\F282"; /* bi-chevron-down */
+      flex: 0 0 auto;
+      width: 2rem;
+      height: 2rem;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--primary-50);
       color: var(--primary);
-      font-size: 1.5rem;
-      line-height: 1;
+      font-family: 'bootstrap-icons';
+      font-size: .9rem;
+      transition: transform .35s var(--ease);
     }
 
     .faq-list details[open] summary::after {
-      content: "\2212";
-    }
-
-    .faq-list summary:focus-visible {
-      outline: 3px solid var(--accent);
-      outline-offset: 2px;
-      border-radius: .75rem;
+      transform: rotate(180deg);
     }
 
     .faq-list details > div {
-      padding: 0 1.25rem 1.25rem;
-      color: var(--gray-600);
+      padding: 0 1.35rem 1.35rem;
+      color: var(--gray-700);
+    }
+
+    .faq-list details[open] > div {
+      animation: faq-open .45s var(--ease);
     }
 
     .faq-list details p {
-      margin: 0 0 .5rem;
+      margin: 0 0 .6rem;
     }
 
     .faq-list details ol {
@@ -831,32 +1076,25 @@
     }
 
     .faq-list details li + li {
-      margin-top: .375rem;
+      margin-top: .4rem;
     }
 
     .faq-list details a {
       color: var(--primary);
-      font-weight: 600;
+      font-weight: 700;
       text-decoration: underline;
+      text-underline-offset: 3px;
     }
 
-    /* ---------- Call-to-action banner ---------- */
+    /* ---------- Call to action ---------- */
     .cta-banner {
       position: relative;
       overflow: hidden;
       padding: 5rem 0;
       color: #fff;
-      background: linear-gradient(to right, var(--primary-600), var(--primary) 55%, var(--accent));
+      background: linear-gradient(120deg, var(--primary-700), var(--primary), var(--accent), var(--primary));
+      background-size: 300% 300%;
     }
-
-    .cta-banner .blob {
-      position: absolute;
-      border-radius: 50%;
-      pointer-events: none;
-    }
-
-    .cta-banner .b1 { top: 2.5rem; left: 2.5rem; width: 5rem; height: 5rem; background: rgba(255, 255, 255, .1); filter: blur(24px); }
-    .cta-banner .b2 { bottom: 2.5rem; right: 2.5rem; width: 8rem; height: 8rem; background: rgba(78, 144, 254, .3); filter: blur(40px); }
 
     .cta-inner {
       position: relative;
@@ -867,100 +1105,847 @@
       gap: 2rem;
     }
 
-    /* The buttons keep one row; the text beside them takes what is left. */
     .cta-inner .hero-actions {
       flex: 0 0 auto;
     }
 
     .cta-inner h2 {
       margin: 0 0 .75rem;
-      font-size: clamp(2rem, 4vw, 3rem);
-      font-weight: 700;
+      color: #fff;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      font-weight: 800;
       line-height: 1.15;
     }
 
     .cta-inner p {
-      max-width: 40rem;
+      max-width: 38rem;
       margin: 0;
-      color: #f3f4f6;
-      font-size: 1.125rem;
+      color: rgba(255, 255, 255, .92);
+      font-size: 1.15rem;
     }
 
     /* ---------- Footer ---------- */
     .site-footer {
       background: var(--gray-900);
-      color: var(--gray-300);
+      color: #cbd5e1;
+      font-size: .98rem;
     }
 
     .footer-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 2rem;
-      padding: 3rem 0;
+      grid-template-columns: 1.4fr 1fr 1fr 1.3fr;
+      gap: 2.5rem;
+      padding: 4rem 0 3rem;
     }
 
+    .footer-about .brand-name {
+      color: #fff;
+    }
+
+    .footer-about .brand-tag {
+      color: #94a3b8;
+    }
+
+    .footer-about p {
+      max-width: 22rem;
+      margin: 1.1rem 0 0;
+      color: #cbd5e1;
+      line-height: 1.7;
+    }
+
+    /* Footer headings: normal case, with a short accent rule beneath. */
     .site-footer h2 {
-      margin: 0 0 1rem;
+      position: relative;
+      margin: 0 0 1.25rem;
+      padding-bottom: .7rem;
       color: #fff;
-      font-size: 1rem;
-      font-weight: 600;
-    }
-
-    .site-footer .footer-brand {
-      display: block;
-      margin-bottom: .5rem;
-      color: #fff;
-      font-size: 1.125rem;
+      font-size: 1.08rem;
       font-weight: 700;
+      letter-spacing: 0;
     }
 
-    .site-footer p {
-      margin: 0 0 1rem;
-      font-size: .875rem;
+    .site-footer h2::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 2.25rem;
+      height: 3px;
+      border-radius: 3px;
+      background: var(--accent);
     }
 
     .site-footer ul {
       margin: 0;
       padding: 0;
       list-style: none;
-      font-size: .875rem;
     }
 
     .site-footer li + li {
-      margin-top: .5rem;
+      margin-top: .7rem;
     }
 
-    .site-footer a:hover {
+    .footer-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      transition: color .2s, transform .25s var(--ease);
+    }
+
+    .footer-links a::before {
+      content: "\F285"; /* bi-chevron-right */
+      font-family: 'bootstrap-icons';
+      font-size: .7rem;
       color: var(--accent);
     }
 
-    .site-footer li i {
-      margin-right: .5rem;
+    .footer-links a:hover {
+      color: #fff;
+      transform: translateX(3px);
+    }
+
+    /* The contact list is filled in by the server (site-contact). */
+    .footer-contact li {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      line-height: 1.5;
+    }
+
+    .footer-contact li i {
+      flex: 0 0 auto;
+      width: 2rem;
+      height: 2rem;
+      display: grid;
+      place-items: center;
+      margin-top: -.2rem;
+      border-radius: .6rem;
+      background: rgba(78, 144, 254, .15);
       color: var(--accent);
+      font-size: .95rem;
+    }
+
+    .footer-contact a:hover {
+      color: #fff;
     }
 
     .footer-bottom {
-      padding: 1.5rem 0;
+      padding: 1.4rem 0;
       border-top: 1px solid var(--gray-800);
-      font-size: .875rem;
+      color: #94a3b8;
+      font-size: .9375rem;
     }
 
     .footer-bottom .container {
       display: flex;
       flex-wrap: wrap;
+      align-items: center;
       justify-content: space-between;
       gap: 1rem;
     }
 
     .footer-bottom nav {
       display: flex;
+      flex-wrap: wrap;
       gap: 1.5rem;
+    }
+
+    .footer-bottom a:hover {
+      color: #fff;
+    }
+
+    .to-top {
+      position: fixed;
+      right: 1.25rem;
+      bottom: 1.25rem;
+      z-index: 40;
+      width: 3rem;
+      height: 3rem;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 1.2rem;
+      box-shadow: var(--shadow-lg);
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(1rem);
+      transition: opacity .3s, transform .3s var(--ease), visibility .3s, background-color .2s;
+    }
+
+    .to-top.is-shown {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+    }
+
+    .to-top:hover {
+      background: var(--primary-600);
+    }
+
+    /* ---------- Menus with drop-downs ---------- */
+    .nav-drop {
+      position: relative;
+    }
+
+    .nav-drop > button {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .5rem .8rem;
+      border: 0;
+      background: none;
+      color: var(--gray-700);
+      font: 600 .98rem 'Mulish', sans-serif;
+      cursor: pointer;
+    }
+
+    .nav-drop > button i {
+      font-size: .7rem;
+      transition: transform .3s var(--ease);
+    }
+
+    .nav-drop:hover > button,
+    .nav-drop:focus-within > button {
+      color: var(--primary);
+    }
+
+    .nav-drop:hover > button i,
+    .nav-drop:focus-within > button i {
+      transform: rotate(180deg);
+    }
+
+    .drop-menu {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      min-width: 16rem;
+      padding: .5rem;
+      border: 1px solid var(--gray-200);
+      border-radius: .9rem;
+      background: #fff;
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      visibility: hidden;
+      transform: translate(-50%, 8px);
+      transition: opacity .25s, transform .3s var(--ease), visibility .25s;
+    }
+
+    .nav-drop:hover .drop-menu,
+    .nav-drop:focus-within .drop-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, 0);
+    }
+
+    .main-nav .drop-menu a {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      padding: .6rem .75rem;
+      border-radius: .6rem;
+      font-size: .95rem;
+    }
+
+    .main-nav .drop-menu a::after {
+      display: none;
+    }
+
+    .main-nav .drop-menu a:hover {
+      background: var(--primary-50);
+    }
+
+    .drop-menu i {
+      color: var(--primary);
+    }
+
+    /* ---------- Hero slider ---------- */
+    .hero-slides {
+      display: grid;
+    }
+
+    /* Slides share one grid cell, so the hero keeps the tallest one's height. */
+    .hero-slide {
+      grid-area: 1 / 1;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(24px);
+      transition: opacity .6s var(--ease), transform .7s var(--ease), visibility .6s;
+    }
+
+    .hero-slide.is-active {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+    }
+
+    .hero-title {
+      margin: 0 0 1.25rem;
+      color: #fff;
+      font-size: clamp(2.5rem, 5.4vw, 4.1rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -.025em;
+    }
+
+    .hero-controls {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-top: 2rem;
+    }
+
+    .slide-btn {
+      width: 2.6rem;
+      height: 2.6rem;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .4);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .1);
+      color: #fff;
+      cursor: pointer;
+      transition: background-color .2s, transform .25s var(--ease);
+    }
+
+    .slide-btn:hover {
+      background: rgba(255, 255, 255, .25);
+      transform: scale(1.08);
+    }
+
+    .slide-dots {
+      display: flex;
+      gap: .5rem;
+    }
+
+    .slide-dots button {
+      width: .7rem;
+      height: .7rem;
+      padding: 0;
+      border: 0;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, .4);
+      cursor: pointer;
+      transition: width .4s var(--ease), background-color .3s;
+    }
+
+    .slide-dots button[aria-current="true"] {
+      width: 2rem;
+      background: var(--gold);
+    }
+
+    /* ---------- Counters ---------- */
+    .stats-band {
+      position: relative;
+      z-index: 3;
+      margin-top: -3.5rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      overflow: hidden;
+      border-radius: 1.25rem;
+      background: #fff;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.6rem 1.5rem;
+    }
+
+    .stat + .stat {
+      border-left: 1px solid var(--gray-100);
+    }
+
+    .stat .icon-tile {
+      width: 3.25rem;
+      height: 3.25rem;
+      font-size: 1.4rem;
+    }
+
+    .stat strong {
+      display: block;
+      color: var(--gray-900);
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .stat span {
+      color: var(--gray-600);
+      font-size: .9375rem;
+      font-weight: 600;
+    }
+
+    /* ---------- Programme showcase ---------- */
+    .showcase-tools {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .level-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+
+    .level-tabs button {
+      padding: .5rem 1rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 9999px;
+      background: #fff;
+      color: var(--gray-700);
+      font: 700 .9375rem 'Mulish', sans-serif;
+      cursor: pointer;
+      transition: background-color .2s, color .2s, border-color .2s;
+    }
+
+    .level-tabs button:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .level-tabs button[aria-pressed="true"] {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .programme-search {
+      position: relative;
+      flex: 0 1 20rem;
+    }
+
+    .programme-search i {
+      position: absolute;
+      top: 50%;
+      left: 1rem;
+      color: var(--gray-500);
+      transform: translateY(-50%);
+    }
+
+    .programme-search input {
+      width: 100%;
+      padding: .7rem 1rem .7rem 2.6rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 9999px;
+      font: 500 1rem 'Mulish', sans-serif;
+      color: var(--gray-900);
+    }
+
+    .programme-search input:focus {
+      outline: 3px solid var(--primary-100);
+      border-color: var(--primary);
+    }
+
+    .carousel {
+      position: relative;
+    }
+
+    .carousel-track {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: calc((100% - 3 * 1.25rem) / 4);
+      gap: 1.25rem;
+      overflow-x: auto;
+      padding: .5rem .25rem 1.25rem;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+    }
+
+    .programme-card {
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      min-height: 15rem;
+      padding: 1.4rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 1.1rem;
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+
+    .programme-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .level-badge {
+      align-self: flex-start;
+      padding: .25rem .7rem;
+      border-radius: 9999px;
+      background: var(--primary-50);
+      color: var(--primary);
+      font-size: .8125rem;
+      font-weight: 800;
+    }
+
+    .level-badge.Diploma { background: #fef3c7; color: #92400e; }
+    .level-badge.PhD, .level-badge.Postgraduate { background: #ede9fe; color: #5b21b6; }
+    .level-badge.Certificate { background: #dcfce7; color: #166534; }
+
+    .programme-card h3 {
+      margin: .85rem 0 .4rem;
+      font-size: 1.08rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .programme-card p {
+      margin: 0;
+      color: var(--gray-600);
+      font-size: .9375rem;
+    }
+
+    .programme-card .meta {
+      display: flex;
+      gap: 1rem;
+      margin: .75rem 0 1rem;
+      color: var(--gray-600);
+      font-size: .875rem;
+      font-weight: 600;
+    }
+
+    .programme-card .meta i {
+      color: var(--primary);
+    }
+
+    .programme-card .text-link {
+      margin-top: auto;
+    }
+
+    .carousel-nav {
+      display: flex;
+      justify-content: center;
+      gap: .75rem;
+      margin-top: .5rem;
+    }
+
+    .carousel-nav button {
+      width: 2.75rem;
+      height: 2.75rem;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--gray-200);
+      border-radius: 50%;
+      background: #fff;
+      color: var(--primary);
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: background-color .2s, color .2s, transform .25s var(--ease);
+    }
+
+    .carousel-nav button:hover {
+      background: var(--primary);
+      color: #fff;
+      transform: scale(1.06);
+    }
+
+    /* ---------- Why study with us ---------- */
+    .why-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .why-card {
+      position: relative;
+      overflow: hidden;
+      padding: 1.9rem 1.6rem;
+      border-radius: 1.25rem;
+      color: #fff;
+      box-shadow: var(--shadow-lg);
+      transition: transform .35s var(--ease), box-shadow .35s var(--ease);
+    }
+
+    .why-card:hover {
+      transform: translateY(-6px) scale(1.01);
+      box-shadow: var(--shadow-xl);
+    }
+
+    /* A soft circle in the corner of each card. */
+    .why-card::after {
+      content: "";
+      position: absolute;
+      top: -3rem;
+      right: -3rem;
+      width: 9rem;
+      height: 9rem;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .12);
+      transition: transform .6s var(--ease);
+    }
+
+    .why-card:hover::after {
+      transform: scale(1.4);
+    }
+
+    .why-card .icon-tile {
+      margin-bottom: 1.25rem;
+      background: rgba(255, 255, 255, .2);
+    }
+
+    .why-card h3 {
+      margin: 0 0 .5rem;
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .why-card p {
+      margin: 0;
+      color: rgba(255, 255, 255, .95);
+      font-size: 1rem;
+    }
+
+    .why-card.c1 { background: linear-gradient(135deg, #1c60a4, #4e90fe); }
+    .why-card.c2 { background: linear-gradient(135deg, #15803d, #22c55e); }
+    .why-card.c3 { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+    .why-card.c4 { background: linear-gradient(135deg, #c2410c, #fb923c); }
+    .why-card.c5 { background: linear-gradient(135deg, #be185d, #f472b6); }
+    .why-card.c6 { background: linear-gradient(135deg, #0e7490, #22d3ee); }
+
+    /* ---------- Payment channels strip ---------- */
+    .channels {
+      padding: 3.5rem 0;
+      background: #fff;
+      border-top: 1px solid var(--gray-100);
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .channels h2 {
+      margin: 0 0 .4rem;
+      font-size: 1.35rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .channels p {
+      margin: 0 0 1.75rem;
+      color: var(--gray-600);
+      text-align: center;
+    }
+
+    .marquee {
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+    }
+
+    .marquee-track {
+      display: flex;
+      gap: 1rem;
+      width: max-content;
+      animation: marquee 30s linear infinite;
+    }
+
+    .marquee:hover .marquee-track {
+      animation-play-state: paused;
+    }
+
+    .channel {
+      display: inline-flex;
+      align-items: center;
+      gap: .6rem;
+      padding: .8rem 1.3rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 9999px;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .channel i {
+      color: var(--primary);
+    }
+
+    /* ---------- News extras ---------- */
+    .news-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .news-head .section-head {
+      margin: 0;
+      text-align: left;
+    }
+
+    .news-card .tag {
+      align-self: flex-start;
+      margin-bottom: .6rem;
+      padding: .2rem .65rem;
+      border-radius: 9999px;
+      background: var(--primary-50);
+      color: var(--primary);
+      font-size: .8125rem;
+      font-weight: 800;
+    }
+
+    .news-card p.is-clamped {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .news-card .read-more {
+      align-self: flex-start;
+      margin-top: .85rem;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--primary);
+      font: 800 .9375rem 'Mulish', sans-serif;
+      cursor: pointer;
+    }
+
+    .news-card .read-more:hover {
+      text-decoration: underline;
+    }
+
+    /* ---------- WhatsApp button ---------- */
+    .whatsapp-fab {
+      position: fixed;
+      left: 1.25rem;
+      bottom: 1.25rem;
+      z-index: 40;
+      display: inline-flex;
+      align-items: center;
+      gap: .55rem;
+      padding: .75rem 1.1rem;
+      border-radius: 9999px;
+      background: #25d366;
+      color: #fff;
+      font-weight: 800;
+      box-shadow: var(--shadow-lg);
+      transition: transform .3s var(--ease), box-shadow .3s;
+      animation: rise .8s var(--ease) 1.2s both;
+    }
+
+    .whatsapp-fab i {
+      font-size: 1.35rem;
+    }
+
+    .whatsapp-fab:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: var(--shadow-xl);
+    }
+
+    /* ---------- Animations ---------- */
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+
+    @keyframes drift {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(18px, -14px); }
+    }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, .45); }
+      100% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+    }
+
+    @keyframes gradient-shift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    @keyframes faq-open {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    /* The hero comes in piece by piece as the page opens. */
+    .js .hero-copy > * {
+      animation: rise .8s var(--ease) both;
+    }
+
+    .js .hero-copy > :nth-child(2) { animation-delay: .08s; }
+    .js .hero-copy > :nth-child(3) { animation-delay: .16s; }
+    .js .hero-copy > :nth-child(4) { animation-delay: .24s; }
+    .js .hero-copy > :nth-child(5) { animation-delay: .32s; }
+    .js .hero-copy > :nth-child(6) { animation-delay: .4s; }
+
+    .js .preview {
+      animation: rise 1s var(--ease) .3s both;
+    }
+
+    .preview-card {
+      animation: float 7s ease-in-out infinite;
+    }
+
+    .preview-float.one {
+      animation: float 5s ease-in-out infinite .6s;
+    }
+
+    .preview-float.two {
+      animation: float 6s ease-in-out infinite 1.2s;
+    }
+
+    .preview-row .status {
+      animation: pulse-ring 2s ease-out infinite;
+    }
+
+    .orb {
+      animation: drift 12s ease-in-out infinite;
+    }
+
+    .orb.o2 { animation-duration: 9s; animation-delay: -3s; }
+    .orb.o3 { animation-duration: 16s; animation-delay: -6s; }
+
+    .cta-banner {
+      animation: gradient-shift 14s ease infinite;
+    }
+
+    /* Sections and cards fade up as they scroll into view; items in a group
+       follow one another (--i is set by the script). */
+    .js .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity .7s var(--ease), transform .7s var(--ease);
+      transition-delay: calc(var(--i, 0) * 90ms);
+    }
+
+    .js .reveal.is-visible {
+      opacity: 1;
+      transform: none;
     }
 
     /* ---------- Responsive ---------- */
     @media (min-width: 640px) {
       .container {
-        padding: 0 1.5rem;
+        padding: 0 1.75rem;
       }
     }
 
@@ -970,32 +1955,25 @@
       }
     }
 
-    /* Keep the hero text clear of the decorative shapes, which reach about
-       6.5rem in from each edge of the screen. */
-    @media (min-width: 768px) {
-      .hero .container {
-        padding-left: max(2rem, calc(7.5rem - max(0px, (100vw - 80rem) / 2)));
-        padding-right: max(2rem, calc(7.5rem - max(0px, (100vw - 80rem) / 2)));
-      }
-    }
-
-    @media (max-width: 1100px) {
-      .hero-deco {
-        opacity: .6;
-      }
-    }
-
     @media (max-width: 1023px) {
-      .main-nav {
-        gap: 1.25rem;
-      }
-
       .brand-tag {
         display: none;
       }
 
-      .quick-grid,
-      .feature-grid {
+      .main-nav a {
+        padding: .5rem .55rem;
+      }
+
+      .hero .container {
+        grid-template-columns: 1fr;
+        gap: 3.5rem;
+      }
+
+      .preview {
+        max-width: 30rem;
+      }
+
+      .quick-grid {
         grid-template-columns: repeat(2, 1fr);
       }
 
@@ -1013,11 +1991,15 @@
       }
     }
 
+    @media (max-width: 1100px) {
+      .main-nav {
+        display: none;
+      }
+    }
+
     @media (max-width: 767px) {
       .topbar,
-      .main-nav,
-      .header-actions,
-      .hero-deco {
+      .header-actions {
         display: none;
       }
 
@@ -1027,30 +2009,37 @@
 
       .mobile-nav.is-open {
         display: block;
+        animation: faq-open .35s var(--ease);
       }
 
       .hero {
-        height: auto;
-        min-height: 0;
-        padding: 4.5rem 0;
+        padding: 3.5rem 0 5rem;
       }
 
       .hero-actions .btn {
         flex: 1 1 100%;
       }
 
-      .section,
-      .cta-banner {
-        padding: 3.5rem 0;
+      .preview-float.one {
+        right: .5rem;
       }
 
-      .section-title {
-        font-size: 1.875rem;
-        line-height: 2.25rem;
+      .preview-float.two {
+        left: .5rem;
+      }
+
+      .section,
+      .cta-banner {
+        padding: 4rem 0;
+      }
+
+      .section-head {
+        margin-bottom: 2.25rem;
       }
 
       .footer-grid {
         grid-template-columns: 1fr;
+        gap: 2rem;
       }
 
       .panel {
@@ -1058,13 +2047,90 @@
       }
     }
 
+    @media (min-width: 768px) and (max-width: 1100px) {
+      .menu-toggle {
+        display: block;
+      }
+
+      .mobile-nav.is-open {
+        display: block;
+      }
+    }
+
     @media (max-width: 520px) {
-      .quick-grid,
-      .feature-grid {
+      .quick-grid {
         grid-template-columns: 1fr;
       }
     }
 
+    /* The newer sections at smaller widths. */
+    @media (max-width: 1100px) {
+      .carousel-track {
+        grid-auto-columns: calc((100% - 2 * 1.25rem) / 3);
+      }
+    }
+
+    @media (max-width: 1023px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stat:nth-child(3) {
+        border-left: 0;
+      }
+
+      .stat:nth-child(n + 3) {
+        border-top: 1px solid var(--gray-100);
+      }
+
+      .why-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .carousel-track {
+        grid-auto-columns: calc((100% - 1.25rem) / 2);
+      }
+    }
+
+    @media (max-width: 767px) {
+      .stats-band {
+        margin-top: -2.5rem;
+      }
+
+      .why-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .carousel-track {
+        grid-auto-columns: 85%;
+      }
+
+      .programme-search {
+        flex: 1 1 100%;
+      }
+
+      .whatsapp-fab span {
+        display: none;
+      }
+
+      .whatsapp-fab {
+        padding: .85rem;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stat + .stat,
+      .stat:nth-child(3) {
+        border-left: 0;
+        border-top: 1px solid var(--gray-100);
+      }
+    }
+
+    /* Visitors who ask for less motion get the finished page at once. */
     @media (prefers-reduced-motion: reduce) {
       html {
         scroll-behavior: auto;
@@ -1073,7 +2139,28 @@
       *,
       *::before,
       *::after {
+        animation: none !important;
         transition: none !important;
+      }
+
+      .js .reveal {
+        opacity: 1;
+        transform: none;
+      }
+
+      .hero-slide {
+        transform: none;
+      }
+
+      /* The strip stays still and wraps instead of scrolling. */
+      .marquee-track {
+        flex-wrap: wrap;
+        justify-content: center;
+        width: auto;
+      }
+
+      .marquee-track [aria-hidden="true"] {
+        display: none;
       }
     }
   </style>
@@ -1083,10 +2170,12 @@
   <a class="skip-link" href="#top">Skip to main content</a>
   <div class="topbar">
     <div class="container">
-      <a href="login.html"><i class="bi bi-grid-1x2"></i> Portal Login</a>
-      <a href="login.html?next=pages/library.html"><i class="bi bi-book"></i> Library Services</a>
-      <a href="login.html?next=pages/documents.html"><i class="bi bi-file-earmark-arrow-down"></i> Forms &amp; Downloads</a>
-      <a href="login.html?next=pages/calendar.html"><i class="bi bi-calendar3"></i> Academic Calendar</a>
+      <a href="login.html"><i class="bi bi-grid-1x2"></i> Portal login</a>
+      <a href="login.html?next=pages/library.html"><i class="bi bi-book"></i> Library services</a>
+      <a href="login.html?next=pages/documents.html"><i class="bi bi-folder2-open"></i> My documents</a>
+      <a href="login.html?next=pages/calendar.html"><i class="bi bi-calendar3"></i> Academic calendar</a>
+      <a href="login.html?next=pages/elearning.html"><i class="bi bi-laptop"></i> E-learning</a>
+      <a href="#contact"><i class="bi bi-envelope"></i> Contact</a>
     </div>
   </div>
 
@@ -1097,128 +2186,285 @@
           <!-- include: site-brand -->
           <span><span class="brand-name">USIAMS</span><span class="brand-tag"><!-- include: site-tagline --></span></span>
         </a>
-        <nav class="main-nav" aria-label="Primary navigation">
-          <a href="#services">Services</a>
+        <nav class="main-nav" id="mainNav" aria-label="Primary navigation">
+          <a href="#top">Home</a>
+          <div class="nav-drop">
+            <button type="button" aria-haspopup="true">About <i class="bi bi-chevron-down"></i></button>
+            <div class="drop-menu">
+              <a href="#why"><i class="bi bi-stars"></i> Why study with us</a>
+              <a href="#faq"><i class="bi bi-question-circle"></i> FAQ</a>
+            </div>
+          </div>
+          <div class="nav-drop">
+            <button type="button" aria-haspopup="true">Programmes <i class="bi bi-chevron-down"></i></button>
+            <div class="drop-menu">
+              <a href="#programmes"><i class="bi bi-mortarboard"></i> Browse programmes</a>
+              <a href="#admissions"><i class="bi bi-calendar-check"></i> Admissions &amp; key dates</a>
+              <a href="apply.html"><i class="bi bi-pencil-square"></i> Apply online</a>
+            </div>
+          </div>
+          <div class="nav-drop">
+            <button type="button" aria-haspopup="true">Payments <i class="bi bi-chevron-down"></i></button>
+            <div class="drop-menu">
+              <a href="login.html?next=pages/finance.html"><i class="bi bi-receipt"></i> Get a GePG control number</a>
+              <a href="#channels"><i class="bi bi-phone"></i> Ways to pay</a>
+              <a href="#faq-fees"><i class="bi bi-info-circle"></i> How to pay fees</a>
+            </div>
+          </div>
           <a href="#news">News</a>
-          <a href="#admissions">Admissions</a>
-          <a href="#faq">FAQ</a>
+          <a href="#contact">Contact us</a>
         </nav>
         <div class="header-actions">
           <a class="btn btn-secondary btn-sm" href="login.html">Login</a>
-          <a class="btn btn-primary btn-sm" href="apply.html">Apply Now</a>
+          <a class="btn btn-primary btn-sm" href="apply.html">Apply now</a>
         </div>
         <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false"
           aria-controls="mobileNav"><i class="bi bi-list"></i></button>
       </div>
       <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
-        <a class="nav-item" href="#services">Services</a>
-        <a class="nav-item" href="#news">News</a>
-        <a class="nav-item" href="#admissions">Admissions</a>
-        <a class="nav-item" href="#faq">FAQ</a>
-        <a class="nav-item" href="login.html?signup=1">Create Student Account</a>
-        <a class="nav-item" href="login.html?next=pages/finance.html">Pay Fees (GePG)</a>
-        <a class="nav-item" href="login.html?next=pages/library.html">Library Services</a>
-        <a class="nav-item" href="login.html?next=pages/documents.html">Forms &amp; Downloads</a>
-        <a class="nav-item" href="login.html?next=pages/calendar.html">Academic Calendar</a>
+        <a class="nav-item" href="#services"><i class="bi bi-lightning-charge"></i> Services</a>
+        <a class="nav-item" href="#programmes"><i class="bi bi-mortarboard"></i> Programmes</a>
+        <a class="nav-item" href="#why"><i class="bi bi-stars"></i> Why study with us</a>
+        <a class="nav-item" href="#admissions"><i class="bi bi-calendar-check"></i> Admissions</a>
+        <a class="nav-item" href="#news"><i class="bi bi-megaphone"></i> News</a>
+        <a class="nav-item" href="#faq"><i class="bi bi-question-circle"></i> FAQ</a>
+        <a class="nav-item" href="#contact"><i class="bi bi-envelope"></i> Contact us</a>
+        <a class="nav-item" href="login.html?signup=1"><i class="bi bi-person-plus"></i> Create student account</a>
+        <a class="nav-item" href="login.html?next=pages/finance.html"><i class="bi bi-cash-coin"></i> Pay fees (GePG)</a>
+        <a class="nav-item" href="login.html?next=pages/library.html"><i class="bi bi-book"></i> Library services</a>
+        <a class="nav-item" href="login.html?next=pages/documents.html"><i class="bi bi-folder2-open"></i> My documents</a>
+        <a class="nav-item" href="login.html?next=pages/calendar.html"><i class="bi bi-calendar3"></i> Academic calendar</a>
         <div class="mobile-actions">
           <a class="btn btn-secondary btn-sm" href="login.html">Login</a>
-          <a class="btn btn-primary btn-sm" href="apply.html">Apply Now</a>
+          <a class="btn btn-primary btn-sm" href="apply.html">Apply now</a>
         </div>
       </nav>
     </div>
   </header>
 
   <main id="top" tabindex="-1">
+    <!-- ================= Hero ================= -->
     <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-deco left" aria-hidden="true">
-        <span class="c1"></span><span class="c2"></span><span class="d1"></span><span class="r1"></span>
-        <span class="c3"></span><span class="l1"></span><span class="l2"></span><span class="d2"></span>
-        <span class="r2"></span><span class="c4"></span>
-      </div>
-      <div class="hero-deco right" aria-hidden="true">
-        <span class="c1"></span><span class="c2"></span><span class="d1"></span><span class="r1"></span>
-        <span class="c3"></span><span class="l1"></span><span class="l2"></span><span class="d2"></span>
-        <span class="r2"></span><span class="c4"></span>
-      </div>
+      <span class="orb o1" aria-hidden="true"></span>
+      <span class="orb o2" aria-hidden="true"></span>
+      <span class="orb o3" aria-hidden="true"></span>
       <div class="container">
-        <div class="hero-content">
-          <span class="hero-eyebrow"><i class="bi bi-mortarboard-fill"></i> The university, connected</span>
-          <h1 id="hero-title">Your next chapter starts here.</h1>
-          <p class="hero-lead">A simpler way to move through university life. Access admissions, registration, results,
-            finance and support from one trusted academic platform.</p>
-          <div class="hero-actions">
-            <a class="btn btn-hero btn-white" href="login.html">Sign in to the portal <i class="bi bi-arrow-right"></i></a>
-            <a class="btn btn-hero btn-outline-white" href="apply.html">Apply for admission</a>
+        <div class="hero-copy">
+          <div class="hero-slides" id="heroSlides" role="region" aria-roledescription="carousel" aria-label="Highlights">
+            <div class="hero-slide is-active" role="group" aria-roledescription="slide" aria-label="1 of 3">
+              <span class="hero-eyebrow"><i class="bi bi-stars"></i> The university, connected</span>
+              <h1 class="hero-title" id="hero-title">Your next chapter <span class="highlight">starts here.</span></h1>
+              <p class="hero-lead">A simpler way to move through university life. Apply, register for courses, check your
+                results, pay fees and get support, all from one trusted academic platform.</p>
+              <div class="hero-actions">
+                <a class="btn btn-hero btn-white" href="login.html">Sign in to the portal <i class="bi bi-arrow-right"></i></a>
+                <a class="btn btn-hero btn-outline-white" href="apply.html">Apply for admission</a>
+              </div>
+            </div>
+            <div class="hero-slide" role="group" aria-roledescription="slide" aria-label="2 of 3">
+              <span class="hero-eyebrow"><i class="bi bi-mortarboard-fill"></i> Admissions are open</span>
+              <h2 class="hero-title">Find the programme <span class="highlight">that fits you.</span></h2>
+              <p class="hero-lead">Certificates, diplomas, degrees and postgraduate study. Browse every programme, then
+                apply online in a few minutes. The decision is emailed to you.</p>
+              <div class="hero-actions">
+                <a class="btn btn-hero btn-white" href="#programmes">Browse programmes <i class="bi bi-arrow-right"></i></a>
+                <a class="btn btn-hero btn-outline-white" href="apply.html">Enrol now</a>
+              </div>
+            </div>
+            <div class="hero-slide" role="group" aria-roledescription="slide" aria-label="3 of 3">
+              <span class="hero-eyebrow"><i class="bi bi-shield-check"></i> Government payments</span>
+              <h2 class="hero-title">Pay fees through <span class="highlight">GePG.</span></h2>
+              <p class="hero-lead">Get a GePG control number in the portal and pay through the Government Payments option
+                of your mobile money service or bank. Your payment is recorded once GePG confirms it.</p>
+              <div class="hero-actions">
+                <a class="btn btn-hero btn-white" href="login.html?next=pages/finance.html">Get a control number <i class="bi bi-arrow-right"></i></a>
+                <a class="btn btn-hero btn-outline-white" href="#channels">Ways to pay</a>
+              </div>
+            </div>
           </div>
-          <p class="hero-signup">Already a student? <a href="login.html?signup=1">Create your student account
-              <i class="bi bi-arrow-right"></i></a></p>
-          <div class="hero-stats">
-            <div class="hero-stat"><span>Admissions</span><strong>Apply online</strong></div>
-            <div class="hero-stat"><span>Results</span><strong>GPA &amp; transcripts</strong></div>
-            <div class="hero-stat"><span>Access</span><strong>Secure sign-in</strong></div>
+          <div class="hero-controls">
+            <button class="slide-btn" type="button" id="slidePrev" aria-label="Previous slide"><i class="bi bi-chevron-left"></i></button>
+            <div class="slide-dots" id="slideDots"></div>
+            <button class="slide-btn" type="button" id="slideNext" aria-label="Next slide"><i class="bi bi-chevron-right"></i></button>
           </div>
+          <p class="hero-signup">Already a student? <a href="login.html?signup=1">Create your student account</a></p>
+          <ul class="hero-points">
+            <li><i class="bi bi-check-circle-fill"></i> Apply online</li>
+            <li><i class="bi bi-check-circle-fill"></i> Results &amp; GPA</li>
+            <li><i class="bi bi-check-circle-fill"></i> GePG fee payments</li>
+          </ul>
+        </div>
+
+        <div class="preview" aria-hidden="true">
+          <div class="preview-card">
+            <div class="preview-head">
+              <span class="preview-avatar"><i class="bi bi-person-fill"></i></span>
+              <div><strong>Student portal</strong><small>Everything for your semester</small></div>
+            </div>
+            <div class="preview-row">
+              <span class="icon-tile soft"><i class="bi bi-calendar-check"></i></span>
+              <div><strong>Today's classes</strong><small>Timetable and attendance</small></div>
+            </div>
+            <div class="preview-row">
+              <span class="icon-tile gold"><i class="bi bi-bar-chart-fill"></i></span>
+              <div><strong>Results &amp; GPA</strong><small>Published each semester</small></div>
+            </div>
+            <div class="preview-row">
+              <span class="icon-tile green"><i class="bi bi-receipt"></i></span>
+              <div><strong>GePG control number</strong><small>Pay via Government Payments</small></div>
+              <span class="status">Paid</span>
+            </div>
+          </div>
+          <div class="preview-float one"><i class="bi bi-bell-fill"></i> Class reminder</div>
+          <div class="preview-float two"><i class="bi bi-shield-check"></i> Secure sign-in</div>
         </div>
       </div>
+      <svg class="hero-wave" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true">
+        <path fill="#ffffff" d="M0,40 C240,80 480,0 720,24 C960,48 1200,70 1440,30 L1440,70 L0,70 Z"></path>
+      </svg>
     </section>
 
+    <!-- ================= Counters (live totals) ================= -->
+    <div class="stats-band" aria-label="The university in numbers">
+      <div class="container">
+        <div class="stats-grid reveal">
+          <div class="stat"><span class="icon-tile"><i class="bi bi-people-fill"></i></span>
+            <div><strong data-stat="students">-</strong><span>Active students</span></div></div>
+          <div class="stat"><span class="icon-tile gold"><i class="bi bi-mortarboard-fill"></i></span>
+            <div><strong data-stat="programmes">-</strong><span>Programmes</span></div></div>
+          <div class="stat"><span class="icon-tile green"><i class="bi bi-journal-bookmark-fill"></i></span>
+            <div><strong data-stat="courses">-</strong><span>Courses</span></div></div>
+          <div class="stat"><span class="icon-tile soft"><i class="bi bi-building-fill"></i></span>
+            <div><strong data-stat="departments">-</strong><span>Departments</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 1. Quick access ================= -->
     <section class="section" id="services" aria-labelledby="services-title">
       <div class="container">
-        <div class="section-head">
-          <span class="section-kicker">Quick access</span>
+        <div class="section-head reveal">
+          <span class="section-kicker"><i class="bi bi-lightning-charge-fill"></i> Quick access</span>
           <h2 class="section-title" id="services-title">Start with what you need</h2>
-          <p class="section-lead">Direct access to the most-used university services.</p>
+          <p class="section-lead">The university services people use most, one click away.</p>
         </div>
-        <div class="quick-grid">
-          <a class="quick-card" href="login.html">
-            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-grid-1x2-fill"></i></span><i class="bi bi-arrow-right"></i></div>
-            <strong>Portal login</strong><small>For students and staff</small>
+        <div class="quick-grid" data-stagger>
+          <a class="quick-card reveal" href="login.html">
+            <span class="icon-tile"><i class="bi bi-grid-1x2-fill"></i></span>
+            <span><strong>Portal login</strong><small>For students and staff</small></span>
+            <i class="bi bi-arrow-right"></i>
           </a>
-          <a class="quick-card" href="apply.html">
-            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-file-earmark-text-fill"></i></span><i class="bi bi-arrow-right"></i></div>
-            <strong>Admissions</strong><small>Begin a new application</small>
+          <a class="quick-card reveal" href="apply.html">
+            <span class="icon-tile"><i class="bi bi-file-earmark-text-fill"></i></span>
+            <span><strong>Admissions</strong><small>Begin a new application</small></span>
+            <i class="bi bi-arrow-right"></i>
           </a>
-          <a class="quick-card" href="login.html?next=pages/finance.html">
-            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-cash-coin"></i></span><i class="bi bi-arrow-right"></i></div>
-            <strong>Pay fees (GePG)</strong><small>Get a GePG control number and pay</small>
+          <a class="quick-card reveal" href="login.html?next=pages/finance.html">
+            <span class="icon-tile"><i class="bi bi-cash-coin"></i></span>
+            <span><strong>Pay fees (GePG)</strong><small>Get a control number and pay</small></span>
+            <i class="bi bi-arrow-right"></i>
           </a>
-          <a class="quick-card" href="#news">
-            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-megaphone-fill"></i></span><i class="bi bi-arrow-right"></i></div>
-            <strong>Announcements</strong><small>Read the latest notices</small>
+          <a class="quick-card reveal" href="login.html?next=pages/library.html">
+            <span class="icon-tile"><i class="bi bi-book-half"></i></span>
+            <span><strong>Library</strong><small>Search and borrow books</small></span>
+            <i class="bi bi-arrow-right"></i>
           </a>
-          <a class="quick-card" href="login.html?next=pages/requests.html">
-            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-chat-square-text-fill"></i></span><i class="bi bi-arrow-right"></i></div>
-            <strong>Support centre</strong><small>Requests and assistance</small>
+          <a class="quick-card reveal" href="login.html?next=pages/requests.html">
+            <span class="icon-tile"><i class="bi bi-chat-square-text-fill"></i></span>
+            <span><strong>Support centre</strong><small>Requests and assistance</small></span>
+            <i class="bi bi-arrow-right"></i>
           </a>
-          <a class="quick-card" href="#faq">
-            <div class="quick-card-top"><span class="icon-tile"><i class="bi bi-question-circle-fill"></i></span><i class="bi bi-arrow-right"></i></div>
-            <strong>Help &amp; FAQ</strong><small>Answers to common questions</small>
+          <a class="quick-card reveal" href="#faq">
+            <span class="icon-tile"><i class="bi bi-question-circle-fill"></i></span>
+            <span><strong>Help &amp; FAQ</strong><small>Answers to common questions</small></span>
+            <i class="bi bi-arrow-right"></i>
           </a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section section-white" id="news" aria-labelledby="news-title">
-      <div class="container">
-        <div class="section-head">
-          <span class="section-kicker">Latest news</span>
-          <h2 class="section-title" id="news-title">Announcements</h2>
-          <p class="section-lead">Notices from the university, open to everyone.</p>
-        </div>
-        <div class="news-grid" id="newsList" aria-live="polite">
-          <p class="muted-note">Loading announcements...</p>
         </div>
       </div>
     </section>
 
-    <section class="section" id="admissions" aria-labelledby="admissions-title">
+    <!-- ================= Programmes ================= -->
+    <section class="section section-tint" id="programmes" aria-labelledby="programmes-title">
       <div class="container">
-        <div class="section-head">
-          <span class="section-kicker">Study with us</span>
+        <div class="section-head reveal">
+          <span class="section-kicker"><i class="bi bi-mortarboard-fill"></i> Programmes</span>
+          <h2 class="section-title" id="programmes-title">Explore our programmes</h2>
+          <p class="section-lead">Filter by level or search by name, then apply for the one you want.</p>
+        </div>
+        <div class="showcase-tools reveal">
+          <div class="level-tabs" id="levelTabs" role="group" aria-label="Filter by level">
+            <button type="button" data-level="" aria-pressed="true">All</button>
+          </div>
+          <label class="programme-search">
+            <i class="bi bi-search"></i>
+            <input type="search" id="programmeSearch" placeholder="Search programmes" aria-label="Search programmes">
+          </label>
+        </div>
+        <div class="carousel reveal">
+          <div class="carousel-track" id="programmeTrack" tabindex="0" aria-label="Programmes" aria-live="polite">
+            <p class="muted-note">Loading programmes...</p>
+          </div>
+          <div class="carousel-nav">
+            <button type="button" id="programmePrev" aria-label="Previous programmes"><i class="bi bi-arrow-left"></i></button>
+            <button type="button" id="programmeNext" aria-label="Next programmes"><i class="bi bi-arrow-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= Why study with us ================= -->
+    <section class="section" id="why" aria-labelledby="why-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="section-kicker"><i class="bi bi-stars"></i> Why study with us</span>
+          <h2 class="section-title" id="why-title">Built around your studies</h2>
+          <p class="section-lead">Everything you need to study, pay and get help is online and in one place.</p>
+        </div>
+        <div class="why-grid" data-stagger>
+          <article class="why-card c1 reveal">
+            <span class="icon-tile"><i class="bi bi-globe2"></i></span>
+            <h3>Apply from anywhere</h3>
+            <p>Send your application online and get the decision by email. No queues, no paper forms.</p>
+          </article>
+          <article class="why-card c2 reveal">
+            <span class="icon-tile"><i class="bi bi-shield-check"></i></span>
+            <h3>Safe government payments</h3>
+            <p>Every fee is paid through GePG with a control number, so each payment is traceable.</p>
+          </article>
+          <article class="why-card c3 reveal">
+            <span class="icon-tile"><i class="bi bi-graph-up-arrow"></i></span>
+            <h3>See your progress</h3>
+            <p>Results, GPA and your unofficial transcript are ready as soon as they are published.</p>
+          </article>
+          <article class="why-card c4 reveal">
+            <span class="icon-tile"><i class="bi bi-bell"></i></span>
+            <h3>Never miss a class</h3>
+            <p>A daily class checklist with reminders in the morning and before each lecture.</p>
+          </article>
+          <article class="why-card c5 reveal">
+            <span class="icon-tile"><i class="bi bi-laptop"></i></span>
+            <h3>Learn online</h3>
+            <p>Course materials and assignments on e-learning, available day and night.</p>
+          </article>
+          <article class="why-card c6 reveal">
+            <span class="icon-tile"><i class="bi bi-headset"></i></span>
+            <h3>Help when you need it</h3>
+            <p>Raise a request or complaint with the right office and follow it until it is resolved.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 4. Admissions ================= -->
+    <section class="section section-tint" id="admissions" aria-labelledby="admissions-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="section-kicker"><i class="bi bi-mortarboard-fill"></i> Study with us</span>
           <h2 class="section-title" id="admissions-title">Admissions and key dates</h2>
           <p class="section-lead">See what you can study, when things happen, and apply online.</p>
         </div>
-        <div class="admissions-grid">
-          <div class="panel">
+        <div class="admissions-grid" data-stagger>
+          <div class="panel reveal">
             <!-- include: site-campus-photo -->
             <h3><i class="bi bi-mortarboard-fill"></i> Programmes offered</h3>
             <!-- include: site-admission-window -->
@@ -1227,7 +2473,7 @@
             <ul class="level-list" id="programmeLevels" aria-live="polite"></ul>
             <a class="btn btn-primary" href="apply.html">Browse programmes and apply <i class="bi bi-arrow-right"></i></a>
           </div>
-          <div class="panel">
+          <div class="panel reveal">
             <h3><i class="bi bi-calendar3"></i> Key dates</h3>
             <ul class="date-list" id="keyDates" aria-live="polite">
               <li><p>Loading dates...</p></li>
@@ -1238,47 +2484,60 @@
       </div>
     </section>
 
-    <section class="section section-white" id="why" aria-labelledby="why-title">
-      <div class="container">
-        <div class="section-head">
-          <span class="section-kicker">One clear view</span>
-          <h2 class="section-title" id="why-title">Everything important, in one place</h2>
-          <p class="section-lead">From your first application to graduation, every service works from the same record.</p>
-        </div>
-        <div class="feature-grid">
-          <article class="card">
-            <span class="icon-circle"><i class="bi bi-mortarboard-fill"></i></span>
-            <h3>Admissions &amp; records</h3>
-            <p>Applications, student profiles and academic history kept together.</p>
-          </article>
-          <article class="card">
-            <span class="icon-circle"><i class="bi bi-calendar3"></i></span>
-            <h3>Registration &amp; timetable</h3>
-            <p>Course registration, class schedules and attendance.</p>
-          </article>
-          <article class="card">
-            <span class="icon-circle"><i class="bi bi-bar-chart-fill"></i></span>
-            <h3>Results &amp; progress</h3>
-            <p>Grades, GPA and official academic reports as soon as they are published.</p>
-          </article>
-          <article class="card">
-            <span class="icon-circle"><i class="bi bi-chat-square-text-fill"></i></span>
-            <h3>Requests &amp; support</h3>
-            <p>Announcements, documents and help from university offices.</p>
-          </article>
+    <!-- ================= Payment channels ================= -->
+    <section class="channels" id="channels" aria-labelledby="channels-title">
+      <div class="container reveal">
+        <h2 id="channels-title">Pay your fees through GePG with</h2>
+        <p>Choose <strong>Government Payments</strong> on any of these, then enter your GePG control number.</p>
+        <div class="marquee">
+          <div class="marquee-track">
+            <span class="channel"><i class="bi bi-phone"></i> M-Pesa</span>
+            <span class="channel"><i class="bi bi-phone"></i> Tigo Pesa</span>
+            <span class="channel"><i class="bi bi-phone"></i> Airtel Money</span>
+            <span class="channel"><i class="bi bi-phone"></i> HaloPesa</span>
+            <span class="channel"><i class="bi bi-bank"></i> CRDB Bank</span>
+            <span class="channel"><i class="bi bi-bank"></i> NMB Bank</span>
+            <span class="channel"><i class="bi bi-bank"></i> NBC Bank</span>
+            <!-- A second copy, so the strip loops without a gap. -->
+            <span class="channel" aria-hidden="true"><i class="bi bi-phone"></i> M-Pesa</span>
+            <span class="channel" aria-hidden="true"><i class="bi bi-phone"></i> Tigo Pesa</span>
+            <span class="channel" aria-hidden="true"><i class="bi bi-phone"></i> Airtel Money</span>
+            <span class="channel" aria-hidden="true"><i class="bi bi-phone"></i> HaloPesa</span>
+            <span class="channel" aria-hidden="true"><i class="bi bi-bank"></i> CRDB Bank</span>
+            <span class="channel" aria-hidden="true"><i class="bi bi-bank"></i> NMB Bank</span>
+            <span class="channel" aria-hidden="true"><i class="bi bi-bank"></i> NBC Bank</span>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="section" id="faq" aria-labelledby="faq-title">
+    <!-- ================= 5. News ================= -->
+    <section class="section" id="news" aria-labelledby="news-title">
       <div class="container">
-        <div class="section-head">
-          <span class="section-kicker">Help</span>
+        <div class="news-head reveal">
+          <div class="section-head">
+            <span class="section-kicker"><i class="bi bi-megaphone-fill"></i> Latest news</span>
+            <h2 class="section-title" id="news-title">Announcements</h2>
+            <p class="section-lead">Notices from the university, open to everyone.</p>
+          </div>
+          <a class="btn btn-primary" href="login.html?next=pages/announcements.html">View all news <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <div class="news-grid" id="newsList" aria-live="polite">
+          <p class="muted-note">Loading announcements...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 6. FAQ ================= -->
+    <section class="section section-tint" id="faq" aria-labelledby="faq-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="section-kicker"><i class="bi bi-question-circle-fill"></i> Help</span>
           <h2 class="section-title" id="faq-title">Frequently asked questions</h2>
           <p class="section-lead">Quick answers for applicants, students and staff.</p>
         </div>
-        <div class="faq-list">
-          <details open>
+        <div class="faq-list" data-stagger>
+          <details class="reveal" open>
             <summary>How do I create my student account?</summary>
             <div>
               <ol>
@@ -1294,14 +2553,14 @@
                 administrator adds them. Not a student yet? <a href="apply.html">Apply for admission</a> first.</p>
             </div>
           </details>
-          <details>
+          <details class="reveal">
             <summary>How do I apply for admission?</summary>
             <div>
               <p>Fill in the <a href="apply.html">online application form</a> and choose the programme you want to study.
                 Admissions staff review every application, and the decision is sent to the email address you give.</p>
             </div>
           </details>
-          <details>
+          <details class="reveal" id="faq-fees">
             <summary>How do I pay my fees?</summary>
             <div>
               <p>All university fees are government payments made through GePG. Sign in and open <strong>Finance</strong>
@@ -1311,14 +2570,21 @@
                 confirmed through GePG.</p>
             </div>
           </details>
-          <details>
+          <details class="reveal">
+            <summary>How many courses do I register for each semester?</summary>
+            <div>
+              <p>Every student registers for 6 or 7 courses a semester, within the registration window shown under Key
+                dates and in the academic calendar.</p>
+            </div>
+          </details>
+          <details class="reveal">
             <summary>I forgot my password. What do I do?</summary>
             <div>
               <p>On the <a href="login.html">sign-in page</a>, choose <strong>Forgot Password?</strong> and enter your
                 email address. A link to set a new password is emailed to you.</p>
             </div>
           </details>
-          <details>
+          <details class="reveal">
             <summary>How do staff get an account?</summary>
             <div>
               <p>Staff accounts are added by a university administrator, who gives you your username and a temporary
@@ -1326,14 +2592,7 @@
                 with <strong>Create Student Account</strong> on the <a href="login.html">sign-in page</a>.</p>
             </div>
           </details>
-          <details>
-            <summary>How many courses do I register for each semester?</summary>
-            <div>
-              <p>Every student registers for 6 or 7 courses a semester, within the registration window shown under Key
-                dates and in the academic calendar.</p>
-            </div>
-          </details>
-          <details>
+          <details class="reveal">
             <summary>Who do I contact for help?</summary>
             <div>
               <p>Signed-in students and staff can raise a request with the right office through the
@@ -1345,18 +2604,17 @@
       </div>
     </section>
 
+    <!-- ================= Call to action ================= -->
     <section class="cta-banner" aria-labelledby="cta-title">
-      <span class="blob b1" aria-hidden="true"></span>
-      <span class="blob b2" aria-hidden="true"></span>
       <div class="container">
-        <div class="cta-inner">
+        <div class="cta-inner reveal">
           <div>
             <h2 id="cta-title">Ready to begin?</h2>
             <p>Apply for admission online, create your student account, or sign in to continue where you left off.</p>
           </div>
           <div class="hero-actions">
-            <a class="btn btn-hero btn-white" href="apply.html">Apply Now <i class="bi bi-arrow-right"></i></a>
-            <a class="btn btn-hero btn-outline-white" href="login.html?signup=1">Create Account</a>
+            <a class="btn btn-hero btn-white" href="apply.html">Apply now <i class="bi bi-arrow-right"></i></a>
+            <a class="btn btn-hero btn-outline-white" href="login.html?signup=1">Create account</a>
             <a class="btn btn-hero btn-outline-white" href="login.html">Login</a>
           </div>
         </div>
@@ -1364,35 +2622,39 @@
     </section>
   </main>
 
-  <footer class="site-footer">
+  <footer class="site-footer" id="contact">
     <div class="container">
       <div class="footer-grid">
-        <div>
-          <span class="footer-brand"><!-- include: site-owner --></span>
-          <p>USIAMS, the University Student Information and Academic Management System - one connected experience
-            for students, staff and partners.</p>
+        <div class="footer-about">
+          <a class="brand" href="index.html" aria-label="USIAMS home">
+            <!-- include: site-brand -->
+            <span><span class="brand-name">USIAMS</span><span class="brand-tag"><!-- include: site-tagline --></span></span>
+          </a>
+          <p>The University Student Information and Academic Management System: one connected experience for
+            students, staff and partners.</p>
         </div>
         <div>
-          <h2>Quick Links</h2>
-          <ul>
+          <h2>Quick links</h2>
+          <ul class="footer-links">
+            <li><a href="#services">Services</a></li>
             <li><a href="#admissions">Admissions</a></li>
             <li><a href="#news">Announcements</a></li>
-            <li><a href="#services">Services</a></li>
             <li><a href="#faq">Help &amp; FAQ</a></li>
           </ul>
         </div>
         <div>
-          <h2>Online Services</h2>
-          <ul>
-            <li><a href="login.html">Portal Login</a></li>
-            <li><a href="apply.html">Apply Online</a></li>
-            <li><a href="login.html?next=pages/finance.html">Pay Fees (GePG)</a></li>
-            <li><a href="login.html?next=pages/requests.html">Support Centre</a></li>
+          <h2>Online services</h2>
+          <ul class="footer-links">
+            <li><a href="login.html">Portal login</a></li>
+            <li><a href="apply.html">Apply online</a></li>
+            <li><a href="login.html?signup=1">Create student account</a></li>
+            <li><a href="login.html?next=pages/finance.html">Pay fees (GePG)</a></li>
+            <li><a href="login.html?next=pages/requests.html">Support centre</a></li>
           </ul>
         </div>
         <div>
-          <h2>Contact Us</h2>
-          <ul>
+          <h2>Contact us</h2>
+          <ul class="footer-contact">
             <!-- include: site-contact -->
           </ul>
         </div>
@@ -1402,21 +2664,27 @@
       <div class="container">
         <span>&copy; <span id="copyrightYear">2026</span> <!-- include: site-owner -->. All rights reserved.</span>
         <nav aria-label="Footer">
-          <a href="login.html">Portal Login</a>
-          <a href="apply.html">Apply Online</a>
+          <a href="login.html">Portal login</a>
+          <a href="apply.html">Apply online</a>
+          <a href="#faq">Help</a>
         </nav>
       </div>
     </div>
   </footer>
+
+  <!-- include: site-whatsapp -->
+  <button class="to-top" id="toTop" type="button" aria-label="Back to top"><i class="bi bi-arrow-up"></i></button>
 
   <script>
     (function () {
       var header = document.getElementById("siteHeader");
       var toggle = document.getElementById("menuToggle");
       var mobileNav = document.getElementById("mobileNav");
+      var toTop = document.getElementById("toTop");
 
-      function updateHeaderShadow() {
+      function onScroll() {
         header.classList.toggle("is-scrolled", window.scrollY > 8);
+        toTop.classList.toggle("is-shown", window.scrollY > 700);
       }
 
       function setMenuOpen(open) {
@@ -1426,9 +2694,14 @@
         toggle.innerHTML = open ? '<i class="bi bi-x-lg"></i>' : '<i class="bi bi-list"></i>';
       }
 
-      // A reload part-way down the page starts scrolled, so set the shadow now.
-      updateHeaderShadow();
-      window.addEventListener("scroll", updateHeaderShadow, { passive: true });
+      // A reload part-way down the page starts scrolled, so set the state now.
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+
+      toTop.addEventListener("click", function () {
+        window.scrollTo({ top: 0 });
+        document.getElementById("top").focus({ preventScroll: true });
+      });
 
       toggle.addEventListener("click", function () {
         setMenuOpen(!mobileNav.classList.contains("is-open"));
@@ -1445,13 +2718,127 @@
         }
       });
 
-      // Close the menu if the screen widens past the phone layout, so it is
+      // Close the menu if the screen widens past the menu layout, so it is
       // not still open the next time the window narrows.
-      window.matchMedia("(min-width: 768px)").addEventListener("change", function (event) {
+      window.matchMedia("(min-width: 1101px)").addEventListener("change", function (event) {
         if (event.matches) setMenuOpen(false);
       });
 
       document.getElementById("copyrightYear").textContent = String(new Date().getFullYear());
+
+      // ---- Scroll animations ----
+      // Items inside a [data-stagger] group follow one another.
+      function stagger(group) {
+        Array.prototype.forEach.call(group.querySelectorAll(":scope > .reveal"), function (item, index) {
+          item.style.setProperty("--i", index);
+        });
+      }
+      Array.prototype.forEach.call(document.querySelectorAll("[data-stagger]"), stagger);
+
+      var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var observer = "IntersectionObserver" in window && !reduceMotion
+        ? new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              if (!entry.isIntersecting) return;
+              entry.target.classList.add("is-visible");
+              if (entry.target.hasAttribute("data-count")) countUp(entry.target);
+              observer.unobserve(entry.target);
+            });
+          }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" })
+        : null;
+
+      function reveal(nodes) {
+        Array.prototype.forEach.call(nodes, function (node) {
+          if (observer) observer.observe(node);
+          else {
+            node.classList.add("is-visible");
+            if (node.hasAttribute("data-count")) node.textContent = node.getAttribute("data-count");
+          }
+        });
+      }
+      reveal(document.querySelectorAll(".reveal"));
+
+      // Counts a number up from zero when it comes into view.
+      function countUp(node) {
+        var target = Number(node.getAttribute("data-count"));
+        var start = null;
+        function frame(time) {
+          if (start === null) start = time;
+          var progress = Math.min(1, (time - start) / 1100);
+          node.textContent = String(Math.round(target * (1 - Math.pow(1 - progress, 3))));
+          if (progress < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+
+      // Underline the menu link of the section on screen (top-level links to
+      // sections of this page only).
+      var navLinks = document.querySelectorAll("#mainNav > a[href^='#']:not([href='#top'])");
+      if ("IntersectionObserver" in window) {
+        var sectionObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            Array.prototype.forEach.call(navLinks, function (link) {
+              link.classList.toggle("is-current", link.getAttribute("href") === "#" + entry.target.id);
+            });
+          });
+        }, { rootMargin: "-45% 0px -50% 0px" });
+        Array.prototype.forEach.call(navLinks, function (link) {
+          var section = document.querySelector(link.getAttribute("href"));
+          if (section) sectionObserver.observe(section);
+        });
+      }
+
+      // ---- Hero slider ----
+      // Changes slide every 7 seconds; pauses while pointed at or focused,
+      // and does not move on its own for visitors who ask for less motion.
+      (function () {
+        var slides = document.querySelectorAll(".hero-slide");
+        var dots = document.getElementById("slideDots");
+        var region = document.getElementById("heroSlides");
+        var current = 0;
+        var timer = null;
+
+        Array.prototype.forEach.call(slides, function (slide, index) {
+          var dot = document.createElement("button");
+          dot.type = "button";
+          dot.setAttribute("aria-label", "Show slide " + (index + 1));
+          dot.addEventListener("click", function () { show(index); restart(); });
+          dots.appendChild(dot);
+        });
+
+        function show(index) {
+          current = (index + slides.length) % slides.length;
+          Array.prototype.forEach.call(slides, function (slide, i) {
+            slide.classList.toggle("is-active", i === current);
+            slide.setAttribute("aria-hidden", String(i !== current));
+          });
+          Array.prototype.forEach.call(dots.children, function (dot, i) {
+            dot.setAttribute("aria-current", String(i === current));
+          });
+        }
+
+        function restart() {
+          clearInterval(timer);
+          if (!reduceMotion) timer = setInterval(function () { show(current + 1); }, 7000);
+        }
+
+        document.getElementById("slidePrev").addEventListener("click", function () { show(current - 1); restart(); });
+        document.getElementById("slideNext").addEventListener("click", function () { show(current + 1); restart(); });
+        region.parentNode.addEventListener("mouseenter", function () { clearInterval(timer); });
+        region.parentNode.addEventListener("mouseleave", restart);
+        region.parentNode.addEventListener("focusin", function () { clearInterval(timer); });
+        show(0);
+        restart();
+      })();
+
+      // The fees question opens when a menu link points at it.
+      function openLinkedAnswer() {
+        var target = location.hash && document.getElementById(location.hash.slice(1));
+        if (target && target.tagName === "DETAILS") target.open = true;
+      }
+      window.addEventListener("hashchange", openLinkedAnswer);
+      openLinkedAnswer();
 
       // ---- Live content: announcements, key dates, programmes ----
       var newsList = document.getElementById("newsList");
@@ -1479,13 +2866,30 @@
 
       function renderNews(items) {
         if (!items.length) return note(newsList, "p", "There are no announcements at the moment.");
-        newsList.replaceChildren.apply(newsList, items.map(function (item) {
-          var card = el("article", "news-card");
-          var time = el("time", null, longDate(item.publishedAt));
+        var cards = items.map(function (item, index) {
+          var card = el("article", "news-card reveal");
+          card.style.setProperty("--i", index);
+          var time = el("time");
           time.dateTime = String(item.publishedAt).slice(0, 10);
-          card.append(time, el("h3", null, item.title), el("p", null, item.body));
+          time.append(el("i", "bi bi-calendar-event"), document.createTextNode(longDate(item.publishedAt)));
+          var body = el("p", "is-clamped", item.body);
+          card.append(el("span", "tag", "Announcement"), time, el("h3", null, item.title), body);
+          // Long notices show three lines until "Read more" is pressed.
+          if (String(item.body || "").length > 160) {
+            var more = el("button", "read-more", "Read more");
+            more.type = "button";
+            more.setAttribute("aria-expanded", "false");
+            more.addEventListener("click", function () {
+              var open = body.classList.toggle("is-clamped") === false;
+              more.textContent = open ? "Show less" : "Read more";
+              more.setAttribute("aria-expanded", String(open));
+            });
+            card.append(more);
+          }
           return card;
-        }));
+        });
+        newsList.replaceChildren.apply(newsList, cards);
+        reveal(cards);
       }
 
       function renderDates(events) {
@@ -1508,12 +2912,98 @@
         Masters: "Master's degrees", PhD: "PhD programmes", Postgraduate: "Postgraduate programmes" };
 
       function renderLevels(levels) {
+        var numbers = [];
         programmeLevels.replaceChildren.apply(programmeLevels, levels.map(function (row) {
           var item = el("li");
-          item.append(el("strong", null, String(row.count)), el("span", null, LEVEL_NAMES[row.level] || row.level));
+          var number = el("strong", null, observer ? "0" : String(row.count));
+          number.setAttribute("data-count", String(row.count));
+          numbers.push(number);
+          item.append(number, el("span", null, LEVEL_NAMES[row.level] || row.level));
           return item;
         }));
+        reveal(numbers);
       }
+
+      // Live totals from the database, counted up as they come into view.
+      function renderStats(stats) {
+        var numbers = [];
+        Array.prototype.forEach.call(document.querySelectorAll("[data-stat]"), function (node) {
+          var value = stats[node.getAttribute("data-stat")];
+          if (typeof value !== "number") return;
+          node.setAttribute("data-count", String(value));
+          node.textContent = observer ? "0" : String(value);
+          numbers.push(node);
+        });
+        reveal(numbers);
+      }
+
+      // ---- Programme showcase: level tabs, search and a scrolling row ----
+      var programmeTrack = document.getElementById("programmeTrack");
+      var levelTabs = document.getElementById("levelTabs");
+      var programmeSearch = document.getElementById("programmeSearch");
+      var allProgrammes = [];
+      var chosenLevel = "";
+
+      function programmeCard(p) {
+        var card = el("article", "programme-card");
+        var badge = el("span", "level-badge " + p.level, p.level);
+        var meta = el("div", "meta");
+        if (p.years) {
+          var years = el("span");
+          years.append(el("i", "bi bi-clock"), document.createTextNode(" " + p.years + (p.years === 1 ? " year" : " years")));
+          meta.append(years);
+        }
+        var code = el("span");
+        code.append(el("i", "bi bi-hash"), document.createTextNode(p.code));
+        meta.append(code);
+        var link = el("a", "text-link", "Apply now ");
+        link.href = "apply.html?programme=" + encodeURIComponent(p.id);
+        link.append(el("i", "bi bi-arrow-right"));
+        card.append(badge, el("h3", null, p.name), el("p", null, p.department || ""), meta, link);
+        return card;
+      }
+
+      function showProgrammes() {
+        var term = programmeSearch.value.trim().toLowerCase();
+        var list = allProgrammes.filter(function (p) {
+          return (!chosenLevel || p.level === chosenLevel) &&
+            (!term || (p.name + " " + p.code + " " + (p.department || "")).toLowerCase().indexOf(term) !== -1);
+        });
+        if (!list.length) return note(programmeTrack, "p", "No programmes match your search.");
+        programmeTrack.replaceChildren.apply(programmeTrack, list.map(programmeCard));
+        programmeTrack.scrollLeft = 0;
+      }
+
+      function renderProgrammes(programmes) {
+        allProgrammes = programmes;
+        if (!programmes.length) return note(programmeTrack, "p", "Programmes will be listed here soon.");
+        var levels = [];
+        programmes.forEach(function (p) { if (levels.indexOf(p.level) === -1) levels.push(p.level); });
+        levels.forEach(function (level) {
+          var tab = el("button", null, LEVEL_NAMES[level] || level);
+          tab.type = "button";
+          tab.setAttribute("data-level", level);
+          tab.setAttribute("aria-pressed", "false");
+          levelTabs.append(tab);
+        });
+        showProgrammes();
+      }
+
+      levelTabs.addEventListener("click", function (event) {
+        var tab = event.target.closest("button");
+        if (!tab) return;
+        chosenLevel = tab.getAttribute("data-level");
+        Array.prototype.forEach.call(levelTabs.children, function (b) { b.setAttribute("aria-pressed", String(b === tab)); });
+        showProgrammes();
+      });
+
+      programmeSearch.addEventListener("input", showProgrammes);
+
+      function scrollProgrammes(direction) {
+        programmeTrack.scrollBy({ left: direction * programmeTrack.clientWidth * 0.9 });
+      }
+      document.getElementById("programmePrev").addEventListener("click", function () { scrollProgrammes(-1); });
+      document.getElementById("programmeNext").addEventListener("click", function () { scrollProgrammes(1); });
 
       fetch("/api/public/landing", { headers: { Accept: "application/json" } })
         .then(function (response) { return response.json(); })
@@ -1522,10 +3012,13 @@
           renderNews(result.data.announcements);
           renderDates(result.data.events);
           renderLevels(result.data.programmeLevels);
+          renderStats(result.data.stats || {});
+          renderProgrammes(result.data.programmes || []);
         })
         .catch(function () {
           note(newsList, "p", "Announcements could not be loaded. Please try again later.");
           keyDates.replaceChildren(el("li", null, "Key dates could not be loaded. Please try again later."));
+          note(programmeTrack, "p", "Programmes could not be loaded. Please try again later.");
         });
     })();
   </script>

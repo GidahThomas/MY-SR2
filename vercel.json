@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "node -e \"const fs=require('fs');fs.mkdirSync('vercel-static',{recursive:true});fs.writeFileSync('vercel-static/robots.txt','User-agent: *\\nDisallow: /api/\\n')\"",
+  "outputDirectory": "vercel-static",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "{*.html,assets/**,components/**,css/**,data/**,js/**,pages/**}",
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
+}

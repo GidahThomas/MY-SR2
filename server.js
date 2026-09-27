@@ -142,9 +142,9 @@ function tlsEnabled() {
 // anyone could put any address in the audit log or dodge the sign-in limit.
 function clientIp(req) {
   if (config.trustProxy) {
-    // The proxy in front (Apache/LiteSpeed on cPanel, nginx) appends the
-    // address it saw to whatever the client sent, so only the last entry is
-    // trustworthy - a client can write anything into the earlier ones.
+    // The proxy in front (Vercel, nginx) puts the address it saw last - or,
+    // on Vercel, alone - so only the last entry is trustworthy: a client can
+    // write anything into the earlier ones.
     const forwarded = String(req.headers["x-forwarded-for"] || "").split(",").pop().trim();
     if (forwarded) return forwarded;
   }
@@ -749,7 +749,8 @@ async function handleBootstrap(res, session) {
   // can read them synchronously like the rest of the data.
   const [preferences, systemSettings] = await Promise.all([db.getPreferences(user.id), db.getSystemSettings()]);
   sendJson(res, 200, {
-    success: true, user, data, preferences, systemSettings,
+    // The browser (js/api.js) maps reloaded resources to the same names.
+    success: true, user, data, aliases: BOOTSTRAP_ALIASES, preferences, systemSettings,
     withheld: skipped, generatedAt: new Date().toISOString()
   });
 }
@@ -761,7 +762,7 @@ async function handleBootstrap(res, session) {
 const SYSTEM_SETTINGS_EDITORS = ["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"];
 
 // What an upload is for, and the per-file limit.
-const FILE_PURPOSES = ["document", "request", "complaint", "submission", "profile"];
+const FILE_PURPOSES = ["document", "request", "complaint", "submission", "profile", "material"];
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 async function handleSettingsRoute(req, res, url, session) {
@@ -1197,10 +1198,11 @@ async function handleApi(req, res, url) {
   }
 
   // The public home page: the latest announcements addressed to everyone,
-  // the next few academic calendar dates and how many programmes are open
-  // at each level. Nothing here is restricted to a role.
+  // the next few academic calendar dates, how many programmes are open at
+  // each level, the programme list for the showcase, and a few totals. Only
+  // counts and published catalogue data - nothing here is restricted to a role.
   if (req.method === "GET" && url.pathname === "/api/public/landing") {
-    const [announcements, events, programmeLevels] = await Promise.all([
+    const [announcements, events, programmeLevels, programmes, [totals]] = await Promise.all([
       repo.query(
         `SELECT id, title, body, published_at AS publishedAt FROM announcements
          WHERE status = 'Published' AND audience_role IS NULL AND published_at <= NOW()
@@ -1211,11 +1213,27 @@ async function handleApi(req, res, url) {
         `SELECT id, title, description, event_date AS date, end_date AS endDate FROM calendar_events
          WHERE COALESCE(end_date, event_date) >= CURDATE() ORDER BY event_date LIMIT 4`
       ),
-      repo.query("SELECT level, COUNT(*) AS count FROM programmes WHERE status = 'Active' GROUP BY level ORDER BY count DESC")
+      repo.query("SELECT level, COUNT(*) AS count FROM programmes WHERE status = 'Active' GROUP BY level ORDER BY count DESC"),
+      repo.query(
+        `SELECT p.id, p.code, p.name, p.level, p.duration_years AS years, d.name AS department
+         FROM programmes p LEFT JOIN departments d ON d.id = p.department_id
+         WHERE p.status = 'Active' ORDER BY p.level, p.name`
+      ),
+      repo.query(
+        `SELECT (SELECT COUNT(*) FROM students WHERE status = 'Active') AS students,
+                (SELECT COUNT(*) FROM programmes WHERE status = 'Active') AS programmes,
+                (SELECT COUNT(*) FROM courses WHERE status = 'Active') AS courses,
+                (SELECT COUNT(*) FROM departments WHERE status = 'Active') AS departments`
+      )
     ]);
     sendJson(res, 200, {
       success: true,
-      data: { announcements, events, programmeLevels: programmeLevels.map(row => ({ level: row.level, count: Number(row.count) })) }
+      data: {
+        announcements, events,
+        programmeLevels: programmeLevels.map(row => ({ level: row.level, count: Number(row.count) })),
+        programmes: programmes.map(row => ({ ...row, years: row.years === null ? null : Number(row.years) })),
+        stats: Object.fromEntries(Object.entries(totals).map(([key, value]) => [key, Number(value)]))
+      }
     });
     return;
   }
@@ -1298,6 +1316,8 @@ async function handleApi(req, res, url) {
     }
     const purpose = String(body.purpose || "");
     if (!FILE_PURPOSES.includes(purpose)) { sendJson(res, 422, { success: false, message: "Unknown upload purpose." }); return; }
+    // Course materials are published by teaching staff, never by students.
+    if (purpose === "material" && user.role === "STUDENT") { sendJson(res, 403, { success: false, message: "Only teaching staff can upload course materials." }); return; }
     const name = String(body.name || "").replace(/[\\/:*?"<>|\r\n]+/g, "_").trim().slice(0, 200);
     const content = Buffer.from(String(body.data || ""), "base64");
     if (!name || !content.length) { sendJson(res, 422, { success: false, message: "Choose a file to upload." }); return; }
@@ -1314,7 +1334,19 @@ async function handleApi(req, res, url) {
     if (!session) return;
     const { user } = session;
     const info = await db.getFileInfo(url.pathname.split("/").pop());
-    const allowed = info && (user.role !== "STUDENT" || info.ownerUserId === user.id || (info.studentId && info.studentId === user.studentId));
+    let allowed = info && (user.role !== "STUDENT" || info.ownerUserId === user.id || (info.studentId && info.studentId === user.studentId));
+    // Course materials a lecturer uploaded: open to the students registered
+    // for that course this semester or any other.
+    if (info && !allowed && info.purpose === "material" && user.studentId) {
+      const rows = await repo.query(
+        `SELECT 1 FROM elearning_materials m
+         JOIN registration_courses rc ON rc.course_id = m.course_id
+         JOIN registrations r ON r.id = rc.registration_id
+         WHERE m.file_url = ? AND r.student_id = ? AND r.status IN ('Registered', 'Approved') LIMIT 1`,
+        [`/api/files/${info.id}`, user.studentId]
+      );
+      allowed = rows.length > 0;
+    }
     if (!allowed) { sendJson(res, 404, { success: false, message: "File not found." }); return; }
     const content = await db.getFileContent(info.id);
     res.writeHead(200, {
@@ -1501,21 +1533,47 @@ server.on("error", error => {
   process.exit(1);
 });
 
-server.listen(config.port, config.host, async () => {
-  console.log(`USIAMS running at ${tlsEnabled() ? "https" : "http"}://${config.host}:${config.port}`);
-  // Report the database state up front; otherwise a stopped MySQL only
-  // shows up later as a failed sign-in.
-  if (!(await db.health())) {
-    console.error(`USIAMS cannot reach MySQL at ${config.db.host}:${config.db.port} (database "${config.db.database}").`);
-    console.error("Start MySQL and check DB_* in .env - pages will load but sign-in will fail until it is reachable.");
-  }
-  // Expired sessions are already refused; this only keeps the table small.
-  const purge = () => db.purgeExpiredSessions().catch(error => console.warn("USIAMS: session cleanup failed:", error.message));
-  purge();
-  setInterval(purge, 60 * 60 * 1000).unref();
-  // Daily timetable reminders (reminders.js). REMINDERS=off disables them,
-  // e.g. for the test suite, whose notification counts they would change.
-  if (config.remindersEnabled) reminders.start();
-});
+// Expired sessions are already refused; this only keeps the table small.
+const purge = () => db.purgeExpiredSessions().catch(error => console.warn("USIAMS: session cleanup failed:", error.message));
 
-module.exports = { server };
+// On Vercel (api/index.js) there is no long-running process to own timers:
+// each request is handled by a function that sleeps between requests. The
+// periodic jobs instead ride on incoming requests, each at most once per
+// interval, so a quiet site catches up on the next visit.
+const lastRun = { purge: 0, reminders: 0 };
+async function runDueJobs() {
+  const now = Date.now();
+  const jobs = [];
+  if (now - lastRun.purge >= 60 * 60 * 1000) { lastRun.purge = now; jobs.push(purge()); }
+  if (config.remindersEnabled && now - lastRun.reminders >= 60 * 1000) {
+    lastRun.reminders = now;
+    jobs.push(reminders.run().catch(error => console.warn("USIAMS: timetable reminders failed:", error.message)));
+  }
+  await Promise.all(jobs);
+}
+
+async function vercelHandler(req, res) {
+  await handleRequest(req, res);
+  // After the response, so no visitor waits on the jobs; awaited, so the
+  // function is not frozen halfway through one.
+  await runDueJobs();
+}
+
+if (!process.env.VERCEL) {
+  server.listen(config.port, config.host, async () => {
+    console.log(`USIAMS running at ${tlsEnabled() ? "https" : "http"}://${config.host}:${config.port}`);
+    // Report the database state up front; otherwise a stopped MySQL only
+    // shows up later as a failed sign-in.
+    if (!(await db.health())) {
+      console.error(`USIAMS cannot reach MySQL at ${config.db.host}:${config.db.port} (database "${config.db.database}").`);
+      console.error("Start MySQL and check DB_* in .env - pages will load but sign-in will fail until it is reachable.");
+    }
+    purge();
+    setInterval(purge, 60 * 60 * 1000).unref();
+    // Daily timetable reminders (reminders.js). REMINDERS=off disables them,
+    // e.g. for the test suite, whose notification counts they would change.
+    if (config.remindersEnabled) reminders.start();
+  });
+}
+
+module.exports = { server, vercelHandler };

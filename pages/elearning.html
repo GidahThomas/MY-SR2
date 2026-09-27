@@ -13,6 +13,8 @@
         <div><h1>E-Learning</h1><p>Course materials, assignments and submissions.</p></div>
       </div>
 
+      <div class="elearn-intro mb-4" id="elearnIntro"></div>
+
       <div class="usi-card mb-4">
         <div class="usi-card-body">
           <label class="form-label">Course</label>
@@ -36,6 +38,16 @@
 <!-- include: app-scripts -->
 <script>
   USIAMS.boot(["STUDENT","LECTURER"], (user) => {
+    // How e-learning works, from each side.
+    const steps = user.role === "STUDENT"
+      ? [["bi-download", "Download materials", "Notes, slides and readings your lecturers publish, plus links to lecture recordings."],
+         ["bi-upload", "Submit assignments", "Upload your work before the due date. It is stored safely with your account."],
+         ["bi-patch-check", "See your marks", "Each submission shows its score once your lecturer has graded it."]]
+      : [["bi-cloud-arrow-up", "Publish materials", "Upload notes and slides, or add a link to a lecture recording."],
+         ["bi-clipboard-plus", "Set assignments", "Give each one a due date and maximum score."],
+         ["bi-check2-square", "Grade submissions", "Download students' work and record their marks."]];
+    document.getElementById("elearnIntro").innerHTML = steps.map(([icon, title, text]) => `
+      <div class="elearn-intro-item"><i class="bi ${icon}"></i><div><strong>${title}</strong><small>${text}</small></div></div>`).join("");
     USIAMS.elearningPage.initPage(user);
   });
 </script>

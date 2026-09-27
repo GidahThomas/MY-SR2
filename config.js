@@ -87,8 +87,18 @@ const config = {
     database: process.env.DB_NAME || "university",
     user: process.env.DB_USER || "root",
     password: process.env.DB_PASSWORD || "",
-    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10)
+    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
+    // Cloud databases (used with Vercel) only accept encrypted connections.
+    // DB_SSL=on checks the server against the system's trusted certificates;
+    // DB_SSL_CA holds the provider's CA certificate (PEM) when it uses its own.
+    ssl: /^(1|on|true|yes)$/i.test(process.env.DB_SSL || "")
+      ? { rejectUnauthorized: true, ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA.replace(/\\n/g, "\n") } : {}) }
+      : undefined
   }
 };
+
+// Vercel reserves TZ, so there the time zone is set as APP_TIMEZONE. Node
+// picks up a TZ change made before the first date is formatted.
+if (process.env.APP_TIMEZONE) process.env.TZ = process.env.APP_TIMEZONE;
 
 module.exports = { config, loadEnvFile };

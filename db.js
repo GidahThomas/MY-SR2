@@ -12,18 +12,8 @@
    ========================================================= */
 const crypto = require("node:crypto");
 const { config } = require("./config");
-const { pool, query } = require("./db/repository");
+const { pool, query, health } = require("./db/repository");
 const { hashPassword, verifyPassword, needsRehash, passwordProblem } = require("./db/passwords");
-
-
-async function health() {
-  try {
-    await query("SELECT 1 AS ok");
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 async function findUser(username) {
   const rows = await query(`

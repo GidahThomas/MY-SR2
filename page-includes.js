@@ -8,6 +8,7 @@
      <!-- include: app-scripts charts -->   the same, plus Chart.js
      <!-- include: app-shell-start -->      the sidebar, navbar and the
      <!-- include: app-shell-end -->        <main> the page's content goes in
+     <!-- include: error-scripts -->        the 403/404/500 pages' scripts
 
    The public home page also uses the site-* markers, which fill in the
    institution's details from config.js (UNIVERSITY_NAME, CONTACT_EMAIL...
@@ -48,6 +49,11 @@ const APP_SCRIPTS = [
   "js/app.js"
 ];
 const CHART_LIBRARY = "assets/vendor/chart.js/chart.umd.min.js";
+
+// The 403, 404 and 500 pages: just enough to find the user's dashboard.
+const ERROR_SCRIPTS = [
+  "js/storage.js", "js/api.js", "js/ui.js", "data/users.js", "js/auth.js", "js/navigation.js", "js/error-page.js"
+];
 
 // The application frame: js/app.js fills the sidebar and navbar.
 const APP_SHELL_START = [
@@ -135,6 +141,13 @@ function renderSite(name, base, html) {
       ? `<img class="campus-photo" src="${base}${photo}" alt="${escapeHtml(site.universityName || "University")} campus" loading="lazy">`
       : "";
   }
+  if (name === "site-whatsapp") {
+    // A Tanzanian number as written locally (0620 116 944) or with +255.
+    const digits = String(site.contactPhone || "").replace(/\D/g, "").replace(/^0(?=\d{9}$)/, "255");
+    if (!/^\d{10,15}$/.test(digits)) return "";
+    const text = encodeURIComponent(`Hello ${site.universityName || "USIAMS"}, I have an enquiry.`);
+    return `<a class="whatsapp-fab" href="https://wa.me/${digits}?text=${text}" target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp"><i class="bi bi-whatsapp"></i><span>Chat with us</span></a>`;
+  }
   if (name === "site-admission-window") {
     if (!site.admissionOpens && !site.admissionCloses) return "";
     const parts = [];
@@ -157,6 +170,7 @@ function render(name, options, base, html) {
     if (options.includes("charts")) scripts.splice(1, 0, CHART_LIBRARY);
     return scripts.map(src => `<script src="${base}${src}"></script>`).join("\n");
   }
+  if (name === "error-scripts") return ERROR_SCRIPTS.map(src => `<script src="${base}${src}"></script>`).join("\n");
   if (name === "app-shell-start") return APP_SHELL_START;
   if (name === "app-shell-end") return APP_SHELL_END;
   throw new Error(`Unknown page include "${name}".`);

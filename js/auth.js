@@ -71,6 +71,17 @@
     window.location.href = getBasePath() + "login.html";
   }
 
+  /** Asks before signing out; the navbar menu and the sidebar both use it. */
+  function confirmLogout() {
+    global.USIAMS.modal.confirm({
+      title: "Sign out of USIAMS",
+      message: "Are you sure you want to end your session and sign out?",
+      confirmText: "Sign Out",
+      variant: "primary",
+      onConfirm: logout
+    });
+  }
+
   function getCurrentUser() {
     return storage.getStorage(SESSION_KEY, null);
   }
@@ -94,11 +105,16 @@
   /**
    * The page to continue to after signing in, from login.html?next=...
    * Only an app page (pages/<name>.html) is accepted, so the parameter
-   * cannot send anyone off-site.
+   * cannot send anyone off-site. Given a role, the page must also be one
+   * that role has in its menu: the home page links "Pay fees" and
+   * "Library" to everyone, and a lecturer who follows one should land on
+   * their dashboard, not on Access Denied.
    */
-  function safeNext() {
+  function safeNext(role) {
     const next = new URLSearchParams(window.location.search).get("next") || "";
-    return /^pages\/[a-z0-9-]+\.html$/.test(next) ? next : null;
+    if (!/^pages\/[a-z0-9-]+\.html$/.test(next)) return null;
+    if (!role || !global.USIAMS.navigation) return next;
+    return global.USIAMS.navigation.menuForRole(role).some(item => item.href === next) ? next : null;
   }
 
   /**
@@ -145,6 +161,6 @@
   }
 
   global.USIAMS = global.USIAMS || {};
-  global.USIAMS.auth = { login, logout, getCurrentUser, isAuthenticated, requireAuth, isReadOnlyRole, guardWrite, getBasePath, unavailableMessage, safeNext };
+  global.USIAMS.auth = { login, logout, confirmLogout, getCurrentUser, isAuthenticated, requireAuth, isReadOnlyRole, guardWrite, getBasePath, unavailableMessage, safeNext };
 
 })(window);

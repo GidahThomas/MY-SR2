@@ -4,6 +4,14 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Vercel: the CLI's project link and the (deliberately empty) build output.
+.vercel
+vercel-static/
+
 # Database exports hold password hashes and personal records.
 *.sql.gz
 usiams-database.sql
+.env.local
+# Cloud database credentials, used from this computer to load the data.
+.env.cloud
+ca.pem

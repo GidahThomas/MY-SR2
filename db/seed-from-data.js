@@ -112,6 +112,7 @@ async function seed() {
     user: config.db.user,
     password: config.db.password,
     database: config.db.database,
+    ssl: config.db.ssl,
     multipleStatements: true
   });
 

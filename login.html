@@ -217,7 +217,7 @@
 (function () {
   // Redirect to the correct dashboard if a session already exists.
   const existing = USIAMS.auth.getCurrentUser();
-  if (existing) window.location.replace(USIAMS.auth.safeNext() || USIAMS.navigation.dashboardHrefFor(existing.role));
+  if (existing) window.location.replace(USIAMS.auth.safeNext(existing.role) || USIAMS.navigation.dashboardHrefFor(existing.role));
 
   document.getElementById("showPassword").addEventListener("change", (e) => {
     document.getElementById("password").type = e.target.checked ? "text" : "password";
@@ -392,7 +392,7 @@
         window.location.href = "apply.html?account=created";
         return;
       }
-      window.location.href = USIAMS.auth.safeNext() || USIAMS.navigation.dashboardHrefFor(result.user.role);
+      window.location.href = USIAMS.auth.safeNext(result.user.role) || USIAMS.navigation.dashboardHrefFor(result.user.role);
     }, 350);
   });
 })();

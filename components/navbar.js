@@ -85,15 +85,7 @@
     ));
 
     const logoutBtn = document.getElementById("navbarLogoutBtn");
-    if (logoutBtn) logoutBtn.addEventListener("click", () => {
-      global.USIAMS.modal.confirm({
-        title: "Sign out of USIAMS",
-        message: "Are you sure you want to end your session and sign out?",
-        confirmText: "Sign Out",
-        variant: "primary",
-        onConfirm: () => global.USIAMS.auth.logout()
-      });
-    });
+    if (logoutBtn) logoutBtn.addEventListener("click", () => global.USIAMS.auth.confirmLogout());
 
     const searchInput = document.getElementById("globalSearchInput");
     const searchResults = document.getElementById("globalSearchResults");

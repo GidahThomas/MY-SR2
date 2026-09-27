@@ -287,6 +287,8 @@
       showError("Could not load fee items and payment methods: " + (error.message || "server unavailable"));
       return;
     }
+    // The dialog may have been closed while the lists were loading.
+    if (!document.body.contains(confirmBtn)) return;
 
     if (!canConfirm) {
       document.getElementById("paySimulationNote").textContent = "After you pay, your payment is recorded automatically once GePG confirms it - you do not need to do anything else here.";

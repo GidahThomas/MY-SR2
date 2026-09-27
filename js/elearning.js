@@ -55,13 +55,34 @@
     return courses;
   }
 
+  // A material is a stored file (downloaded with the session) or a web link
+  // such as a lecture recording; only http(s) links are ever made clickable.
+  const isWebLink = url => /^https?:\/\/[^\s"'<>]+$/i.test(String(url || ""));
+
+  function materialAction(m) {
+    if (global.USIAMS.api.files.isStored(m.url)) {
+      return `<a class="btn btn-sm btn-outline-primary" href="#" data-action="download-attachment" data-url="${util.escapeHtml(m.url)}" data-name="${util.escapeHtml(m.title)}"><i class="bi bi-download me-1"></i>Download</a>`;
+    }
+    if (isWebLink(m.url)) {
+      return `<a class="btn btn-sm btn-outline-primary" href="${util.escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right me-1"></i>Open</a>`;
+    }
+    return `<span class="text-muted-usi" style="font-size:.76rem;">No file attached</span>`;
+  }
+
+  function materialIcon(type) {
+    return { "Lecture Notes": "bi-file-earmark-text", Slides: "bi-file-earmark-slides", Reading: "bi-book", "Video Link": "bi-play-btn" }[type] || "bi-file-earmark";
+  }
+
   function renderMaterials(user) {
     const materials = materialsFor(selectedCourseId);
     const isLecturer = user.role !== "STUDENT";
     document.getElementById("materialsList").innerHTML = (materials.length ? materials.map(m => `
-      <div class="usi-card mb-2"><div class="usi-card-body d-flex justify-content-between align-items-center">
-        <div><strong>${util.escapeHtml(m.title)}</strong><div class="text-muted-usi" style="font-size:.76rem;">${util.escapeHtml(m.type)} &bull; Uploaded ${util.formatDate(m.uploadedDate)}</div></div>
-        <i class="bi bi-file-earmark-text fs-4 text-muted-usi"></i>
+      <div class="usi-card mb-2"><div class="usi-card-body d-flex justify-content-between align-items-center gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <i class="bi ${materialIcon(m.type)} fs-4" style="color:var(--primary);"></i>
+          <div><strong>${util.escapeHtml(m.title)}</strong><div class="text-muted-usi" style="font-size:.76rem;">${util.escapeHtml(m.type)} &bull; Uploaded ${util.formatDate(m.uploadedDate)}</div></div>
+        </div>
+        ${materialAction(m)}
       </div></div>`).join("") : `<div class="empty-state"><i class="bi bi-folder2-open"></i>No materials uploaded for this course yet.</div>`)
       + (isLecturer ? `<button class="btn btn-outline-primary btn-sm mt-2" id="addMaterialBtn"><i class="bi bi-plus-lg me-1"></i>Add Material</button>` : "");
 
@@ -75,15 +96,43 @@
         <div class="modal-body">
           <label class="form-label">Title</label><input type="text" class="form-control mb-3" id="materialTitleInput" placeholder="e.g. Week 3 - Slides">
           <label class="form-label">Type</label>
-          <select class="form-select" id="materialTypeInput">${global.USIAMS.data.elearningMaterialTypes.map(t => `<option>${t}</option>`).join("")}</select>
+          <select class="form-select mb-3" id="materialTypeInput">${global.USIAMS.data.elearningMaterialTypes.map(t => `<option>${t}</option>`).join("")}</select>
+          <div id="materialFileWrap">
+            <label class="form-label" for="materialFileInput">File (up to 5 MB)</label>
+            <input type="file" class="form-control" id="materialFileInput">
+          </div>
+          <div id="materialLinkWrap" class="d-none">
+            <label class="form-label" for="materialLinkInput">Link to the video or page</label>
+            <input type="url" class="form-control" id="materialLinkInput" placeholder="https://...">
+          </div>
+          <div class="form-text">Students registered for this course can download or open it.</div>
         </div>
         <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="saveMaterialBtn" style="background:var(--primary);border-color:var(--primary);">Save</button></div>
       </div></div></div>
     `);
-    document.getElementById("saveMaterialBtn").addEventListener("click", () => {
+    const typeInput = document.getElementById("materialTypeInput");
+    const isLink = () => typeInput.value === "Video Link";
+    typeInput.addEventListener("change", () => {
+      document.getElementById("materialFileWrap").classList.toggle("d-none", isLink());
+      document.getElementById("materialLinkWrap").classList.toggle("d-none", !isLink());
+    });
+    document.getElementById("saveMaterialBtn").addEventListener("click", async () => {
       const title = document.getElementById("materialTitleInput").value.trim();
       if (!title) { toast.show("error", "Title required", "Please enter a title for the material."); return; }
-      materialsOverlay.add({ id: util.uid("MAT"), courseId: selectedCourseId, title, type: document.getElementById("materialTypeInput").value, uploadedDate: new Date().toISOString().slice(0, 10) });
+      let url = null;
+      if (isLink()) {
+        url = document.getElementById("materialLinkInput").value.trim();
+        if (!isWebLink(url)) { toast.show("error", "Link required", "Enter a link starting with https://"); return; }
+      } else {
+        const file = document.getElementById("materialFileInput").files[0];
+        if (!file) { toast.show("error", "File required", "Choose the file students will download."); return; }
+        const btn = document.getElementById("saveMaterialBtn");
+        btn.disabled = true;
+        // The file itself is stored in the database; the material keeps its URL.
+        try { url = (await global.USIAMS.api.files.upload(file, "material")).url; }
+        catch (error) { btn.disabled = false; toast.show("error", "Upload failed", error.message); return; }
+      }
+      materialsOverlay.add({ id: util.uid("MAT"), courseId: selectedCourseId, title, type: typeInput.value, url, uploadedDate: new Date().toISOString().slice(0, 10) });
       modal.close();
       renderMaterials(currentUser);
       toast.show("success", "Material added", "The course material has been published.");

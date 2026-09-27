@@ -29,6 +29,9 @@
     select.innerHTML = programmes
       .map(p => `<option value="${util.escapeHtml(p.id)}">${util.escapeHtml(p.name)} (${util.escapeHtml(p.level)})</option>`)
       .join("");
+    // The home page's programme cards link here as apply.html?programme=<id>.
+    const wanted = new URLSearchParams(global.location.search).get("programme");
+    if (wanted && programmes.some(p => p.id === wanted)) select.value = wanted;
   }
 
   async function init() {

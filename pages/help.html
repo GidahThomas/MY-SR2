@@ -24,6 +24,13 @@
       </div>
 
       <div class="usi-card mb-3">
+        <div class="usi-card-header"><h3><i class="bi bi-grid me-2"></i>Services at a glance</h3></div>
+        <div class="usi-card-body">
+          <div class="service-areas" id="serviceAreas"></div>
+        </div>
+      </div>
+
+      <div class="usi-card mb-3">
         <div class="usi-card-header">
           <h3><i class="bi bi-book me-2"></i>How do I...?</h3>
           <div class="search-box" style="max-width:320px;"><i class="bi bi-search"></i><input type="search" class="form-control" id="helpSearch" placeholder="Search guides, e.g. pay, register, results" aria-label="Search guides"></div>
@@ -65,6 +72,39 @@
       "Sign out from the menu under your name (top right) when you finish, especially on a shared computer."
     ];
     document.getElementById("gettingStarted").innerHTML = basics.map(b => `<li>${escapeHtml(b)}</li>`).join("");
+
+    // Every service by area. A service links to its page when this role
+    // has that page in its menu; otherwise it is shown for information.
+    const myPages = new Set(USIAMS.navigation.menuForRole(user.role).map(item => item.href));
+    const AREAS = [
+      { title: "Academics", icon: "bi-mortarboard-fill", items: [
+        ["bi-journal-check", "Course registration", "Register 6 or 7 courses; prerequisites and credit limits are checked for you.", "pages/registration.html"],
+        ["bi-calendar-week", "Timetable & attendance", "Weekly schedule, the daily class checklist and class reminders.", "pages/timetable.html"],
+        ["bi-bar-chart-line", "Results & GPA", "Semester results, GPA and an unofficial transcript.", "pages/results.html"],
+        ["bi-laptop", "E-learning", "Course materials to download, assignments to submit, and marks.", "pages/elearning.html"]
+      ] },
+      { title: "Finance & campus", icon: "bi-wallet2", items: [
+        ["bi-receipt-cutoff", "Fees through GePG", "Get a GePG control number and pay through Government Payments.", "pages/finance.html"],
+        ["bi-book", "Library", "Search the catalogue, borrow books and track your loans.", "pages/library.html"],
+        ["bi-building", "Hostel", "Request accommodation and see your room allocation.", "pages/hostel.html"],
+        ["bi-folder2-open", "Documents", "Upload your certificates and download them any time.", "pages/documents.html"]
+      ] },
+      { title: "Support & community", icon: "bi-people-fill", items: [
+        ["bi-chat-left-dots", "Requests & complaints", "Reach the right office and follow each case to the end.", "pages/requests.html"],
+        ["bi-megaphone", "Announcements", "University notices and your personal notifications.", "pages/announcements.html"],
+        ["bi-check2-square", "Elections", "Student elections, one vote per position.", "pages/elections.html"],
+        ["bi-award", "Graduation clearance", "Clearance from each office, tracked step by step.", "pages/graduation.html"]
+      ] }
+    ];
+    const root = USIAMS.auth.getBasePath();
+    document.getElementById("serviceAreas").innerHTML = AREAS.map(area => `
+      <section class="service-area">
+        <h4><i class="bi ${area.icon}"></i>${escapeHtml(area.title)}</h4>
+        <ul>${area.items.map(([icon, name, text, href]) => {
+          const body = `<i class="bi ${icon}"></i><span><strong>${escapeHtml(name)}</strong><small>${escapeHtml(text)}</small></span>`;
+          return myPages.has(href) ? `<li><a href="${root}${href}">${body}</a></li>` : `<li><div>${body}</div></li>`;
+        }).join("")}</ul>
+      </section>`).join("");
 
     // One accordion item per page this role can open.
     const guides = USIAMS.help.guidesFor(user);

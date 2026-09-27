@@ -1,2 +1,0 @@
-# Shell scripts run on Linux servers; keep Unix line endings on every checkout.
-*.sh text eol=lf

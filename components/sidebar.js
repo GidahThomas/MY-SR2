@@ -48,15 +48,7 @@
       </div>
     `;
 
-    document.getElementById("sidebarLogoutBtn").addEventListener("click", () => {
-      global.USIAMS.modal.confirm({
-        title: "Sign out of USIAMS",
-        message: "Are you sure you want to end your session and sign out?",
-        confirmText: "Sign Out",
-        variant: "primary",
-        onConfirm: () => global.USIAMS.auth.logout()
-      });
-    });
+    document.getElementById("sidebarLogoutBtn").addEventListener("click", () => global.USIAMS.auth.confirmLogout());
   }
 
   global.USIAMS = global.USIAMS || {};

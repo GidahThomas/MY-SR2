@@ -1,0 +1,11 @@
+.env
+.env.local
+.env.cloud
+ca.pem
+.vercel
+node_modules
+tests
+*.log
+*.sql.gz
+usiams-database.sql
+usiams-cpanel.zip

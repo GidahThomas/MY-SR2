@@ -58,17 +58,9 @@
     users: "users"
   };
 
-  // Resource name -> the USIAMS.data property the modules read.
-  // Mirrors BOOTSTRAP_ALIASES in server.js.
-  const DATA_ALIAS = {
-    attendanceSummary: "attendance", books: "seedBooks", loans: "seedLoans",
-    requests: "seedRequests", complaints: "seedComplaints", announcements: "seedAnnouncements",
-    notifications: "seedNotifications", documents: "seedDocuments", hostels: "seedHostels",
-    hostelRooms: "seedRooms", hostelAllocations: "seedAllocations", internships: "seedInternships",
-    graduation: "seedGraduation", materials: "seedMaterials", assignments: "seedAssignments",
-    submissions: "seedSubmissions", applications: "seedApplications", auditLogs: "seedAuditLogs",
-    registrations: "seedRegistrations", calendar: "academicCalendar", holidays: "publicHolidays"
-  };
+  // Resource name -> the USIAMS.data property the modules read. Sent by the
+  // server with the bootstrap (BOOTSTRAP_ALIASES in server.js).
+  let dataAlias = {};
 
   /** resource name -> the live array the app reads and writes. */
   const cache = new Map();
@@ -169,7 +161,7 @@
     const list = listOf(resource);
     list.length = 0;
     list.push(...(rows || []));
-    const alias = DATA_ALIAS[resource] || resource;
+    const alias = dataAlias[resource] || resource;
     USIAMS.data = USIAMS.data || {};
     USIAMS.data[alias] = list;
     return list;
@@ -185,8 +177,9 @@
     const result = await request("/api/bootstrap");
     // The payload is keyed by the alias the modules already use; map it
     // back to resource names so the caches and USIAMS.data share arrays.
+    dataAlias = result.aliases || {};
     const resourceByAlias = {};
-    for (const [resource, alias] of Object.entries(DATA_ALIAS)) resourceByAlias[alias] = resource;
+    for (const [resource, alias] of Object.entries(dataAlias)) resourceByAlias[alias] = resource;
     for (const [alias, rows] of Object.entries(result.data)) {
       setList(resourceByAlias[alias] || alias, rows);
     }

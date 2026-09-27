@@ -88,6 +88,45 @@
     renderStudentNeedsAttention(user, student);
     renderBylawsReminder(student);
     renderProfileReminder(student);
+    renderJourney(student, currentCourses, balance, results);
+  }
+
+  // "Your journey": the path from admission to graduation, with each step
+  // marked from the student's own records - done, the one to do next, or
+  // still ahead - and linked to the page where it happens.
+  function renderJourney(student, currentCourses, balance, results) {
+    const el = document.getElementById("journeySteps");
+    if (!el) return;
+    const load = academic.COURSE_LOAD;
+    const clearance = global.USIAMS.storage.getStorage("graduation", global.USIAMS.data.seedGraduation || [])
+      .find(g => g.studentId === student.id);
+    const cleared = clearance && Object.values(clearance.checklist || {}).every(Boolean);
+
+    const steps = [
+      { title: "Admitted", text: "Your place on the programme is confirmed.", done: true, href: "profile-setup.html", icon: "bi-envelope-check" },
+      { title: "Account ready", text: "You are signed in to your student portal.", done: true, href: "settings.html", icon: "bi-person-check" },
+      { title: "Register courses", text: `Choose ${load.min} or ${load.max} courses this semester.`, done: currentCourses.length >= load.min, href: "registration.html", icon: "bi-pencil-square" },
+      { title: "Pay fees", text: balance.balance > 0 ? `${util.formatCurrency(balance.balance)} still to pay through GePG.` : "Your fees are fully paid.", done: balance.balance <= 0, href: "finance.html", icon: "bi-cash-coin" },
+      { title: "Learn & track", text: "Timetable, e-learning, attendance and results.", done: results.length > 0, href: "elearning.html", icon: "bi-laptop" },
+      { title: "Graduate", text: cleared ? "Clearance complete." : "Clear each office before graduation.", done: cleared, href: "graduation.html", icon: "bi-mortarboard" }
+    ];
+    const nextIndex = steps.findIndex(s => !s.done);
+    const doneCount = steps.filter(s => s.done).length;
+    document.getElementById("journeyProgress").textContent = `${doneCount} of ${steps.length} steps done`;
+
+    el.innerHTML = steps.map((s, i) => {
+      const state = s.done ? "done" : i === nextIndex ? "next" : "ahead";
+      const label = { done: "Done", next: "Do this next", ahead: "Coming up" }[state];
+      return `
+        <a class="journey-step is-${state}" href="${s.href}">
+          <span class="journey-dot">${s.done ? `<i class="bi bi-check-lg"></i>` : i + 1}</span>
+          <span class="journey-text">
+            <strong><i class="bi ${s.icon} me-1"></i>${util.escapeHtml(s.title)}</strong>
+            <small>${util.escapeHtml(s.text)}</small>
+            <em>${label}</em>
+          </span>
+        </a>`;
+    }).join("");
   }
 
   function renderProfileReminder(student) {
