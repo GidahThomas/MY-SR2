@@ -32,6 +32,14 @@ loadEnvFile();
 const config = {
   host: process.env.HOST || "127.0.0.1",
   port: Number(process.env.PORT || 3000),
+  // GePG is not connected. With GEPG_SIMULATION=on a student's "Confirm
+  // Payment" stands in for GePG's paid notification - demos only: it lets
+  // a student mark their own bill paid. Off (the default), only finance
+  // staff can confirm a payment, after checking it in GePG.
+  gepgSimulation: /^(1|on|true|yes)$/i.test(process.env.GEPG_SIMULATION || ""),
+  // Set when the server sits behind a reverse proxy (nginx, IIS) that sets
+  // X-Forwarded-For; only then is that header trusted for the client IP.
+  trustProxy: /^(1|on|true|yes)$/i.test(process.env.TRUST_PROXY || ""),
   remindersEnabled: !/^(0|off|false|no)$/i.test(process.env.REMINDERS || ""),
   sessionTtlMs: Number(process.env.SESSION_TTL_HOURS || 8) * 60 * 60 * 1000,
   // Only verifies password hashes written before each got its own salt;

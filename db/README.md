@@ -47,24 +47,30 @@ payments, plus the service requests, complaints, announcements, notifications,
 documents, library catalogue and loans, internships, graduation clearances,
 alumni, QA flags, academic calendar, e-learning content and audit trail.
 
-## Demo accounts
+## Accounts
 
-| Username | Password | Role |
-|---|---|---|
-| student | student123 | Student |
-| admin | admin123 | University Admin |
-| qa | qa123 | Quality Assurance Officer |
-| lecturer | lecturer123 | Lecturer |
-| finance | finance123 | Finance Officer |
-| registration | registration123 | Registration Officer |
-| sysadmin | sysadmin123 | System Admin |
-| librarian | librarian123 | Librarian |
-| hostel | hostel123 | Hostel Officer |
+A seeded database has **no sign-in accounts**. The demo data refers to 20
+people in `data/users.js` (who posted an announcement, which lecturer
+teaches a class); the seeder loads them so those records can be written,
+then removes them with `db/accounts.js`. Records that belong to an account
+(its notifications, sessions, settings, role assignments) are deleted with
+it; anything else it touched (a request it filed, an announcement it posted,
+the audit trail) is kept and no longer names it.
 
-The seed loads 20 accounts in total, one per role in `data/users.js`. Passwords
-are scrypt hashes, each with its own random salt (`db/passwords.js`); older
-hashes made with the shared `PASSWORD_SALT` still verify and are upgraded on
-the next sign-in. Never use these accounts in production.
+Real accounts are kept when you reseed. Create the first administrator with:
+
+```powershell
+npm run create-admin -- --username jdoe --email jdoe@university.ac.tz --name "Jane Doe"
+```
+
+Passwords are scrypt hashes, each with its own random salt
+(`db/passwords.js`); older hashes made with the shared `PASSWORD_SALT` still
+verify and are upgraded on the next sign-in.
+
+The test suite seeds **its own database** (`<DB_NAME>_test`) with
+`node db/seed-from-data.js --with-demo-accounts`, which keeps the demo
+accounts as logins (passwords in `db/demo-passwords.js`, never served to
+browsers). Never run that flag against a real database.
 
 ## Sessions, password resets and email
 

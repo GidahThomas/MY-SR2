@@ -51,6 +51,3 @@
 @media (min-width: 992px) {
   .sidebar-backdrop { display: none !important; }
 }
-
-/* Ensure any wide table scrolls instead of breaking layout */
-.usi-table-wrap { -webkit-overflow-scrolling: touch; }

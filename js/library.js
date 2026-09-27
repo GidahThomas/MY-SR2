@@ -99,15 +99,11 @@
             <div class="col-md-4"><dt>Due</dt><dd>${util.formatDate(l.dueDate)}</dd></div>
             <div class="col-md-4"><dt>Returned</dt><dd>${l.returnedDate ? util.formatDate(l.returnedDate) : "-"}</dd></div>
           </dl>
-          ${!l.returnedDate ? `<button class="btn btn-sm btn-outline-secondary" data-action="return" data-id="${l.id}"><i class="bi bi-arrow-return-left me-1"></i>Return Book</button>` : ""}
+          ${!l.returnedDate ? `<div class="text-muted-usi" style="font-size:.8rem;"><i class="bi bi-info-circle me-1"></i>Hand the book in at the library desk; the librarian records the return.</div>` : ""}
         </div>
       </div>`;
     }).join("") : `<div class="empty-state"><i class="bi bi-journal"></i>You have no borrowed books.</div>`;
 
-    myLoansContainer.querySelectorAll("[data-action='return']").forEach(btn => btn.addEventListener("click", () => {
-      returnBook(btn.dataset.id);
-      renderStudentView();
-    }));
   }
 
   // ---------------------------------------------------------------------

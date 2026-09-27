@@ -5,13 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const ROOT = path.join(__dirname, "..");
-const BASE = process.env.BASE || "http://127.0.0.1:3311";
-let pass = 0, fail = 0;
-const check = (label, ok, detail = "") => {
-  if (ok) { pass++; console.log("  PASS " + label); }
-  else { fail++; console.log("  FAIL " + label + (detail ? " -> " + detail : "")); }
-};
+const { BASE, ROOT, check, finish } = require("./helpers");
 
 function makeWindow() {
   const store = new Map();
@@ -51,7 +45,7 @@ function load(sandbox, relative) {
 
   // The data files run next and capture their overlays during evaluation -
   // this is the ordering that made the bridge install at load time.
-  for (const file of ["grading-system.js", "academic-structure.js", "courses.js", "users.js",
+  for (const file of ["shared.js", "grading-system.js", "academic-structure.js", "courses.js", "users.js",
     "students.js", "results.js", "registrations.js", "finance.js", "attendance.js", "timetable.js",
     "requests.js", "complaints.js", "notifications.js", "calendar.js", "announcements.js",
     "documents.js", "internship.js", "graduation.js", "alumni.js", "library.js", "hostel.js",
@@ -168,6 +162,5 @@ function load(sandbox, relative) {
   const stray = await fetch(BASE + "/api/data/loans/LOAN-QA-TEST", { headers: { Authorization: "Bearer " + login.token } });
   check("nothing was written to the database", stray.status === 404);
 
-  console.log("\n" + (fail === 0 ? "ALL PASS" : "FAILURES: " + fail) + "  (" + pass + " passed)");
-  process.exit(fail === 0 ? 0 : 1);
+  finish();
 })().catch(e => { console.error("HARNESS ERROR:", e); process.exit(1); });

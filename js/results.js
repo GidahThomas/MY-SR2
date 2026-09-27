@@ -118,18 +118,7 @@
 
   function initPage(user) {
     currentUser = user;
-    let targetStudentId = user.studentId;
-    const selectorWrap = document.getElementById("studentSelectorWrap");
-    if (user.role !== "STUDENT") {
-      selectorWrap.classList.remove("d-none");
-      const select = document.getElementById("studentSelector");
-      select.innerHTML = window.USIAMS.data.students.map(s => `<option value="${s.id}">${s.regNumber}</option>`).join("");
-      targetStudentId = select.value;
-      select.addEventListener("change", () => loadStudent(select.value));
-    } else {
-      selectorWrap.classList.add("d-none");
-    }
-    loadStudent(targetStudentId);
+    loadStudent(window.USIAMS.util.studentPicker(user, { onChange: loadStudent }));
 
     document.getElementById("resultsSemesterFilter").addEventListener("change", render);
     document.getElementById("printResultsBtn").addEventListener("click", printResults);

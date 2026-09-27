@@ -12,24 +12,7 @@
 const path = require("node:path");
 const { loadSeedData } = require(path.join(__dirname, "..", "db", "load-seed-data"));
 
-const BASE = process.env.BASE || "http://127.0.0.1:3311";
-let pass = 0, fail = 0;
-const check = (l, c, d = "") => { c ? (pass++, console.log("  PASS " + l)) : (fail++, console.log("  FAIL " + l + (d ? " -> " + d : ""))); };
-
-const login = async (u, p) => (await (await fetch(BASE + "/api/auth/login", {
-  method: "POST", headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ username: u, password: p })
-})).json());
-
-const call = async (path, { method = "GET", token, body } = {}) => {
-  const r = await fetch(BASE + path, {
-    method,
-    headers: { ...(token ? { Authorization: "Bearer " + token } : {}), ...(body ? { "Content-Type": "application/json" } : {}) },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  let j = null; try { j = await r.json(); } catch {}
-  return { status: r.status, json: j };
-};
+const { check, finish, call, login } = require("./helpers");
 
 // Fields the API deliberately does not return.
 const WITHHELD = { users: ["password"] };
@@ -116,7 +99,7 @@ function keysOf(list) {
   // What pages/administration.html sends when adding a user.
   const created = await call("/api/data/users", {
     method: "POST", token: admin.token,
-    body: { id: "USR-SHAPETEST", name: "Shape Test", username: "shapetest", email: "shape.test@usiams.ac.tz",
+    body: { name: "Shape Test", username: "shapetest", email: "shape.test@usiams.ac.tz",
             role: "LECTURER", password: "changeme123", status: "Active", lastLogin: null }
   });
   check("admin creates an account", created.status === 201, JSON.stringify(created.json).slice(0, 200));
@@ -126,12 +109,13 @@ function keysOf(list) {
   check("the temporary password actually works", !!canSignIn.token, JSON.stringify(canSignIn).slice(0, 120));
   check("the password was hashed, not stored as typed", !!canSignIn.token);
 
-  const rerole = await call("/api/data/users/USR-SHAPETEST", { method: "PATCH", token: admin.token, body: { role: "LIBRARIAN" } });
+  const shapeTestId = created.json.data.id; // the server issues account ids
+  const rerole = await call("/api/data/users/" + shapeTestId, { method: "PATCH", token: admin.token, body: { role: "LIBRARIAN" } });
   check("role change is written to the join table", rerole.status === 200 && rerole.json.data.role === "LIBRARIAN",
     rerole.json.data && rerole.json.data.role);
 
-  await call("/api/data/users/USR-SHAPETEST", { method: "DELETE", token: admin.token });
-  const gone = await call("/api/data/users/USR-SHAPETEST", { token: admin.token });
+  await call("/api/data/users/" + shapeTestId, { method: "DELETE", token: admin.token });
+  const gone = await call("/api/data/users/" + shapeTestId, { token: admin.token });
   check("account removed again", gone.status === 404);
 
   // Timetable entries are written back with the grid's "time".
@@ -147,6 +131,5 @@ function keysOf(list) {
     ttCreated.json.data && ttCreated.json.data.startTime + "/" + ttCreated.json.data.endTime);
   await call("/api/data/timetable/TT-SHAPETEST", { method: "DELETE", token: admin.token });
 
-  console.log("\n" + (fail === 0 ? "ALL PASS" : "FAILURES: " + fail) + "  (" + pass + " passed)");
-  process.exit(fail === 0 ? 0 : 1);
+  finish();
 })();

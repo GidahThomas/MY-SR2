@@ -1,21 +1,4 @@
-const BASE = process.env.BASE || "http://127.0.0.1:3311";
-let pass = 0, fail = 0;
-const check = (l, c, d = "") => { c ? (pass++, console.log("  PASS " + l)) : (fail++, console.log("  FAIL " + l + (d ? " -> " + d : ""))); };
-
-const login = async (u, p) => (await (await fetch(BASE + "/api/auth/login", {
-  method: "POST", headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ username: u, password: p })
-})).json());
-
-const call = async (path, { method = "GET", token, body } = {}) => {
-  const r = await fetch(BASE + path, {
-    method,
-    headers: { ...(token ? { Authorization: "Bearer " + token } : {}), ...(body ? { "Content-Type": "application/json" } : {}) },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  let j = null; try { j = await r.json(); } catch {}
-  return { status: r.status, json: j };
-};
+const { check, finish, call, login } = require("./helpers");
 
 (async () => {
   const student = await login("student", "student123");     // USR-0001
@@ -86,6 +69,5 @@ const call = async (path, { method = "GET", token, body } = {}) => {
     check("qa still refused every write", qaMark.status === 403, String(qaMark.status));
   }
 
-  console.log("\n" + (fail === 0 ? "ALL PASS" : "FAILURES: " + fail) + "  (" + pass + " passed)");
-  process.exit(fail === 0 ? 0 : 1);
+  finish();
 })();

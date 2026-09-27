@@ -23,17 +23,37 @@ const pool = mysql.createPool({
   // frontend modules were written against; decimals as numbers stops
   // credits and money arriving as "3.0" strings.
   dateStrings: true,
-  decimalNumbers: true
+  decimalNumbers: true,
+  // MySQL/MariaDB closes connections that sit idle (wait_timeout). Keep-alive
+  // and closing idle connections ourselves stop the pool handing out one the
+  // server has already dropped.
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
+  idleTimeout: 60000,
+  maxIdle: 2
 });
 
+// A connection the server dropped fails its next query with one of these;
+// the pool discards it, so the same query on a fresh connection succeeds.
+const DROPPED = new Set(["ECONNRESET", "PROTOCOL_CONNECTION_LOST", "EPIPE", "ETIMEDOUT"]);
+
+async function withRetry(run) {
+  try {
+    return await run();
+  } catch (error) {
+    if (!DROPPED.has(error.code)) throw error;
+    return run();
+  }
+}
+
 async function query(sql, params = []) {
-  const [rows] = await pool.execute(sql, params);
+  const [rows] = await withRetry(() => pool.execute(sql, params));
   return rows;
 }
 
 /** pool.query (not execute) for statements with dynamic IN lists. */
 async function rawQuery(sql, params = []) {
-  const [rows] = await pool.query(sql, params);
+  const [rows] = await withRetry(() => pool.query(sql, params));
   return rows;
 }
 

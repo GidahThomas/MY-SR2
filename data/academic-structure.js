@@ -131,11 +131,10 @@
     { id: "BSCCND", name: "Bachelor of Science in Clinical Nutrition and Dietetics", code: "BSC-CND", departmentId: "DPHCN", level: "Undergraduate", durationYears: 4, creditLimitPerSemester: 28, creditMinPerSemester: 12 }
   ];
 
-  // Every student takes six or seven courses a semester. Credit limits are
-  // set wide enough for that load (6 courses of 2 credits = 12, 7 courses of
-  // 4 credits = 28); the course count is the rule that binds. server.js
-  // enforces the same numbers (COURSE_LOAD) on every saved registration.
-  const COURSE_LOAD = { min: 6, max: 7 };
+  // Six or seven courses a semester (data/shared.js). Credit limits are set
+  // wide enough for that load (6 courses of 2 credits = 12, 7 courses of 4
+  // credits = 28); the course count is the rule that binds.
+  const { COURSE_LOAD } = global.USIAMS.shared;
 
   const ACADEMIC_YEARS = [
     { id: "AY2023", label: "2023/2024", status: "Closed" },

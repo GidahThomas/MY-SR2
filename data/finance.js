@@ -19,11 +19,7 @@
     DPRIVLAW: 2700000, DBMS: 4300000, DOG: 4300000
   };
 
-  function seededMark(seed, min, max) {
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-    return min + (hash % (max - min + 1));
-  }
+  const { seededMark } = global.USIAMS.shared;
 
   function annualFeeFor(student) {
     return ANNUAL_FEE_BY_DEPARTMENT[student.departmentId] || 2000000;

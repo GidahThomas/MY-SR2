@@ -17,8 +17,18 @@ const { config } = require("./config");
 const db = require("./db");
 const repo = require("./db/repository");
 const { RESOURCES, READ_ONLY_ROLES } = require("./db/resources");
+const studentRules = require("./db/student-rules");
 const mailer = require("./mailer");
 const reminders = require("./reminders");
+const rateLimit = require("./rate-limit");
+const pageIncludes = require("./page-includes");
+
+/** 429 with Retry-After, when a form has been tried too often. */
+function tooManyAttempts(res, seconds) {
+  const minutes = Math.ceil(seconds / 60);
+  res.setHeader("Retry-After", String(seconds));
+  sendJson(res, 429, { success: false, message: `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.` });
+}
 
 const ROOT = __dirname;
 
@@ -111,20 +121,40 @@ function tlsEnabled() {
   return !!(config.tls.certFile && config.tls.keyFile);
 }
 
+// X-Forwarded-For is written by the client unless a proxy in front of us
+// overwrites it, so it is only believed when TRUST_PROXY is set - otherwise
+// anyone could put any address in the audit log or dodge the sign-in limit.
 function clientIp(req) {
-  return (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress || null;
+  if (config.trustProxy) {
+    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+    if (forwarded) return forwarded;
+  }
+  return req.socket.remoteAddress || null;
 }
 
 function readBody(req, maxBytes = 1024 * 1024) {
+  const fail = (status, message) => Object.assign(new Error(message), { status });
   return new Promise((resolve, reject) => {
     let raw = "";
+    let tooLarge = false;
     req.on("data", chunk => {
+      if (tooLarge) return;
       raw += chunk;
-      if (raw.length > maxBytes) req.destroy();
+      if (raw.length > maxBytes) {
+        tooLarge = true;
+        raw = "";
+        reject(fail(413, "The request is too large."));
+        req.destroy();
+      }
     });
     req.on("end", () => {
-      try { resolve(raw ? JSON.parse(raw) : {}); }
-      catch { reject(new Error("Invalid JSON body.")); }
+      if (tooLarge) return;
+      let body;
+      try { body = raw ? JSON.parse(raw) : {}; }
+      catch { reject(fail(400, "The request body is not valid JSON.")); return; }
+      // Every handler expects an object; an array or a bare value is refused.
+      if (!body || typeof body !== "object" || Array.isArray(body)) { reject(fail(400, "The request body must be a JSON object.")); return; }
+      resolve(body);
     });
     req.on("error", reject);
   });
@@ -320,10 +350,10 @@ function denyWrite(res, user) {
  * Fields in a write that no column stores. The repository silently ignores
  * them, so data typed into a form could be lost without anyone noticing.
  */
-// Every student takes six or seven courses a semester. Mirrors
-// USIAMS.academic.COURSE_LOAD in data/academic-structure.js. A Draft
-// registration (being amended) may hold any number; anything submitted may not.
-const COURSE_LOAD = { min: 6, max: 7 };
+// Every student takes six or seven courses a semester (data/shared.js). A
+// Draft registration (being amended) may hold any number; anything submitted
+// may not.
+const { COURSE_LOAD } = require("./data/shared");
 
 function registrationLoadRefusal(record) {
   if (!record || record.status === "Draft") return null;
@@ -371,12 +401,19 @@ async function handleResourceRoute(req, res, url, session) {
   }
 
   if (req.method === "POST") {
-    const body = await readBody(req);
+    let body = await readBody(req);
     if (audit) audit.dropped = droppedFields(resource, body);
     const ownerField = ownerFieldOf(resource);
     // A student may only file records against their own identity.
     const owner = ownerField ? body[ownerField] : undefined;
     if (!canWrite(resource, user, { owner })) { denyWrite(res, user); return; }
+    // ...and only the fields db/student-rules.js allows, with the status,
+    // dates and reviewer set by the server rather than by the request.
+    if (user.role === "STUDENT") {
+      const outcome = await studentRules.forCreate(name, body, { user });
+      if (outcome.error) { sendJson(res, outcome.status, { success: false, message: outcome.error }); return; }
+      body = outcome.body;
+    }
     if (user.role === "STUDENT" && ownerField) body[ownerField] = ownerIdentity(resource, user);
 
     // A notification addressed to "ALL" is delivered as one row per
@@ -401,6 +438,44 @@ async function handleResourceRoute(req, res, url, session) {
     if (name === "users") {
       const refusal = await scopedAccountRefusal({ actor: user, operation: "create", body });
       if (refusal) { sendJson(res, 403, { success: false, message: refusal }); return; }
+      // Account ids are always minted here. The page proposes sequential ids
+      // (USR-0001...), which are the removed demo accounts' ids - a reseed
+      // would then have taken a real account for a demo one.
+      delete body.id;
+
+      // A student account needs its student record (programme, registration
+      // number) or the student signs in to an empty system. It is created the
+      // way the sign-up form creates it. Only University and System Admins
+      // add students; scoped admins were refused above.
+      if (String(body.role || "").toUpperCase() === "STUDENT") {
+        if (!ACCOUNT_ADMIN_ROLES.includes(user.role)) { denyWrite(res, user); return; }
+        const username = String(body.username || "").trim().toLowerCase();
+        const email = String(body.email || "").trim().toLowerCase();
+        const fullName = String(body.name || "").trim();
+        const password = String(body.password || "");
+        const invalid = !/^[a-z0-9._@-]{3,80}$/.test(username) ? "Username must be 3-80 letters, numbers, dots, @, underscores or hyphens."
+          : !/^\S+@\S+\.\S+$/.test(email) ? "Enter a valid email address."
+          : !fullName ? "Enter the student's full name."
+          : password.length < 8 ? "The temporary password must be at least 8 characters."
+          : !body.programmeId ? "Choose the student's programme."
+          : null;
+        if (invalid) { sendJson(res, 422, { success: false, message: invalid }); return; }
+        if (await db.findUser(username)) { sendJson(res, 409, { success: false, message: "That username is already taken." }); return; }
+        if (await db.findUserByEmail(email)) { sendJson(res, 409, { success: false, message: "Another account already uses this email address." }); return; }
+        try {
+          const created = await db.createStudentAccount({
+            id: accountId(), username, passwordHash: db.hashPassword(password), fullName, email, programmeId: String(body.programmeId)
+          });
+          await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "CREATE", entityType: "users", entityId: created.userId, ip: clientIp(req) });
+          const account = await repo.getById("users", created.userId);
+          sendJson(res, 201, { success: true, data: { ...account, studentId: created.studentId, registrationNumber: created.registrationNumber } });
+        } catch (error) {
+          const badProgramme = error.code === "INVALID_PROGRAMME" || error.code === "ER_NO_REFERENCED_ROW_2";
+          if (!badProgramme && error.code !== "ER_DUP_ENTRY") throw error;
+          sendJson(res, badProgramme ? 422 : 409, { success: false, message: badProgramme ? "The selected programme is not available." : "That username or email is already registered." });
+        }
+        return;
+      }
     }
     if (name === "registrations") {
       const refusal = registrationLoadRefusal({ status: "Registered", ...body });
@@ -423,7 +498,8 @@ async function handleResourceRoute(req, res, url, session) {
 
     // A student editing their own record (Complete My Profile, By-Laws
     // acknowledgement): only the fields the resource opens to students.
-    if (user.role === "STUDENT" && resource.studentUpdatableFields) {
+    const studentFields = user.role === "STUDENT" ? (studentRules.updatableFields(name) || resource.studentUpdatableFields) : null;
+    if (studentFields) {
       if (!ownerField || existing[ownerField] !== user.studentId) { denyWrite(res, user); return; }
       const body = await readBody(req);
       if (audit) audit.dropped = droppedFields(resource, body);
@@ -437,13 +513,18 @@ async function handleResourceRoute(req, res, url, session) {
       };
       const same = (a, b) => normalize(a) === normalize(b);
       const refused = Object.keys(flat).filter(key => key !== "id" && !derived.includes(key) &&
-        !resource.studentUpdatableFields.includes(key) && !same(flat[key], existing[key]));
+        !studentFields.includes(key) && !same(flat[key], existing[key]));
       if (refused.length) {
         sendJson(res, 403, { success: false, message: `Students cannot change: ${refused.join(", ")}.` });
         return;
       }
       const patch = {};
-      for (const key of resource.studentUpdatableFields) if (flat[key] !== undefined) patch[key] = flat[key];
+      for (const key of studentFields) if (flat[key] !== undefined) patch[key] = flat[key];
+      const merged = { ...existing, ...patch };
+      const problem = await studentRules.checkUpdate(name, merged, existing, { user });
+      if (problem) { sendJson(res, 422, { success: false, message: problem }); return; }
+      // The registration check works out the credit total itself.
+      if (name === "registrations") patch.totalCredits = merged.totalCredits;
       const updated = await repo.update(name, id, patch);
       await db.recordAudit({
         userId: user.id, userName: user.name, userRole: user.role, action: "UPDATE",
@@ -488,6 +569,10 @@ async function handleResourceRoute(req, res, url, session) {
     if (!existing) { sendJson(res, 404, { success: false, message: "Record not found." }); return; }
     const ownerField = ownerFieldOf(resource);
     if (!canWrite(resource, user, { owner: ownerField ? existing[ownerField] : undefined, operation: "delete" })) { denyWrite(res, user); return; }
+    if (user.role === "STUDENT" && !studentRules.mayDelete(name, existing)) {
+      sendJson(res, 403, { success: false, message: "You cannot delete this record." });
+      return;
+    }
     if (name === "users") {
       const scoped = await scopedAccountRefusal({ actor: user, operation: "delete" });
       if (scoped) { sendJson(res, 403, { success: false, message: scoped }); return; }
@@ -555,7 +640,9 @@ async function handleFinanceRoute(req, res, url, session) {
 
   try {
     if (req.method === "GET" && parts[2] === "payment-methods" && parts.length === 3) {
-      sendJson(res, 200, { success: true, data: await db.paymentMethods() });
+      // studentCanConfirm tells the page whether a student may confirm their
+      // own payment (GEPG_SIMULATION); otherwise finance staff confirm it.
+      sendJson(res, 200, { success: true, data: await db.paymentMethods(), studentCanConfirm: config.gepgSimulation || isStaff });
       return;
     }
 
@@ -588,6 +675,13 @@ async function handleFinanceRoute(req, res, url, session) {
     if (req.method === "POST" && parts[2] === "control-numbers" && parts[4] === "pay" && parts.length === 5) {
       const bill = await db.findControlNumber(parts[3]);
       if (!bill || (user.role === "STUDENT" ? bill.studentId !== user.studentId : !isStaff)) { fail(404, "Control number not found."); return; }
+      // Only GePG can say a bill was paid. Until it is connected that is the
+      // finance office's job, after checking the payment in GePG - a student
+      // confirming their own payment would be paying with a button.
+      if (!isStaff && !config.gepgSimulation) {
+        fail(403, "Your payment is recorded when GePG confirms it. Pay with the control number; the finance office confirms received payments.");
+        return;
+      }
       const body = await readBody(req);
       const paid = await db.payControlNumber({
         controlNumber: bill.controlNumber, paymentMethodId: body.paymentMethodId, payerAccount: body.payerAccount,
@@ -719,7 +813,7 @@ function serveStatic(req, res, pathname) {
     const notFound = path.join(ROOT, "pages", "404.html");
     if (fs.existsSync(notFound) && req.headers.accept && req.headers.accept.includes("text/html")) {
       res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
-      fs.createReadStream(notFound).pipe(res);
+      res.end(pageIncludes.pageHtml(notFound, ROOT));
       return;
     }
     sendJson(res, 404, { success: false, message: "Resource not found." });
@@ -728,7 +822,10 @@ function serveStatic(req, res, pathname) {
   // no-cache: the browser re-checks every file, so an edited page or script
   // is picked up on the next reload instead of a stale copy being reused.
   res.writeHead(200, { "Content-Type": `${contentType(filePath)}; charset=utf-8`, "Cache-Control": "no-cache" });
-  fs.createReadStream(filePath).pipe(res);
+  // Pages get their shared stylesheet and script lists filled in
+  // (page-includes.js); every other file is sent as it is.
+  if (path.extname(filePath).toLowerCase() === ".html") res.end(pageIncludes.pageHtml(filePath, ROOT));
+  else fs.createReadStream(filePath).pipe(res);
 }
 
 // ---------------------------------------------------------------------
@@ -751,6 +848,10 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/auth/login") {
     try {
       const { username, password } = await readBody(req);
+      const ip = clientIp(req) || "unknown";
+      const accountKey = `${ip}|${String(username || "").trim().toLowerCase()}`;
+      const wait = Math.max(rateLimit.retryAfter("loginAccount", accountKey), rateLimit.retryAfter("loginAddress", ip));
+      if (wait) { tooManyAttempts(res, wait); return; }
       const account = await db.findUser(String(username || ""));
       const passwordMatches = !!account && db.verifyPassword(String(password || ""), account.passwordHash);
       // Only someone who knows the password learns the account is waiting.
@@ -759,6 +860,8 @@ async function handleApi(req, res, url) {
         return;
       }
       if (!passwordMatches || account.status !== "Active" || !account.role) {
+        rateLimit.record("loginAccount", accountKey);
+        rateLimit.record("loginAddress", ip);
         await db.recordAudit({
           userName: String(username || "").slice(0, 80), action: "LOGIN", entityType: "Session",
           status: "Failed", ip: clientIp(req)
@@ -766,6 +869,7 @@ async function handleApi(req, res, url) {
         sendJson(res, 401, { success: false, message: "Invalid username or password. Please check your credentials and try again." });
         return;
       }
+      rateLimit.clear("loginAccount", accountKey);
       const token = crypto.randomBytes(32).toString("hex");
       const user = publicUser(account);
       await db.recordLogin(account.id);
@@ -779,6 +883,8 @@ async function handleApi(req, res, url) {
       await db.createSession({ token, user, ip: clientIp(req), ttlMs: config.sessionTtlMs });
       sendJson(res, 200, { success: true, token, user });
     } catch (error) {
+      // A bad request (malformed or oversized body) is the caller's error.
+      if (error.status === 400 || error.status === 413) { sendJson(res, error.status, { success: false, message: error.message }); return; }
       console.error("USIAMS database authentication failed:", error.message);
       sendJson(res, 503, { success: false, message: "The database is unavailable. Check MySQL and the DB_* environment settings." });
     }
@@ -786,6 +892,9 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && url.pathname === "/api/auth/register") {
+    const registerWait = rateLimit.retryAfter("register", clientIp(req) || "unknown");
+    if (registerWait) { tooManyAttempts(res, registerWait); return; }
+    rateLimit.record("register", clientIp(req) || "unknown");
     try {
       const { username, fullName, email, password, programmeId, role, departmentId, unitId } = await readBody(req);
       const normalizedUsername = String(username || "").trim().toLowerCase();
@@ -870,6 +979,8 @@ async function handleApi(req, res, url) {
         message: "Account created. You can now sign in."
       });
     } catch (error) {
+      // A bad request (malformed or oversized body) is the caller's error.
+      if (error.status === 400 || error.status === 413) { sendJson(res, error.status, { success: false, message: error.message }); return; }
       console.error("USIAMS account creation failed:", error.message);
       const duplicate = error.code === "ER_DUP_ENTRY";
       const badProgramme = error.code === "INVALID_PROGRAMME" || error.code === "ER_NO_REFERENCED_ROW_2";
@@ -888,6 +999,12 @@ async function handleApi(req, res, url) {
   // new password is only accepted with the token from that email (step 2).
   // The reply is the same whether or not an account matched, so this form
   // cannot be used to discover which usernames or emails exist.
+  if (req.method === "POST" && (url.pathname === "/api/auth/forgot-password" || url.pathname === "/api/auth/reset-password")) {
+    const resetWait = rateLimit.retryAfter("passwordReset", clientIp(req) || "unknown");
+    if (resetWait) { tooManyAttempts(res, resetWait); return; }
+    rateLimit.record("passwordReset", clientIp(req) || "unknown");
+  }
+
   if (req.method === "POST" && url.pathname === "/api/auth/forgot-password") {
     const generic = { success: true, message: "If an active account matches, a password reset link has been sent to its email address. The link works once and expires in 30 minutes." };
     try {
@@ -908,6 +1025,8 @@ async function handleApi(req, res, url) {
       }
       sendJson(res, 200, generic);
     } catch (error) {
+      // A bad request (malformed or oversized body) is the caller's error.
+      if (error.status === 400 || error.status === 413) { sendJson(res, error.status, { success: false, message: error.message }); return; }
       console.error("USIAMS password reset request failed:", error.message);
       sendJson(res, 503, { success: false, message: "The password reset service is unavailable." });
     }
@@ -937,6 +1056,8 @@ async function handleApi(req, res, url) {
       await db.recordAudit({ userId, action: "UPDATE", entityType: "password", entityId: userId, ip: clientIp(req) });
       sendJson(res, 200, { success: true, message: "Password reset successfully. You can now sign in." });
     } catch (error) {
+      // A bad request (malformed or oversized body) is the caller's error.
+      if (error.status === 400 || error.status === 413) { sendJson(res, error.status, { success: false, message: error.message }); return; }
       console.error("USIAMS password reset failed:", error.message);
       sendJson(res, 503, { success: false, message: "The password reset service is unavailable." });
     }
@@ -945,6 +1066,9 @@ async function handleApi(req, res, url) {
 
   // Public admissions form - deliberately unauthenticated.
   if (req.method === "POST" && url.pathname === "/api/admissions/applications") {
+    const applyWait = rateLimit.retryAfter("admissions", clientIp(req) || "unknown");
+    if (applyWait) { tooManyAttempts(res, applyWait); return; }
+    rateLimit.record("admissions", clientIp(req) || "unknown");
     try {
       const body = await readBody(req);
       const application = {
@@ -965,6 +1089,8 @@ async function handleApi(req, res, url) {
       await db.createAdmissionApplication(application);
       sendJson(res, 201, { success: true, reference: application.id, message: "Application submitted successfully." });
     } catch (error) {
+      // A bad request (malformed or oversized body) is the caller's error.
+      if (error.status === 400 || error.status === 413) { sendJson(res, error.status, { success: false, message: error.message }); return; }
       console.error("USIAMS admission application failed:", error.message);
       const badProgramme = error.code === "ER_NO_REFERENCED_ROW_2";
       sendJson(res, badProgramme ? 422 : 503, {
@@ -1010,10 +1136,13 @@ async function handleApi(req, res, url) {
     const session = await requireUser(req, res);
     if (!session) return;
     const { user } = session;
+    const changeWait = rateLimit.retryAfter("changePassword", user.id);
+    if (changeWait) { tooManyAttempts(res, changeWait); return; }
     const { currentPassword, newPassword } = await readBody(req);
     const next = String(newPassword || "");
     const storedHash = await db.passwordHashFor(user.id);
     if (!storedHash || !db.verifyPassword(String(currentPassword || ""), storedHash)) {
+      rateLimit.record("changePassword", user.id);
       sendJson(res, 422, { success: false, message: "Your current password is not correct." });
       return;
     }
@@ -1065,7 +1194,10 @@ async function handleApi(req, res, url) {
     const { user } = session;
     let body;
     try { body = await readBody(req, 8 * 1024 * 1024); }
-    catch { sendJson(res, 413, { success: false, message: "The file is too large. The limit is 5 MB." }); return; }
+    catch (error) {
+      sendJson(res, error.status === 400 ? 400 : 413, { success: false, message: error.status === 400 ? error.message : "The file is too large. The limit is 5 MB." });
+      return;
+    }
     const purpose = String(body.purpose || "");
     if (!FILE_PURPOSES.includes(purpose)) { sendJson(res, 422, { success: false, message: "Unknown upload purpose." }); return; }
     const name = String(body.name || "").replace(/[\\/:*?"<>|\r\n]+/g, "_").trim().slice(0, 200);
@@ -1173,7 +1305,31 @@ function tlsOptions() {
   return { cert: fs.readFileSync(config.tls.certFile), key: fs.readFileSync(config.tls.keyFile) };
 }
 
+// Browser protections on every response:
+//  - the page may only load scripts, styles, fonts and data from this server
+//    (everything, Bootstrap included, is served from assets/vendor), so an
+//    injected <script src="https://evil..."> or a leak to another site fails;
+//  - no other site may show USIAMS in a frame (clickjacking);
+//  - files are never "sniffed" into a different type, and links do not
+//    carry USIAMS addresses to other sites.
+// Inline scripts are still allowed: the pages use them (and onclick
+// attributes), so 'unsafe-inline' stays until those move into .js files.
+const SECURITY_HEADERS = {
+  "Content-Security-Policy": [
+    "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:", "font-src 'self' data:", "connect-src 'self'", "object-src 'none'",
+    "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'"
+  ].join("; "),
+  "X-Frame-Options": "DENY",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "same-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin"
+};
+
 async function handleRequest(req, res) {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value);
   // Over HTTPS, tell browsers never to fall back to plain HTTP.
   if (tlsEnabled()) res.setHeader("Strict-Transport-Security", "max-age=31536000");
   const rawPath = String(req.url || "/").split("?")[0];

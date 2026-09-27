@@ -35,7 +35,7 @@
               <td><span class="status-badge status-${d.status.toLowerCase()}">${d.status}</span></td>
               <td>
                 <button class="btn btn-sm btn-outline-secondary" data-action="download" data-id="${d.id}"><i class="bi bi-download"></i></button>
-                <button class="btn btn-sm btn-outline-danger write-action" data-write-action data-action="delete" data-id="${d.id}"><i class="bi bi-trash"></i></button>
+                ${currentUser.role !== "STUDENT" || d.status === "Pending" ? `<button class="btn btn-sm btn-outline-danger write-action" data-write-action data-action="delete" data-id="${d.id}" title="${currentUser.role === "STUDENT" ? "Withdraw (only before it is reviewed)" : "Delete"}"><i class="bi bi-trash"></i></button>` : ""}
               </td>
             </tr>`).join("")}
         </tbody>

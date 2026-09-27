@@ -669,9 +669,11 @@ async function castElectionVote({ electionId, positionId, candidateId, voterStud
     WHERE EXISTS (
       SELECT 1 FROM elections WHERE id = ? AND status = 'Open' AND NOW() BETWEEN starts_at AND ends_at
     ) AND EXISTS (
+      SELECT 1 FROM election_positions WHERE id = ? AND election_id = ?
+    ) AND EXISTS (
       SELECT 1 FROM election_candidates WHERE id = ? AND position_id = ? AND status = 'Approved'
     )
-  `, [electionId, positionId, candidateId, voterStudentId, electionId, candidateId, positionId]);
+  `, [electionId, positionId, candidateId, voterStudentId, electionId, positionId, electionId, candidateId, positionId]);
   if (result.affectedRows !== 1) {
     const error = new Error("Election or candidate is not valid.");
     error.code = "INVALID_ELECTION_VOTE";

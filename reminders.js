@@ -23,8 +23,7 @@ const MORNING_FROM = 6 * 60;
 const EVENING_FROM = 20 * 60;
 const REMIND_BEFORE_MINUTES = 15;
 
-const pad = n => String(n).padStart(2, "0");
-const localDate = now => `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+const { localDate } = require("./data/shared");
 const minutesOf = time => { const [h, m] = String(time).split(":").map(Number); return h * 60 + (m || 0); };
 
 /** Every registered class today, one row per student and class. */

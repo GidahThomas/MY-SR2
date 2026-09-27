@@ -24,7 +24,7 @@
 .priority-urgent { background: var(--danger-bg); color: var(--danger); }
 
 /* Data table */
-.usi-table-wrap { overflow-x: auto; }
+.usi-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table.usi-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 table.usi-table thead th {
   text-align: left; padding: .75rem 1rem; background: var(--surface-alt);

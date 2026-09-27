@@ -17,6 +17,16 @@ const mysql = require("mysql2/promise");
 const { config } = require("../config");
 const { loadSeedData } = require("./load-seed-data");
 const { hashPassword } = require("./passwords");
+const { demoAccounts, removeAccounts } = require("./accounts");
+const DEMO_PASSWORDS = require("./demo-passwords");
+
+// The demo data comes with 20 sign-in accounts (data/users.js). They are
+// loaded so the demo records can refer to them, then removed again - a
+// seeded database has no demo logins. Real accounts (npm run create-admin,
+// self-registration, Administration > Users) are kept across reseeds.
+// --with-demo-accounts keeps the demo logins instead; the test suite uses
+// it, against its own database.
+const WITH_DEMO_ACCOUNTS = process.argv.includes("--with-demo-accounts");
 
 // Truncated in reverse-dependency order before reseeding.
 const TABLES_IN_DEPENDENCY_ORDER = [
@@ -108,8 +118,29 @@ async function seed() {
   try {
     console.log(`USIAMS: seeding ${config.db.database} at ${config.db.host}:${config.db.port}`);
     await connection.query("SET FOREIGN_KEY_CHECKS = 0");
+    const keepAccounts = !WITH_DEMO_ACCOUNTS;
     for (const table of TABLES_IN_DEPENDENCY_ORDER) {
+      if (keepAccounts && (table === "users" || table === "user_roles")) continue;
       await connection.query(`TRUNCATE TABLE \`${table}\``);
+    }
+    const demo = demoAccounts(data);
+    const demoIds = demo.map(a => a.id);
+    if (keepAccounts) {
+      // Clear out demo accounts left by an earlier seed; real ones stay. A
+      // row counts as demo only if it has a demo id AND a demo username (the
+      // original one, or the demo-usr-NNNN placeholder), never on id alone.
+      const [rows] = await connection.query("SELECT id, username FROM users WHERE id IN (?)", [demoIds]);
+      const leftover = [];
+      for (const row of rows) {
+        const account = demo.find(a => a.id === row.id);
+        const username = String(row.username).toLowerCase();
+        if (username === account.username || username === `demo-${account.id.toLowerCase()}`) leftover.push(row.id);
+        else throw new Error(`the account "${row.username}" has the id ${row.id}, which the demo data uses. Give it a new id before reseeding.`);
+      }
+      if (leftover.length) {
+        await connection.query("DELETE FROM user_roles WHERE user_id IN (?)", [leftover]);
+        await connection.query("DELETE FROM users WHERE id IN (?)", [leftover]);
+      }
     }
     await connection.query("SET FOREIGN_KEY_CHECKS = 1");
 
@@ -132,7 +163,15 @@ async function seed() {
     // ---- Users and role assignments ----------------------------------
     await insertMany(connection, "users",
       ["id", "username", "password_hash", "full_name", "email", "status", "department_id", "unit_id", "last_login_at"],
-      data.users.map(u => [u.id, u.username, hashPassword(u.password), u.name, u.email,
+      // Unless the demo logins are wanted, these rows exist only so the demo
+      // records can refer to them: placeholder usernames and emails (so they
+      // cannot clash with real accounts), a password that matches nothing,
+      // and removed again at the end of the seed.
+      data.users.map(u => [u.id,
+        WITH_DEMO_ACCOUNTS ? u.username : `demo-${u.id.toLowerCase()}`,
+        WITH_DEMO_ACCOUNTS ? hashPassword(DEMO_PASSWORDS[u.username]) : "!",
+        u.name,
+        WITH_DEMO_ACCOUNTS ? u.email : `${u.id.toLowerCase()}@demo.invalid`,
         u.status || "Active", u.departmentId || null, u.unitId || null, toDateTime(u.lastLogin)]));
 
     await insertMany(connection, "user_roles", ["user_id", "role_id"],
@@ -385,9 +424,9 @@ async function seed() {
         `${toDate(log.date)} ${log.time || "00:00"}:00`]));
 
     // ---- Elections ---------------------------------------------------
-    // The election and its positions are seeded here rather than in
-    // db/seed.sql so that `npm run db:setup`, which recreates the schema
-    // from scratch, still produces a working ballot.
+    // The election and its positions are seeded with everything else, so
+    // `npm run db:setup`, which recreates the schema from scratch, still
+    // produces a working ballot.
     await insertMany(connection, "elections", ["id", "name", "description", "starts_at", "ends_at", "status"],
       [["UDOSO-2026", "UDOSO General Election 2026", "Student union election managed through USIAMS.",
         "2026-09-16 08:00:00", "2026-10-07 18:00:00", "Open"]]);
@@ -417,6 +456,14 @@ async function seed() {
     });
     await insertMany(connection, "election_candidates", ["id", "position_id", "student_id", "manifesto", "status"], candidateRows);
 
+    if (!WITH_DEMO_ACCOUNTS) {
+      const result = await removeAccounts(connection, demoIds);
+      console.log(`  demo accounts removed     ${result.removed}`);
+      for (const [table, n] of Object.entries(result.deleted)) console.log(`    deleted with them: ${table} ${n}`);
+      for (const [column, n] of Object.entries(result.cleared)) console.log(`    link cleared: ${column} ${n}`);
+      const [[{ remaining }]] = await connection.query("SELECT COUNT(*) AS remaining FROM users");
+      if (!remaining) console.log("USIAMS: there are no sign-in accounts yet. Create the first administrator with: npm run create-admin");
+    }
     console.log("USIAMS: seed complete.");
   } finally {
     await connection.end();

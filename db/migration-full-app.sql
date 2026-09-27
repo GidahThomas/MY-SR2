@@ -492,3 +492,9 @@ CREATE TABLE IF NOT EXISTS class_reminders_sent (
   PRIMARY KEY (student_id, class_date, kind, timetable_entry_id),
   CONSTRAINT fk_class_reminders_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- An announcement belongs to the university, not to the account that
+-- posted it: when that account is removed the announcement stays, without
+-- a publisher (see db/accounts.js).
+ALTER TABLE announcements
+  MODIFY COLUMN published_by VARCHAR(40) NULL;

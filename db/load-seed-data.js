@@ -21,7 +21,7 @@ const DATA_DIR = path.join(__dirname, "..", "data");
 // Load order matters: later seed files read datasets produced by earlier ones
 // (students.js needs programmes, results.js needs courses, and so on).
 const LOAD_ORDER = [
-  "grading-system.js", "academic-structure.js", "courses.js", "users.js", "students.js",
+  "shared.js", "grading-system.js", "academic-structure.js", "courses.js", "users.js", "students.js",
   "results.js", "registrations.js", "finance.js", "attendance.js", "timetable.js",
   "requests.js", "complaints.js", "notifications.js", "calendar.js", "announcements.js",
   "documents.js", "internship.js", "graduation.js", "alumni.js", "library.js",

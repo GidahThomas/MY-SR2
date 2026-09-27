@@ -139,6 +139,33 @@
     return `${prefix}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e5).toString(36)}`;
   }
 
+  // ---- Status timeline ------------------------------------------------------
+  // The history list on a request or complaint: one entry per status change.
+  function timelineHtml(timeline) {
+    const tone = status => status === "REJECTED" ? "rej" : status === "RESOLVED" || status === "CLOSED" ? "done" : "warn";
+    return `<ul class="usi-timeline">${(timeline || []).map(t => `<li><span class="tl-dot ${tone(t.status)}"></span>
+      <div class="tl-title">${titleCase(t.status)}</div><div class="tl-meta">${formatDateTime(t.date)} - ${escapeHtml(t.note)}</div></li>`).join("")}</ul>`;
+  }
+
+  // ---- Student picker -------------------------------------------------------
+  // Pages about one student (results, registration, attendance, graduation)
+  // show staff a #studentSelector of students; a student sees only their own
+  // record and no picker. Returns the student to show first; onChange gets
+  // the id whenever staff pick another.
+  function studentPicker(user, { include = () => true, onChange } = {}) {
+    const wrap = global.document.getElementById("studentSelectorWrap");
+    if (user.role === "STUDENT") {
+      if (wrap) wrap.classList.add("d-none");
+      return user.studentId;
+    }
+    if (wrap) wrap.classList.remove("d-none");
+    const select = global.document.getElementById("studentSelector");
+    select.innerHTML = (global.USIAMS.data.students || []).filter(include)
+      .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.regNumber)}</option>`).join("");
+    if (onChange) select.addEventListener("change", () => onChange(select.value));
+    return select.value;
+  }
+
   // ---- Private values (GPA) --------------------------------------------
   // A .private-value button blurs its content until the user clicks it;
   // the next click blurs it again. Always hidden when a page loads, so a
@@ -171,7 +198,7 @@
   global.USIAMS.util = {
     escapeHtml, formatCurrency, formatDate, formatDateTime, timeAgo, initials,
     debounce, slugify, titleCase, paginate, downloadCsv, avatarColorFromString,
-    validateEmail, validatePhone, uid, canViewStudentNames, studentLabel, privateValue
+    validateEmail, validatePhone, uid, canViewStudentNames, studentLabel, privateValue, studentPicker, timelineHtml
   };
 
 })(window);

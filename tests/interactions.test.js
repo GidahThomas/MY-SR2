@@ -16,162 +16,16 @@
    ========================================================= */
 const fs = require("node:fs");
 const path = require("node:path");
-const { JSDOM, VirtualConsole, requestInterceptor } = require("jsdom");
+const { BASE, ROOT, check, finish, CREDENTIALS, signIn, isRestricted, rolesFor, openPage, pressControls } = require("./helpers");
 
-const BASE = process.env.BASE || "http://127.0.0.1:3311";
-const ROOT = path.join(__dirname, "..");
-let pass = 0, fail = 0;
-const check = (l, c, d = "") => { c ? (pass++, console.log("  PASS " + l)) : (fail++, console.log("  FAIL " + l + (d ? "\n         " + d : ""))); };
-
-const CREDENTIALS = {
-  STUDENT: ["student", "student123"],
-  LECTURER: ["lecturer", "lecturer123"],
-  UNIVERSITY_ADMIN: ["admin", "admin123"],
-  QUALITY_ASSURANCE_OFFICER: ["qa", "qa123"],
-  FINANCE_OFFICER: ["finance", "finance123"],
-  REGISTRATION_OFFICER: ["registration", "registration123"],
-  SYSTEM_ADMIN: ["sysadmin", "sysadmin123"],
-  LIBRARIAN: ["librarian", "librarian123"],
-  HOSTEL_OFFICER: ["hostel", "hostel123"]
-};
-
-const sessions = {};
-async function signIn(role) {
-  if (sessions[role]) return sessions[role];
-  const [username, password] = CREDENTIALS[role];
-  const result = await (await fetch(BASE + "/api/auth/login", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password })
-  })).json();
-  if (!result.token) throw new Error(`could not sign in as ${role}`);
-  sessions[role] = result;
-  return result;
-}
-
-const ROLE_PAGE_ALLOWLIST = (() => {
-  const source = fs.readFileSync(path.join(ROOT, "js", "auth.js"), "utf8");
-  const block = source.match(/ROLE_PAGE_ALLOWLIST\s*=\s*\{([\s\S]*?)\};/);
-  if (!block) return {};
-  const allowlist = {};
-  for (const line of block[1].split("\n")) {
-    const entry = line.match(/(\w+)\s*:\s*\[([^\]]*)\]/);
-    if (entry) allowlist[entry[1]] = entry[2].split(",").map(s => s.trim().replace(/['"]/g, "")).filter(Boolean);
-  }
-  return allowlist;
-})();
-const isRestricted = (role, file) => {
-  const allowed = ROLE_PAGE_ALLOWLIST[role];
-  return !!allowed && !allowed.includes(file);
-};
-
-function rolesFor(html) {
-  const match = html.match(/USIAMS\.boot\(\s*(\[[^\]]*\]|null)/);
-  if (!match) return null;
-  if (match[1] === "null") return Object.keys(CREDENTIALS);
-  try { return JSON.parse(match[1].replace(/'/g, '"')).filter(role => CREDENTIALS[role]); }
-  catch { return null; }
-}
-
-function localOnly() {
-  return requestInterceptor(request => {
-    // Third-party libraries (served from assets/vendor/) are stubbed, as
-    // they were when they came from a CDN: the harness supplies its own
-    // bootstrap and Chart stand-ins.
-    if (request.url.startsWith(BASE) && !request.url.includes("/assets/vendor/")) return undefined;
-    return new Response("", { status: 200, headers: { "Content-Type": "text/plain" } });
-  });
-}
-
+/** Opens a page as a role, presses its controls and changes its selects. */
 async function exercise(pageUrl, role) {
-  const session = await signIn(role);
-  const problems = [];
-  const virtualConsole = new VirtualConsole();
-  virtualConsole.on("jsdomError", error => {
-    const message = error.message || "";
-    if (/Could not load|stylesheet|getContext|canvas npm package|acquire context|Not implemented/i.test(message)) return;
-    problems.push(message.split("\n")[0]);
-  });
-  virtualConsole.on("error", (...args) => {
-    const text = args.join(" ");
-    if (/acquire context|canvas/i.test(text)) return;
-    problems.push("console.error: " + text.split("\n")[0]);
-  });
+  const { window, problems, mounted } = await openPage(pageUrl, await signIn(role));
+  if (!mounted) { window.close(); return { problems, clicked: 0, skipped: true }; }
 
-  const dom = await JSDOM.fromURL(pageUrl, {
-    runScripts: "dangerously",
-    resources: { interceptors: [localOnly()] },
-    pretendToBeVisual: true,
-    virtualConsole,
-    beforeParse(window) {
-      window.bootstrap = {
-        Modal: class {
-          constructor(element) { this.element = element; }
-          show() {} hide() {} dispose() {}
-          static getInstance() { return null; }
-          static getOrCreateInstance(element) { return new window.bootstrap.Modal(element); }
-        },
-        Tab: class { constructor(element) { this.element = element; } show() {} }
-      };
-      window.Chart = class {
-        constructor() { this.data = {}; this.options = {}; }
-        update() {} destroy() {} resize() {}
-        static register() {}
-      };
-      window.Chart.helpers = {
-        merge(target, ...sources) {
-          const isPlain = v => v && typeof v === "object" && !Array.isArray(v);
-          for (const source of sources) {
-            if (!isPlain(source)) continue;
-            for (const [key, value] of Object.entries(source)) {
-              target[key] = isPlain(value) && isPlain(target[key])
-                ? window.Chart.helpers.merge({ ...target[key] }, value)
-                : value;
-            }
-          }
-          return target;
-        }
-      };
-      window.localStorage.setItem("usiams.session.token", JSON.stringify(session.token));
-      window.localStorage.setItem("usiams.session.currentUser", JSON.stringify(session.user));
-      window.fetch = (input, init) => fetch(new URL(String(input), pageUrl).href, init);
-      window.Headers = Headers; window.Request = Request; window.Response = Response;
-      // Anything that asks before destroying data stops here.
-      window.confirm = () => false;
-      window.alert = () => {};
-      window.scrollTo = () => {};
-      window.print = () => {};
-      window.URL.createObjectURL = () => "blob:stub";
-      window.URL.revokeObjectURL = () => {};
-      window.matchMedia = window.matchMedia || (() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
-    }
-  });
+  const clicked = await pressControls(window, problems, { limit: 40 });
 
-  const { window } = dom;
-  const deadline = Date.now() + 8000;
-  const mounted = () => !!window.document.querySelector("#sidebarContainer a, .app-footer");
-  while (Date.now() < deadline && !mounted()) await new Promise(r => setTimeout(r, 100));
-  await new Promise(r => setTimeout(r, 250));
-
-  if (!mounted()) { dom.window.close(); return { problems, clicked: 0, skipped: true }; }
-
-  // Everything a user can press, plus the tab strips and table controls.
-  const controls = [...window.document.querySelectorAll(
-    "button:not([data-bs-dismiss]), [data-bs-toggle='tab'], [role='tab'], .nav-link[href^='#']"
-  )].filter(el => !el.closest(".app-sidebar, .app-navbar"));
-
-  let clicked = 0;
-  for (const control of controls.slice(0, 40)) {
-    try {
-      control.click();
-      clicked++;
-      // Let any async handler settle and surface its error.
-      await new Promise(r => setTimeout(r, 30));
-    } catch (error) {
-      problems.push(`click(${control.id || control.textContent.trim().slice(0, 24)}): ${error.message}`);
-    }
-  }
-
-  // Change every select and input so change/input handlers run too.
+  // Change every select so change handlers run too.
   for (const select of [...window.document.querySelectorAll("select")].slice(0, 15)) {
     try {
       if (select.options.length > 1) {
@@ -185,8 +39,10 @@ async function exercise(pageUrl, role) {
   }
 
   await new Promise(r => setTimeout(r, 300));
-  dom.window.close();
-  return { problems, clicked, skipped: false };
+  window.close();
+  // jsdom's "not implemented" notices (downloads, window features) are the
+  // harness's limits, not the page's faults.
+  return { problems: problems.filter(p => !/Not implemented/i.test(p)), clicked, skipped: false };
 }
 
 (async () => {
@@ -236,6 +92,5 @@ async function exercise(pageUrl, role) {
     }
   }
 
-  console.log("\n" + (fail === 0 ? "ALL PASS" : "FAILURES: " + fail) + "  (" + pass + " passed)");
-  process.exit(fail === 0 ? 0 : 1);
+  finish();
 })();

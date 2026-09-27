@@ -131,14 +131,6 @@
         </button>
       </div>
 
-      <div class="mt-4 pt-3 border-top">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <strong style="font-size:.85rem;">Development Accounts</strong>
-          <span class="text-soft-usi" style="font-size:.72rem;">Change before production</span>
-        </div>
-        <div class="row g-2" id="accountDirectory"></div>
-      </div>
-
       <div class="divider mt-4">
         <span class="divider-text">Copyright &copy; 2026 USIAMS (Version 1.0)</span>
       </div>
@@ -223,33 +215,6 @@
 
   document.getElementById("showPassword").addEventListener("change", (e) => {
     document.getElementById("password").type = e.target.checked ? "text" : "password";
-  });
-
-  const accountDirectory = document.getElementById("accountDirectory");
-  accountDirectory.innerHTML = [
-    ["Student", "student", "student123"],
-    ["University Admin", "admin", "admin123"],
-    ["Quality Assurance Officer", "qa", "qa123"],
-    ["Lecturer", "lecturer", "lecturer123"],
-    ["Finance Officer", "finance", "finance123"],
-    ["Registration Officer", "registration", "registration123"],
-    ["System Admin", "sysadmin", "sysadmin123"],
-    ["Librarian", "librarian", "librarian123"],
-    ["Hostel Officer", "hostel", "hostel123"]
-  ].map(([role, username, password]) => `
-    <div class="col-6">
-      <button type="button" class="demo-account-chip w-100 text-start" data-username="${username}" data-password="${password}">
-        <strong style="font-size:.76rem;display:block;">${role}</strong>
-        <span class="text-muted-usi" style="font-size:.7rem;">${username} / ${password}</span>
-      </button>
-    </div>
-  `).join("");
-
-  accountDirectory.querySelectorAll("[data-username]").forEach((account) => {
-    account.addEventListener("click", () => {
-      document.getElementById("username").value = account.dataset.username;
-      document.getElementById("password").value = account.dataset.password;
-    });
   });
 
   // A link from the reset email arrives as login.html?reset=<token>: open the

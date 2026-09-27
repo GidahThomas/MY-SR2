@@ -209,7 +209,7 @@
             </div>
           </div>
           <div id="payError" class="alert alert-danger mt-3 mb-0 d-none"></div>
-          <p class="text-muted-usi mt-3 mb-0" style="font-size:.75rem;">Demonstration system: GePG is not connected, so confirming below simulates GePG reporting the payment as received.</p>
+          <p class="text-muted-usi mt-3 mb-0" style="font-size:.75rem;" id="paySimulationNote">Demonstration system: GePG is not connected, so confirming below simulates GePG reporting the payment as received.</p>
         </div>
         <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button><button class="btn btn-primary" id="payConfirmBtn" disabled>4. Confirm Payment</button></div>
       </div></div></div>
@@ -229,6 +229,11 @@
     let items = [];
     let methods = [];
     let bill = null;
+    // Whether this user may confirm the payment here (finance staff, or any
+    // user when the server runs with GEPG_SIMULATION=on). Otherwise the
+    // student pays with the control number and GePG / the finance office
+    // records it.
+    let canConfirm = true;
 
     const showError = message => { errorBox.textContent = message; errorBox.classList.toggle("d-none", !message); };
     const selectedMethod = () => methods.find(m => m.id === methodSelect.value);
@@ -276,11 +281,16 @@
     try {
       [items, methods] = await Promise.all([
         loadFeeItems(),
-        api.request("/api/finance/payment-methods").then(r => r.data)
+        api.request("/api/finance/payment-methods").then(r => { canConfirm = r.studentCanConfirm !== false; return r.data; })
       ]);
     } catch (error) {
       showError("Could not load fee items and payment methods: " + (error.message || "server unavailable"));
       return;
+    }
+
+    if (!canConfirm) {
+      document.getElementById("paySimulationNote").textContent = "After you pay, your payment is recorded automatically once GePG confirms it - you do not need to do anything else here.";
+      confirmBtn.textContent = "Done";
     }
 
     itemSelect.innerHTML = `<option value="">Select what to pay for...</option>` + items.map(i => `
@@ -334,6 +344,12 @@
 
     confirmBtn.addEventListener("click", async () => {
       if (!bill || !methodSelect.value) return;
+      if (!canConfirm) {
+        modal.close();
+        toast.show("info", "Pay with your control number",
+          `Pay ${util.formatCurrency(bill.amount)} to GePG control number ${bill.controlNumber} using ${selectedMethod() ? selectedMethod().name : "your provider"} (Government Payments). It will show as paid once GePG confirms it.`, 12000);
+        return;
+      }
       if (!accountValid()) { accountInput.classList.add("is-invalid"); accountInput.focus(); return; }
       const method = selectedMethod();
       const masked = maskAccount(accountInput.value);

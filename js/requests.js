@@ -54,10 +54,7 @@
           <p>${util.escapeHtml(req.description)}</p>
           ${req.attachment ? `<p class="text-muted-usi" style="font-size:.8rem;"><i class="bi bi-paperclip me-1"></i>${req.attachmentUrl ? `<a href="#" data-action="download-attachment" data-url="${util.escapeHtml(req.attachmentUrl)}" data-name="${util.escapeHtml(req.attachment)}">${util.escapeHtml(req.attachment)}</a>` : util.escapeHtml(req.attachment)}</p>` : ""}
           <h6 class="mt-3">Timeline</h6>
-          <ul class="usi-timeline">
-            ${req.timeline.map(t => `<li><span class="tl-dot ${t.status === "REJECTED" ? "rej" : t.status === "RESOLVED" || t.status === "CLOSED" ? "done" : "warn"}"></span>
-              <div class="tl-title">${util.titleCase(t.status)}</div><div class="tl-meta">${util.formatDateTime(t.date)} - ${util.escapeHtml(t.note)}</div></li>`).join("")}
-          </ul>
+          ${util.timelineHtml(req.timeline)}
         </div>
         <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button></div>
       </div></div></div>

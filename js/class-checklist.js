@@ -21,8 +21,8 @@
   const CLASS_MINUTES = 120;
   const REMIND_BEFORE_MINUTES = 15;
 
+  const { localDate } = global.USIAMS.shared;
   const pad = n => String(n).padStart(2, "0");
-  function localDate(now) { return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`; }
   function minutesOf(time) { const [h, m] = String(time).split(":").map(Number); return h * 60 + (m || 0); }
   function clock(minutes) { return `${pad(Math.floor(minutes / 60) % 24)}:${pad(minutes % 60)}`; }
   function store() { return global.USIAMS.api.apiStore(RESOURCE); }

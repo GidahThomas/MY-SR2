@@ -51,18 +51,7 @@
 
   function initPage(user) {
     currentUser = user;
-    let targetStudentId = user.studentId;
-    const selectorWrap = document.getElementById("studentSelectorWrap");
-    if (user.role !== "STUDENT") {
-      selectorWrap.classList.remove("d-none");
-      const select = document.getElementById("studentSelector");
-      select.innerHTML = global.USIAMS.data.students.filter(s => s.status === "Active").map(s => `<option value="${s.id}">${s.regNumber}</option>`).join("");
-      targetStudentId = select.value;
-      select.addEventListener("change", () => loadStudent(select.value));
-    } else {
-      selectorWrap.classList.add("d-none");
-    }
-    loadStudent(targetStudentId);
+    loadStudent(global.USIAMS.util.studentPicker(user, { include: s => s.status === "Active", onChange: loadStudent }));
   }
 
   function loadStudent(id) {

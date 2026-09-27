@@ -5,7 +5,7 @@
    command from db/README.md for environments (XAMPP on Windows,
    most notably) where the mysql client is not on PATH.
 
-   Usage: node db/run-sql.js db/schema.sql [db/seed.sql ...]
+   Usage: node db/run-sql.js db/schema.sql [db/migration-full-app.sql ...]
    ========================================================= */
 const fs = require("node:fs");
 const path = require("node:path");
@@ -14,8 +14,12 @@ const { config } = require("../config");
 
 // Statements that create or drop the database itself must run before a
 // database is selected, so the connection starts without one.
+// The .sql files name the default database, "university"; they are applied
+// to DB_NAME instead, so a different database (the test suite's, say) works.
 async function runFile(connection, file) {
-  const sql = fs.readFileSync(file, "utf8");
+  const database = config.db.database.replace(/`/g, "");
+  const sql = fs.readFileSync(file, "utf8")
+    .replace(/\b(CREATE DATABASE IF NOT EXISTS|DROP DATABASE IF EXISTS|USE)\s+university\b/gi, (_, statement) => `${statement} \`${database}\``);
   await connection.query(sql);
   console.log(`  applied ${path.relative(process.cwd(), file)}`);
 }

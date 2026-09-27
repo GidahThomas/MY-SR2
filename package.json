@@ -12,7 +12,8 @@
     "db:migrate": "node db/run-sql.js db/migration-full-app.sql",
     "db:seed": "node db/seed-from-data.js",
     "db:setup": "npm run db:schema && npm run db:migrate && npm run db:seed",
-    "test": "node tests/run.js"
+    "test": "node tests/run.js",
+    "create-admin": "node db/create-admin.js"
   },
   "dependencies": {
     "mysql2": "^3.24.4",

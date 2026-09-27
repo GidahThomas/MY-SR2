@@ -56,10 +56,7 @@
           <p><span class="status-badge priority-${c.priority.toLowerCase()}">${c.priority} PRIORITY</span> ${c.assignedTo ? `&bull; Assigned to ${util.escapeHtml(c.assignedTo)}` : ""}</p>
           ${c.attachment ? `<p class="text-muted-usi" style="font-size:.8rem;"><i class="bi bi-paperclip me-1"></i>${c.attachmentUrl ? `<a href="#" data-action="download-attachment" data-url="${util.escapeHtml(c.attachmentUrl)}" data-name="${util.escapeHtml(c.attachment)}">${util.escapeHtml(c.attachment)}</a>` : util.escapeHtml(c.attachment)}</p>` : ""}
           <h6 class="mt-3">Timeline</h6>
-          <ul class="usi-timeline">
-            ${c.timeline.map(t => `<li><span class="tl-dot ${t.status === "REJECTED" ? "rej" : t.status === "RESOLVED" || t.status === "CLOSED" ? "done" : "warn"}"></span>
-              <div class="tl-title">${util.titleCase(t.status)}</div><div class="tl-meta">${util.formatDateTime(t.date)} - ${util.escapeHtml(t.note)}</div></li>`).join("")}
-          </ul>
+          ${util.timelineHtml(c.timeline)}
         </div>
         <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button></div>
       </div></div></div>

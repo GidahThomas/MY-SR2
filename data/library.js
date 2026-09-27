@@ -10,7 +10,7 @@
   "use strict";
 
   const LOAN_STATUSES = ["Borrowed", "Returned", "Overdue"];
-  const LOAN_PERIOD_DAYS = 14;
+  const LOAN_PERIOD_DAYS = global.USIAMS.shared.LOAN_PERIOD_DAYS;
 
   const SEED_BOOKS = [
     { id: "BK-0001", title: "Introduction to Algorithms", author: "Cormen, Leiserson, Rivest, Stein", isbn: "978-0262046305", category: "Computer Science", totalCopies: 5 },

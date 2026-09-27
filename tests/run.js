@@ -5,9 +5,10 @@
 
    Usage: npm test
 
-   The suites exercise the live database, so run `npm run db:seed`
-   first if the data has drifted. They create and then remove their
-   own records; they do not depend on being run in any order.
+   The suites run against their own database - DB_NAME with "_test"
+   appended (or TEST_DB_NAME) - which is rebuilt from scratch on every
+   run and loaded with the demo data and the demo sign-in accounts. The
+   real database is never touched.
    ========================================================= */
 const { spawn, spawnSync } = require("node:child_process");
 const path = require("node:path");
@@ -16,26 +17,42 @@ const fs = require("node:fs");
 const PORT = Number(process.env.TEST_PORT || 3399);
 const BASE = `http://127.0.0.1:${PORT}`;
 const ROOT = path.join(__dirname, "..");
+const { config } = require("../config");
+
+const TEST_DB = process.env.TEST_DB_NAME || `${config.db.database}_test`;
+if (TEST_DB === config.db.database) {
+  console.error("USIAMS: the test database must not be the application database.");
+  process.exit(1);
+}
+// Every child process - server, seeder, suites - works on the test database.
+const TEST_ENV = { ...process.env, DB_NAME: TEST_DB };
 
 const SUITES = [
   "api.test.js", "shapes.test.js", "frontend.test.js",
   "notifications.test.js", "registration.test.js", "pages.test.js", "interactions.test.js"
 ];
 
+function runNode(args, what) {
+  const result = spawnSync(process.execPath, args, { cwd: ROOT, env: TEST_ENV, stdio: "pipe" });
+  if (result.status !== 0) {
+    throw new Error(`could not ${what}: ` + String(result.stderr || result.stdout).slice(0, 300));
+  }
+}
+
+/** Creates the test database and its tables from scratch. */
+function buildTestDatabase() {
+  runNode([path.join(ROOT, "db", "run-sql.js"), "db/schema.sql", "db/migration-full-app.sql"],
+    `build the test database ${TEST_DB}`);
+}
+
 /**
- * Reloads the demo dataset. The suites write to the live database - the
- * interactions suite in particular presses real buttons - so each one
- * starts from the same known state instead of inheriting the last one's
- * edits. Without this, one suite deactivating an account made every later
- * sign-in fail.
+ * Reloads the demo dataset, with the demo sign-in accounts the suites use.
+ * The suites write to the database - the interactions suite in particular
+ * presses real buttons - so each one starts from the same known state
+ * instead of inheriting the last one's edits.
  */
 function reseed() {
-  const result = spawnSync(process.execPath, [path.join(ROOT, "db", "seed-from-data.js")], {
-    cwd: ROOT, env: process.env, stdio: "pipe"
-  });
-  if (result.status !== 0) {
-    throw new Error("could not reseed the database: " + String(result.stderr || result.stdout).slice(0, 300));
-  }
+  runNode([path.join(ROOT, "db", "seed-from-data.js"), "--with-demo-accounts"], "reseed the test database");
 }
 
 function waitForServer(timeoutMs = 15000) {
@@ -56,11 +73,18 @@ function waitForServer(timeoutMs = 15000) {
 }
 
 (async () => {
+  try {
+    buildTestDatabase();
+  } catch (error) {
+    console.error("USIAMS:", error.message);
+    process.exit(1);
+  }
+
   const server = spawn(process.execPath, [path.join(ROOT, "server.js")], {
     cwd: ROOT,
     // Timetable reminders would add notifications mid-run and change the
     // counts the suites check.
-    env: { ...process.env, PORT: String(PORT), REMINDERS: "off" },
+    env: { ...TEST_ENV, PORT: String(PORT), REMINDERS: "off" },
     stdio: ["ignore", "pipe", "pipe"]
   });
   let serverLog = "";
@@ -70,7 +94,7 @@ function waitForServer(timeoutMs = 15000) {
   let failed = 0;
   try {
     await waitForServer();
-    console.log(`USIAMS tests running against ${BASE}\n`);
+    console.log(`USIAMS tests running against ${BASE} (database ${TEST_DB})\n`);
     for (const suite of SUITES) {
       const file = path.join(__dirname, suite);
       if (!fs.existsSync(file)) { console.log(`SKIP ${suite} (missing)`); continue; }
@@ -80,7 +104,7 @@ function waitForServer(timeoutMs = 15000) {
       reseed();
       const result = spawnSync(process.execPath, [file], {
         cwd: ROOT,
-        env: { ...process.env, BASE },
+        env: { ...TEST_ENV, BASE },
         stdio: "inherit"
       });
       if (result.status !== 0) failed++;
@@ -94,10 +118,6 @@ function waitForServer(timeoutMs = 15000) {
     server.kill();
     // With USIAMS_AUDIT_WRITES=1 the server logs every write; keep that log.
     if (process.env.USIAMS_AUDIT_LOG) fs.writeFileSync(process.env.USIAMS_AUDIT_LOG, serverLog);
-    // Leave the database as the demo dataset, not as the last suite left it:
-    // the interactions suite presses real Deactivate buttons, which otherwise
-    // left demo accounts unable to sign in after every test run.
-    try { reseed(); } catch (error) { console.error("USIAMS:", error.message); }
   }
 
   if (failed) {

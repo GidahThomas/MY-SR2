@@ -11,106 +11,11 @@
    ========================================================= */
 const fs = require("node:fs");
 const path = require("node:path");
-const { JSDOM, VirtualConsole, requestInterceptor } = require("jsdom");
+const { BASE, ROOT, check, finish, call, login, rolesFor, openPage, pressControls } = require("./helpers");
 
-const BASE = process.env.BASE || "http://127.0.0.1:3311";
-const ROOT = path.join(__dirname, "..");
-let pass = 0, fail = 0;
-const check = (l, c, d = "") => { c ? (pass++, console.log("  PASS " + l)) : (fail++, console.log("  FAIL " + l + (d ? "\n         " + d : ""))); };
-
-const call = async (p, { method = "GET", token, body } = {}) => {
-  const r = await fetch(BASE + p, {
-    method,
-    headers: { ...(token ? { Authorization: "Bearer " + token } : {}), ...(body ? { "Content-Type": "application/json" } : {}) },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  let j = null; try { j = await r.json(); } catch {}
-  return { status: r.status, json: j };
-};
-
-function localOnly() {
-  return requestInterceptor(request => {
-    // Third-party libraries (served from assets/vendor/) are stubbed, as
-    // they were when they came from a CDN: the harness supplies its own
-    // bootstrap and Chart stand-ins.
-    if (request.url.startsWith(BASE) && !request.url.includes("/assets/vendor/")) return undefined;
-    return new Response("", { status: 200, headers: { "Content-Type": "text/plain" } });
-  });
-}
-
+/** Opens a page as the new student, presses its controls, reports problems. */
 async function renderAs(file, session) {
-  const problems = [];
-  const navigations = [];
-  const virtualConsole = new VirtualConsole();
-  virtualConsole.on("jsdomError", error => {
-    const message = error.message || "";
-    if (/Could not load|stylesheet|getContext|canvas npm package|acquire context/i.test(message)) return;
-    if (/Not implemented: navigation/i.test(message)) { navigations.push(message); return; }
-    problems.push(message.split("\n")[0]);
-  });
-  virtualConsole.on("error", (...args) => {
-    const text = args.join(" ");
-    if (/acquire context|canvas/i.test(text)) return;
-    problems.push("console.error: " + text.split("\n")[0]);
-  });
-
-  const pageUrl = `${BASE}/pages/${file}`;
-  const dom = await JSDOM.fromURL(pageUrl, {
-    runScripts: "dangerously",
-    resources: { interceptors: [localOnly()] },
-    pretendToBeVisual: true,
-    virtualConsole,
-    beforeParse(window) {
-      window.bootstrap = {
-        Modal: class {
-          constructor(element) { this.element = element; }
-          show() {} hide() {} dispose() {}
-          static getInstance() { return null; }
-          static getOrCreateInstance(element) { return new window.bootstrap.Modal(element); }
-        },
-        Tab: class { constructor(element) { this.element = element; } show() {} }
-      };
-      window.Chart = class {
-        constructor() { this.data = {}; this.options = {}; }
-        update() {} destroy() {} resize() {}
-        static register() {}
-      };
-      window.Chart.helpers = {
-        merge(target, ...sources) {
-          const isPlain = v => v && typeof v === "object" && !Array.isArray(v);
-          for (const source of sources) {
-            if (!isPlain(source)) continue;
-            for (const [key, value] of Object.entries(source)) {
-              target[key] = isPlain(value) && isPlain(target[key])
-                ? window.Chart.helpers.merge({ ...target[key] }, value)
-                : value;
-            }
-          }
-          return target;
-        }
-      };
-      window.localStorage.setItem("usiams.session.token", JSON.stringify(session.token));
-      window.localStorage.setItem("usiams.session.currentUser", JSON.stringify(session.user));
-      window.fetch = (input, init) => fetch(new URL(String(input), pageUrl).href, init);
-      window.Headers = Headers; window.Request = Request; window.Response = Response;
-      window.confirm = () => false;
-      window.alert = () => {};
-      window.scrollTo = () => {};
-      window.print = () => {};
-      window.URL.createObjectURL = () => "blob:stub";
-      window.URL.revokeObjectURL = () => {};
-      window.matchMedia = window.matchMedia || (() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
-    }
-  });
-
-  const { window } = dom;
-  const mounted = () => !!window.document.querySelector("#sidebarContainer a, .app-footer");
-  const deadline = Date.now() + 8000;
-  while (Date.now() < deadline && !mounted() && !/USIAMS is unavailable/.test(window.document.body.textContent)) {
-    await new Promise(r => setTimeout(r, 100));
-  }
-  await new Promise(r => setTimeout(r, 250));
-
+  const { window, problems, navigations, mounted } = await openPage(`${BASE}/pages/${file}`, session);
   // Only a navigation during boot is an auth redirect. Downloads are
   // triggered by clicking a generated anchor, which jsdom also reports as
   // navigation - counting those would fail any page with a CSV export.
@@ -119,23 +24,16 @@ async function renderAs(file, session) {
   // Press the page's own controls too - empty-state pages often only fail
   // once something asks them to act on data that is not there.
   let clicked = 0;
-  if (mounted()) {
-    const controls = [...window.document.querySelectorAll("button:not([data-bs-dismiss]), [data-bs-toggle='tab']")]
-      .filter(el => !el.closest(".app-sidebar, .app-navbar"));
-    for (const control of controls.slice(0, 25)) {
-      try { control.click(); clicked++; await new Promise(r => setTimeout(r, 25)); }
-      catch (error) { problems.push(`click(${control.id || "?"}): ${error.message}`); }
-    }
+  if (mounted) {
+    clicked = await pressControls(window, problems, { limit: 25, selector: "button:not([data-bs-dismiss]), [data-bs-toggle='tab']" });
     await new Promise(r => setTimeout(r, 200));
   }
-
   const result = {
-    problems, clicked,
-    mounted: mounted(),
+    problems, clicked, mounted,
     fatal: /USIAMS is unavailable/.test(window.document.body.textContent),
     navigated: redirectedDuringBoot
   };
-  dom.window.close();
+  window.close();
   return result;
 }
 
@@ -204,9 +102,8 @@ async function renderAs(file, session) {
   }
 
   console.log("\n== Signing in as the new student ==");
-  const login = await call("/api/auth/login", { method: "POST", body: { username, password: "password123" } });
-  check("the new account signs in", login.status === 200 && !!login.json.token);
-  const session = { token: login.json.token, user: login.json.user };
+  const session = await login(username, "password123");
+  check("the new account signs in", !!session);
   check("the session carries a studentId", !!session.user.studentId, JSON.stringify(session.user));
   check("the role is STUDENT", session.user.role === "STUDENT");
 
@@ -239,12 +136,7 @@ async function renderAs(file, session) {
   const pageFiles = fs.readdirSync(path.join(ROOT, "pages"))
     .filter(f => f.endsWith(".html"))
     .filter(f => !["403.html", "404.html", "500.html"].includes(f))
-    .filter(f => {
-      const html = fs.readFileSync(path.join(ROOT, "pages", f), "utf8");
-      const match = html.match(/USIAMS\.boot\(\s*(\[[^\]]*\]|null)/);
-      if (!match) return false;
-      return match[1] === "null" || match[1].includes("STUDENT");
-    });
+    .filter(f => (rolesFor(fs.readFileSync(path.join(ROOT, "pages", f), "utf8")) || []).includes("STUDENT"));
 
   for (const file of pageFiles) {
     let result;
@@ -276,6 +168,5 @@ async function renderAs(file, session) {
   check("but still only their own", mine.json.data.every(r => r.studentId === session.user.studentId));
   await call("/api/data/requests/" + filed.json.data.id, { method: "DELETE", token: session.token });
 
-  console.log("\n" + (fail === 0 ? "ALL PASS" : "FAILURES: " + fail) + "  (" + pass + " passed)");
-  process.exit(fail === 0 ? 0 : 1);
+  finish();
 })();

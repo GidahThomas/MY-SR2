@@ -28,11 +28,7 @@
   // is also the venue used for meetings and student study sessions.
   const AUDITORIUM = "Auditorium";
 
-  function seededMark(seed, min, max) {
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-    return min + (hash % (max - min + 1));
-  }
+  const { seededMark } = global.USIAMS.shared;
 
   // Teaching staff per department: its lecturer account (if any), its head,
   // and further members of staff, so a department with many classes can

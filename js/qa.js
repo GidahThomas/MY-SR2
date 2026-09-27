@@ -48,6 +48,30 @@
   }
 
   global.USIAMS = global.USIAMS || {};
-  global.USIAMS.qa = { injectReadOnlyBadge, accessDeniedBanner };
+  // Data-quality indicators from the QA flags, shown on the QA dashboard and
+  // the Quality Assurance page.
+  function qualityIndicators(flags) {
+    const count = test => flags.filter(test).length;
+    return [
+      { label: "Missing Student Information", count: count(f => f.category === "Student Records") },
+      { label: "Duplicate Records", count: count(f => String(f.description || "").toLowerCase().includes("duplicate")) },
+      { label: "Missing Results", count: count(f => f.category === "Results") },
+      { label: "Invalid Course Registration", count: count(f => f.category === "Registration") },
+      { label: "Missing Attendance", count: count(f => f.category === "Attendance") },
+      { label: "Inconsistent Academic Records", count: count(f => f.category === "Graduation") }
+    ];
+  }
+
+  function renderQualityIndicators(containerId, flags) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = qualityIndicators(flags).map(i => `
+      <div class="quality-indicator-row">
+        <span style="font-size:.85rem;">${i.label}</span>
+        <span class="status-badge ${i.count > 0 ? "status-warning" : "status-active"}">${i.count} ${i.count === 1 ? "issue" : "issues"}</span>
+      </div>`).join("");
+  }
+
+  global.USIAMS.qa = { injectReadOnlyBadge, accessDeniedBanner, qualityIndicators, renderQualityIndicators };
 
 })(window);

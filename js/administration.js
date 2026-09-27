@@ -246,9 +246,11 @@
   const DEPARTMENT_ROLES = ["LECTURER", "ACADEMIC_ADVISOR", "DEPARTMENT_ADMIN", "HEAD_OF_DEPARTMENT"];
   const UNIT_ROLES = { COLLEGE_ADMIN: "College", INSTITUTE_ADMIN: "Institute", SCHOOL_ADMIN: "School" };
 
-  // A student account is tied to its student record by email, so students
-  // are created through admissions and registration rather than here.
-  const NON_ASSIGNABLE_ROLES = ["STUDENT"];
+  // A student account comes with its student record: the server creates
+  // both, in the chosen programme, exactly as the sign-up form does. Only
+  // University and System Admins can add students here (scoped admins'
+  // role lists do not include STUDENT).
+  const NON_ASSIGNABLE_ROLES = [];
 
   function temporaryPassword() {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
@@ -270,7 +272,7 @@
           <div class="row g-3">
             <div class="col-12"><label class="form-label" for="nuRole">Role</label>
               <select class="form-select" id="nuRole"><option value="">Select a role...</option>${roleOptions}</select>
-              <div class="form-text">Student accounts are created through admissions and registration.</div>
+              <div class="form-text">Students can also create their own accounts from the sign-in page.</div>
             </div>
             <div class="col-12 d-none" id="nuScopeWrap"><label class="form-label" for="nuScope" id="nuScopeLabel"></label>
               <select class="form-select" id="nuScope"></select>
@@ -305,7 +307,10 @@
     roleSelect.addEventListener("change", () => {
       const role = roleSelect.value;
       let options = null;
-      if (DEPARTMENT_ROLES.includes(role)) {
+      if (role === "STUDENT") {
+        scopeLabel.textContent = "Programme";
+        options = window.USIAMS.data.programmes.filter(p => p.status !== "Inactive");
+      } else if (DEPARTMENT_ROLES.includes(role)) {
         scopeLabel.textContent = "Department";
         options = allowedDepartments();
       } else if (UNIT_ROLES[role]) {
@@ -343,14 +348,25 @@
 
       const id = window.USIAMS.storage.nextId("USR", existing);
       const record = { id, name, username, email, role, password, status: "Active", lastLogin: null };
+      if (role === "STUDENT") record.programmeId = scope;
       if (DEPARTMENT_ROLES.includes(role)) record.departmentId = scope;
       if (UNIT_ROLES[role]) record.unitId = scope;
-      usersOverlay.add(record);
+      const added = usersOverlay.add(record);
       modal.close();
       refreshUsers();
       renderRolesTab();
       toast.show("success", "User added",
         `${name} was added as ${window.USIAMS.data.roles[role]}. Username: ${username}, temporary password: ${password}`, 15000);
+      // A new student also has a new student record (and registration
+      // number); load it so the student lists show them straight away.
+      if (role === "STUDENT") {
+        window.USIAMS.api.flush()
+          .then(() => window.USIAMS.api.reload("students"))
+          .then(() => {
+            if (added && added.registrationNumber) toast.show("info", "Student record created", `${name}'s registration number is ${added.registrationNumber}.`, 15000);
+          })
+          .catch(() => {});
+      }
     });
   }
 

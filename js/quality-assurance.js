@@ -21,19 +21,7 @@
 
   function renderIndicators() {
     const flags = all();
-    const indicators = [
-      { label: "Missing Student Information", count: flags.filter(f => f.category === "Student Records").length },
-      { label: "Duplicate Records", count: flags.filter(f => f.description.toLowerCase().includes("duplicate")).length },
-      { label: "Missing Results", count: flags.filter(f => f.category === "Results").length },
-      { label: "Invalid Course Registration", count: flags.filter(f => f.category === "Registration").length },
-      { label: "Missing Attendance", count: flags.filter(f => f.category === "Attendance").length },
-      { label: "Inconsistent Academic Records", count: flags.filter(f => f.category === "Graduation").length }
-    ];
-    document.getElementById("qualityIndicatorsList").innerHTML = indicators.map(i => `
-      <div class="quality-indicator-row">
-        <span style="font-size:.85rem;">${i.label}</span>
-        <span class="status-badge ${i.count > 0 ? "status-warning" : "status-active"}">${i.count} ${i.count === 1 ? "issue" : "issues"}</span>
-      </div>`).join("");
+    window.USIAMS.qa.renderQualityIndicators("qualityIndicatorsList", flags);
   }
 
   function renderFlags() {

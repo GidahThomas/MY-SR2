@@ -7,12 +7,11 @@
   "use strict";
 
   const COMPLAINT_CATEGORIES = ["Academic", "Administrative", "Facilities", "Harassment", "Financial", "ICT / System Issue", "Other"];
-  const COMPLAINT_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
+  const { COMPLAINT_PRIORITIES, COMPLAINT_RECIPIENT_OFFICES } = global.USIAMS.shared;
   const COMPLAINT_STATUSES = ["PENDING", "IN_PROGRESS", "RESOLVED", "REJECTED", "ESCALATED", "CLOSED"];
   // Chosen by the student at submission time, so a complaint is routed
   // to the right office immediately rather than sitting unassigned
   // until a staff member manually triages it.
-  const COMPLAINT_RECIPIENT_OFFICES = ["IT Support / ICT Office", "Bursar / Finance Office", "Registrar / Administration", "Head of Department / Academic Office", "Hostel Office", "Library", "Facilities / Estates Office", "Other"];
 
   const SEED_COMPLAINTS = [
     {

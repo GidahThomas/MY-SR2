@@ -62,23 +62,12 @@
 
   function initPage(user) {
     currentUser = user;
-    let targetStudentId = user.studentId;
-    const selectorWrap = document.getElementById("studentSelectorWrap");
-    if (user.role !== "STUDENT") {
-      selectorWrap.classList.remove("d-none");
-      const select = document.getElementById("studentSelector");
-      select.innerHTML = window.USIAMS.data.students.filter(s => s.year >= 3).map(s => `<option value="${s.id}">${s.regNumber}</option>`).join("");
-      targetStudentId = select.value;
-      select.addEventListener("change", () => {
-        document.getElementById("graduationStudentName").textContent = window.USIAMS.util.studentLabel(window.USIAMS.students.getStudent(select.value), currentUser);
-        render(select.value);
-      });
-    } else {
-      selectorWrap.classList.add("d-none");
-    }
-    const student = window.USIAMS.students.getStudent(targetStudentId);
-    document.getElementById("graduationStudentName").textContent = `${window.USIAMS.util.studentLabel(student, currentUser)} (${student.regNumber})`;
-    render(targetStudentId);
+    const show = studentId => {
+      const student = window.USIAMS.students.getStudent(studentId);
+      document.getElementById("graduationStudentName").textContent = `${window.USIAMS.util.studentLabel(student, currentUser)} (${student.regNumber})`;
+      render(studentId);
+    };
+    show(window.USIAMS.util.studentPicker(user, { include: s => s.year >= 3, onChange: show }));
   }
 
   window.USIAMS = window.USIAMS || {};

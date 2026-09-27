@@ -4,20 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quality Assurance Dashboard - USIAMS</title>
-<link rel="stylesheet" href="../assets/vendor/bootstrap/bootstrap.min.css">
-<link rel="stylesheet" href="../assets/vendor/bootstrap-icons/bootstrap-icons.css">
-<link rel="stylesheet" href="../css/style.css">
-<link rel="stylesheet" href="../css/components.css">
-<link rel="stylesheet" href="../css/dashboard.css">
-<link rel="stylesheet" href="../css/responsive.css">
-<link rel="stylesheet" href="../css/print.css">
+<!-- include: app-styles -->
 </head>
 <body>
-<div class="app-shell" id="appShell">
-  <aside class="app-sidebar" id="sidebarContainer"></aside>
-  <div class="app-main">
-    <header class="app-navbar" id="navbarContainer"></header>
-    <main class="app-content">
+<!-- include: app-shell-start -->
 
       <div class="page-header">
         <div>
@@ -70,59 +60,9 @@
         <div class="usi-card-body"><div class="chart-box"><canvas id="populationByProgrammeChart"></canvas></div></div>
       </div>
 
-    </main>
-  </div>
-</div>
+<!-- include: app-shell-end -->
 
-<script src="../assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-<script src="../assets/vendor/chart.js/chart.umd.min.js"></script>
-<script src="../js/storage.js"></script>
-<script src="../js/api.js"></script>
-<script src="../js/ui.js"></script>
-<script src="../components/toast.js"></script>
-<script src="../components/modal.js"></script>
-<script src="../data/grading-system.js"></script>
-<script src="../data/academic-structure.js"></script>
-<script src="../data/courses.js"></script>
-<script src="../data/users.js"></script>
-<script src="../data/students.js"></script>
-<script src="../data/results.js"></script>
-<script src="../data/registrations.js"></script>
-<script src="../data/finance.js"></script>
-<script src="../data/attendance.js"></script>
-<script src="../data/timetable.js"></script>
-<script src="../data/requests.js"></script>
-<script src="../data/complaints.js"></script>
-<script src="../data/notifications.js"></script>
-<script src="../data/calendar.js"></script>
-<script src="../data/announcements.js"></script>
-<script src="../data/documents.js"></script>
-<script src="../data/internship.js"></script>
-<script src="../data/graduation.js"></script>
-<script src="../data/alumni.js"></script>
-<script src="../data/library.js"></script>
-<script src="../data/hostel.js"></script>
-<script src="../data/elearning.js"></script>
-<script src="../data/admissions.js"></script>
-<script src="../data/qa-flags.js"></script>
-<script src="../data/audit-logs.js"></script>
-<script src="../js/gpa.js"></script>
-<script src="../js/auth.js"></script>
-<script src="../js/navigation.js"></script>
-<script src="../js/search.js"></script>
-<script src="../js/notifications.js"></script>
-<script src="../js/qa.js"></script>
-<script src="../js/charts.js"></script>
-<script src="../js/library.js"></script>
-<script src="../js/hostel.js"></script>
-<script src="../js/elearning.js"></script>
-<script src="../js/admissions.js"></script>
-<script src="../js/announcements.js"></script>
-<script src="../components/table.js"></script>
-<script src="../components/cards.js"></script>
-<script src="../components/sidebar.js"></script>
-<script src="../components/navbar.js"></script>
-<script src="../js/app.js"></script>
+<!-- include: app-scripts charts -->
 <script src="../js/dashboard.js"></script>
 <script>
   USIAMS.boot(["QUALITY_ASSURANCE_OFFICER"], (user) => {

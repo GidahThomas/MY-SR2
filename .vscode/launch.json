@@ -10,6 +10,9 @@
             "request": "launch",
             "name": "USIAMS: server",
             "program": "${workspaceFolder}/server.js",
+            // Restart the server whenever a project file changes, so the
+            // browser never talks to a server still running old code.
+            "runtimeArgs": ["--watch"],
             "cwd": "${workspaceFolder}",
             "env": { "PORT": "8081" },
             "console": "integratedTerminal",

@@ -538,12 +538,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 .login-card { width: 100%; max-width: 420px; }
 .login-logo-row { display: flex; align-items: center; gap: .8rem; margin-bottom: 1.5rem; }
-.demo-account-chip {
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: .5rem .65rem; font-size: .74rem; cursor: pointer; background: var(--surface-alt);
-  transition: border-color .15s;
-}
-.demo-account-chip:hover { border-color: var(--usiams-blue-500); }
 
 /* Login carousel card (left panel) */
 .login-carousel-card {

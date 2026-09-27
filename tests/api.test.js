@@ -1,29 +1,4 @@
-const BASE = process.env.BASE || "http://127.0.0.1:3311";
-let pass = 0, fail = 0;
-
-function check(label, condition, detail = "") {
-  if (condition) { pass++; console.log("  PASS " + label); }
-  else { fail++; console.log("  FAIL " + label + (detail ? " -> " + detail : "")); }
-}
-
-async function call(path, { method = "GET", token, body } = {}) {
-  const res = await fetch(BASE + path, {
-    method,
-    headers: {
-      ...(token ? { Authorization: "Bearer " + token } : {}),
-      ...(body ? { "Content-Type": "application/json" } : {})
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  let json = null;
-  try { json = await res.json(); } catch {}
-  return { status: res.status, json };
-}
-
-async function login(username, password) {
-  const r = await call("/api/auth/login", { method: "POST", body: { username, password } });
-  return r.json && r.json.token ? { token: r.json.token, user: r.json.user } : null;
-}
+const { check, finish, call, login } = require("./helpers");
 
 (async () => {
   console.log("\n== Authentication ==");
@@ -314,6 +289,5 @@ async function login(username, password) {
   check("session tokens are not stored in plain text", sessionRow.n === 0);
   await repo.pool.end();
 
-  console.log("\n" + (fail === 0 ? "ALL PASS" : "FAILURES: " + fail) + "  (" + pass + " passed)");
-  process.exit(fail === 0 ? 0 : 1);
+  finish();
 })();
