@@ -3,3 +3,7 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Database exports hold password hashes and personal records.
+*.sql.gz
+usiams-database.sql

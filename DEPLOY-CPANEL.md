@@ -20,6 +20,8 @@ It uses these names:
 | Database and database user | `cpuser_usiams` (password generated and saved in `~/usiams/.env`) |
 | First administrator | username `admin`, email `info@unicollege.ac.tz` (password generated and printed once) |
 
+To start the live site from your **local XAMPP database** (its accounts, including your administrator, and all its records) instead of the demo setup, also upload `usiams-database.sql` (see *Using your XAMPP data* below). The script then loads that into the new database and does not create another administrator.
+
 The domain must already be added to your cPanel account. Until `unicollege.ac.tz` is registered and pointing at the hosting, give the account's temporary domain instead and re-run the script with the real one later. It is safe to run again: it keeps the existing database and settings, and never rebuilds tables that hold data. Afterwards, do step 8 (HTTPS and email).
 
 ## What the hosting plan must have
@@ -176,6 +178,26 @@ Back on **Setup Node.js App**, click **Restart**.
 4. On the sign-in page, create a test student account with **Create Student Account**.
 5. Use **Forgot Password?** and confirm the email arrives.
 6. As administrator, open the **Audit log**. The IP address of each sign-in should be the visitor's real address. If every entry shows `127.0.0.1`, change `TRUST_PROXY=on` to `TRUST_PROXY=off` in `.env` and restart. If you are not sure, ask your host whether their web server sets `X-Forwarded-For`.
+
+## Using your XAMPP data
+
+To put what is in your local XAMPP database online, export it on your computer. The export leaves out sign-in sessions and the outgoing-email log, and removes the `root@localhost` owner from the views, which cPanel would refuse. In Git Bash, from the folder holding the project:
+
+```bash
+D=/c/xampp/mysql/bin/mysqldump.exe
+{ "$D" -u root --single-transaction --hex-blob --default-character-set=utf8mb4 --skip-dump-date \
+    --ignore-table=university.user_sessions --ignore-table=university.password_resets \
+    --ignore-table=university.outbound_messages university
+  "$D" -u root --no-data --skip-dump-date university user_sessions password_resets outbound_messages
+} | sed -E 's/DEFINER=`[^`]*`@`[^`]*`//g' > usiams-database.sql
+```
+
+Then either:
+
+- **with SSH/Terminal:** upload it next to `cpanel-deploy.sh` and run the script (*Quick deploy* above), on a new, empty database; or
+- **without:** skip step 6, and in cPanel **phpMyAdmin** select `cpuser_usiams`, open **Import**, choose `usiams-database.sql` and click **Import**. Then run `db:migrate` under **Run JS script**, and skip step 7: sign in with your existing administrator account.
+
+`usiams-database.sql` holds every account's password hash and everyone's personal records. Keep it private, delete it from the server after importing, and never commit it to GitHub.
 
 ## Updating the site later
 

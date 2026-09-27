@@ -6,8 +6,10 @@
 #
 #    bash cpanel-deploy.sh [domain]
 #
-#  with usiams-cpanel.zip next to it. It does what DEPLOY-CPANEL.md
-#  describes, using these names:
+#  with usiams-cpanel.zip next to it. If usiams-database.sql (an export of
+#  an existing USIAMS database, e.g. the XAMPP one) is there too, an empty
+#  database is loaded from it instead of from the demo data. It does what
+#  DEPLOY-CPANEL.md describes, using these names:
 #
 #    application folder  ~/usiams
 #    database and user   <cpanel user>_usiams   (password generated)
@@ -23,6 +25,7 @@ DOMAIN="${1:-unicollege.ac.tz}"
 APP_NAME="usiams"
 APP_DIR="$HOME/$APP_NAME"
 ZIP="${ZIP:-$(dirname "$0")/usiams-cpanel.zip}"
+DUMP="${DUMP:-$(dirname "$0")/usiams-database.sql}"
 CPUSER="$(whoami)"
 DB="${CPUSER}_${APP_NAME}"
 ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
@@ -127,7 +130,23 @@ TABLES="$(node -e '
     .catch(e => { console.error(e.message); process.exit(1); });
 ')" || fail "cannot connect to the database with the settings in .env."
 
-if [ "$TABLES" = "0" ]; then
+if [ "$TABLES" = "0" ] && [ -f "$DUMP" ]; then
+  step "Loading the database from $(basename "$DUMP")"
+  command -v mysql >/dev/null || fail "the mysql client is missing - import $(basename "$DUMP") with phpMyAdmin instead."
+  # The password goes in a private options file, not on the command line
+  # where other users of the server could see it.
+  MYCNF="$(mktemp)"
+  chmod 600 "$MYCNF"
+  node -e '
+    const { config } = require("./config");
+    console.log(`[client]\nhost=${config.db.host}\nport=${config.db.port}\nuser=${config.db.user}\npassword="${config.db.password}"`);
+  ' > "$MYCNF"
+  mysql --defaults-extra-file="$MYCNF" --default-character-set=utf8mb4 "$DB" < "$DUMP" \
+    || { rm -f "$MYCNF"; fail "importing $(basename "$DUMP") failed."; }
+  rm -f "$MYCNF"
+  # Brings an older export up to date; safe on a current one.
+  npm run --silent db:migrate
+elif [ "$TABLES" = "0" ]; then
   step "Building the tables and loading the starting data (db:setup)"
   npm run --silent db:setup
 else
@@ -135,14 +154,18 @@ else
   npm run --silent db:migrate
 fi
 
-step "Creating the first administrator ($ADMIN_USERNAME)"
+step "Checking for an administrator account"
+# An imported database brings its own administrators (with their
+# passwords); only an empty one needs a first administrator made.
 if node -e '
   const { query, pool } = require("./db/repository");
-  query("SELECT 1 FROM users WHERE LOWER(username) = ?", [process.argv[1]])
-    .then(r => { pool.end(); process.exit(r.length ? 0 : 1); });
-' "$ADMIN_USERNAME"; then
-  echo "   (already exists - sign in with its current password)"
+  query(`SELECT u.username FROM users u JOIN user_roles r ON r.user_id = u.id
+         WHERE u.status = "Active" AND r.role_id IN ("SYSTEM_ADMIN", "UNIVERSITY_ADMIN")`)
+    .then(rows => { pool.end(); if (rows.length) console.log("   found: " + rows.map(r => r.username).join(", ")); process.exit(rows.length ? 0 : 1); });
+'; then
+  echo "   (sign in with the existing administrator's password)"
 else
+  echo "   none yet - creating $ADMIN_USERNAME"
   npm run --silent create-admin -- --username "$ADMIN_USERNAME" --email "$ADMIN_EMAIL" --name "$ADMIN_NAME"
 fi
 
