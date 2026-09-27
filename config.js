@@ -42,6 +42,8 @@ const config = {
   trustProxy: /^(1|on|true|yes)$/i.test(process.env.TRUST_PROXY || ""),
   remindersEnabled: !/^(0|off|false|no)$/i.test(process.env.REMINDERS || ""),
   sessionTtlMs: Number(process.env.SESSION_TTL_HOURS || 8) * 60 * 60 * 1000,
+  // A session also ends after this long with no activity.
+  sessionIdleMs: Number(process.env.SESSION_IDLE_MINUTES || 60) * 60 * 1000,
   // Only verifies password hashes written before each got its own salt;
   // those are upgraded on the account's next sign-in.
   passwordSalt: process.env.PASSWORD_SALT || "usiams-demo-salt",

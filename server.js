@@ -40,6 +40,10 @@ const STAFF_ACCOUNT_MESSAGE = "Only students can create their own accounts. Staf
 // ---------------------------------------------------------------------
 // Session helpers
 // ---------------------------------------------------------------------
+// A real scrypt hash of a random password, verified against when a sign-in
+// names an unknown username (see the login route).
+const DUMMY_PASSWORD_HASH = db.hashPassword(crypto.randomBytes(18).toString("hex"));
+
 function accountId() {
   return `USR-${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
 }
@@ -87,17 +91,23 @@ async function authenticatedUser(req) {
 async function requireUser(req, res) {
   const session = await authenticatedUser(req);
   if (!session) {
+    // Guessing tokens is counted per address (see handleApi).
+    if (getToken(req)) rateLimit.record("badToken", clientIp(req) || "unknown");
     sendJson(res, 401, { success: false, message: "Authentication required." });
     return null;
   }
   return session;
 }
 
-/** Where this server is reached, for links in emails. */
-function publicBaseUrl(req) {
+/**
+ * Where this server is reached, for links in emails. Never taken from the
+ * request's Host header: an attacker could otherwise ask for a password
+ * reset with "Host: evil.example" and have the victim emailed a link that
+ * hands the reset token to them. Set PUBLIC_URL in production.
+ */
+function publicBaseUrl() {
   if (config.publicUrl) return config.publicUrl;
-  const scheme = tlsEnabled() ? "https" : "http";
-  return `${scheme}://${req.headers.host || `${config.host}:${config.port}`}`;
+  return `${tlsEnabled() ? "https" : "http"}://${config.host === "0.0.0.0" ? "127.0.0.1" : config.host}:${config.port}`;
 }
 
 function tlsEnabled() {
@@ -136,7 +146,10 @@ function readBody(req, maxBytes = 1024 * 1024) {
     req.on("end", () => {
       if (tooLarge) return;
       let body;
-      try { body = raw ? JSON.parse(raw) : {}; }
+      // Keys that could reach an object's prototype through a later
+      // Object.assign or spread are dropped as the JSON is read.
+      const safe = (key, value) => (key === "__proto__" || key === "constructor" || key === "prototype" ? undefined : value);
+      try { body = raw ? JSON.parse(raw, safe) : {}; }
       catch { reject(fail(400, "The request body is not valid JSON.")); return; }
       // Every handler expects an object; an array or a bare value is refused.
       if (!body || typeof body !== "object" || Array.isArray(body)) { reject(fail(400, "The request body must be a JSON object.")); return; }
@@ -442,9 +455,8 @@ async function handleResourceRoute(req, res, url, session) {
         const invalid = !/^[a-z0-9._@-]{3,80}$/.test(username) ? "Username must be 3-80 letters, numbers, dots, @, underscores or hyphens."
           : !/^\S+@\S+\.\S+$/.test(email) ? "Enter a valid email address."
           : !fullName ? "Enter the student's full name."
-          : password.length < 8 ? "The temporary password must be at least 8 characters."
           : !body.programmeId ? "Choose the student's programme."
-          : null;
+          : db.passwordProblem(password, { username, email });
         if (invalid) { sendJson(res, 422, { success: false, message: invalid }); return; }
         if (await db.findUser(username)) { sendJson(res, 409, { success: false, message: "That username is already taken." }); return; }
         if (await db.findUserByEmail(email)) { sendJson(res, 409, { success: false, message: "Another account already uses this email address." }); return; }
@@ -462,6 +474,10 @@ async function handleResourceRoute(req, res, url, session) {
         }
         return;
       }
+    }
+    if (name === "users") {
+      const weakPassword = db.passwordProblem(body.password, { username: body.username, email: body.email });
+      if (weakPassword) { sendJson(res, 422, { success: false, message: weakPassword }); return; }
     }
     if (name === "registrations") {
       const refusal = registrationLoadRefusal({ status: "Registered", ...body });
@@ -531,15 +547,25 @@ async function handleResourceRoute(req, res, url, session) {
       if (scoped) { sendJson(res, 403, { success: false, message: scoped }); return; }
       const refusal = await accountChangeRefusal({ operation: "update", targetId: id, patch: body, actor: user });
       if (refusal) { sendJson(res, 409, { success: false, message: refusal }); return; }
+      if (body.password !== undefined && body.password !== "") {
+        const weakPassword = db.passwordProblem(body.password, { username: body.username || existing.username, email: body.email || existing.email });
+        if (weakPassword) { sendJson(res, 422, { success: false, message: weakPassword }); return; }
+      } else {
+        delete body.password;
+      }
     }
     if (name === "registrations") {
       const refusal = registrationLoadRefusal({ ...existing, ...body });
       if (refusal) { sendJson(res, 422, { success: false, message: refusal }); return; }
     }
     const updated = await repo.update(name, id, body);
-    // Suspending an account has to take effect now, not when its token
-    // happens to expire.
-    if (name === "users" && updated && updated.status !== "Active") await revokeSessionsFor(id);
+    // A session carries the role and scope the account had at sign-in, so
+    // suspending an account, changing its role or scope, or setting a new
+    // password must end its sessions now - not when the token expires.
+    if (name === "users" && updated && (updated.status !== "Active" || updated.role !== existing.role ||
+        updated.departmentId !== existing.departmentId || updated.unitId !== existing.unitId || body.password)) {
+      await revokeSessionsFor(id);
+    }
     if (name === "applications" && updated && updated.status !== existing.status) await emailAdmissionDecision(updated);
     await db.recordAudit({
       userId: user.id, userName: user.name, userRole: user.role, action: "UPDATE",
@@ -789,7 +815,27 @@ function isPublicPath(relativePath) {
   return PUBLIC_DIRECTORIES.includes(segments[0]);
 }
 
+/**
+ * Sends a page with a Content-Security-Policy that only runs the page's own
+ * scripts: each response gets a fresh random nonce, stamped on every
+ * <script> tag in the file. Script injected into the page some other way -
+ * through data shown on it - has no nonce and is refused by the browser, as
+ * are inline onclick="..." attributes.
+ */
+function sendHtml(res, status, html) {
+  const nonce = crypto.randomBytes(16).toString("base64");
+  res.setHeader("Content-Security-Policy", pageCsp(nonce));
+  res.writeHead(status, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+  res.end(html.replace(/<script\b/gi, `<script nonce="${nonce}"`));
+}
+
 function serveStatic(req, res, pathname) {
+  // Files are only ever read; anything else is not a static request.
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.setHeader("Allow", "GET, HEAD");
+    sendJson(res, 405, { success: false, message: "Method not allowed." });
+    return;
+  }
   // The public home page is the front door; it links on to login and apply.
   // Pages declare the SVG icon (page-includes.js); older browsers and
   // bookmark tools still ask for /favicon.ico, so answer with the PNG.
@@ -801,20 +847,19 @@ function serveStatic(req, res, pathname) {
       !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     const notFound = path.join(ROOT, "pages", "404.html");
     if (fs.existsSync(notFound) && req.headers.accept && req.headers.accept.includes("text/html")) {
-      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(pageIncludes.pageHtml(notFound, ROOT));
+      sendHtml(res, 404, pageIncludes.pageHtml(notFound, ROOT));
       return;
     }
     sendJson(res, 404, { success: false, message: "Resource not found." });
     return;
   }
+  // Pages get their shared stylesheet and script lists filled in
+  // (page-includes.js); every other file is sent as it is.
+  if (path.extname(filePath).toLowerCase() === ".html") { sendHtml(res, 200, pageIncludes.pageHtml(filePath, ROOT)); return; }
   // no-cache: the browser re-checks every file, so an edited page or script
   // is picked up on the next reload instead of a stale copy being reused.
   res.writeHead(200, { "Content-Type": `${contentType(filePath)}; charset=utf-8`, "Cache-Control": "no-cache" });
-  // Pages get their shared stylesheet and script lists filled in
-  // (page-includes.js); every other file is sent as it is.
-  if (path.extname(filePath).toLowerCase() === ".html") res.end(pageIncludes.pageHtml(filePath, ROOT));
-  else fs.createReadStream(filePath).pipe(res);
+  fs.createReadStream(filePath).pipe(res);
 }
 
 // ---------------------------------------------------------------------
@@ -822,6 +867,16 @@ function serveStatic(req, res, pathname) {
 // ---------------------------------------------------------------------
 async function handleApi(req, res, url) {
   if (req.method === "OPTIONS") { sendJson(res, 204, {}); return; }
+
+  // Overall request limit: per session when the request carries a
+  // well-formed token, per address otherwise, and a separate limit on
+  // addresses that keep sending tokens that are not valid.
+  const ip = clientIp(req) || "unknown";
+  const token = getToken(req);
+  const limitKey = token && /^[0-9a-f]{64}$/.test(token) ? `session:${token}` : `address:${ip}`;
+  const apiWait = Math.max(rateLimit.retryAfter("api", limitKey), rateLimit.retryAfter("badToken", ip));
+  if (apiWait) { tooManyAttempts(res, apiWait); return; }
+  rateLimit.record("api", limitKey);
 
   if (req.method === "GET" && url.pathname === "/api/health") {
     const databaseConnected = await db.health();
@@ -838,11 +893,18 @@ async function handleApi(req, res, url) {
     try {
       const { username, password } = await readBody(req);
       const ip = clientIp(req) || "unknown";
-      const accountKey = `${ip}|${String(username || "").trim().toLowerCase()}`;
-      const wait = Math.max(rateLimit.retryAfter("loginAccount", accountKey), rateLimit.retryAfter("loginAddress", ip));
+      const usernameKey = String(username || "").trim().toLowerCase().slice(0, 80);
+      const accountKey = `${ip}|${usernameKey}`;
+      // Per username from any address too, so an attacker spreading guesses
+      // over many addresses is still stopped.
+      const wait = Math.max(rateLimit.retryAfter("loginAccount", accountKey), rateLimit.retryAfter("loginAddress", ip),
+        rateLimit.retryAfter("loginUser", usernameKey));
       if (wait) { tooManyAttempts(res, wait); return; }
       const account = await db.findUser(String(username || ""));
-      const passwordMatches = !!account && db.verifyPassword(String(password || ""), account.passwordHash);
+      // An unknown username is checked against a dummy hash, so a wrong
+      // username takes as long as a wrong password and the response time
+      // does not reveal which usernames exist.
+      const passwordMatches = db.verifyPassword(String(password || ""), account ? account.passwordHash : DUMMY_PASSWORD_HASH) && !!account;
       // Only someone who knows the password learns the account is waiting.
       if (passwordMatches && account.status === "Pending") {
         sendJson(res, 403, { success: false, message: "Your account request is awaiting approval by a university administrator. You can sign in once it is approved." });
@@ -851,6 +913,7 @@ async function handleApi(req, res, url) {
       if (!passwordMatches || account.status !== "Active" || !account.role) {
         rateLimit.record("loginAccount", accountKey);
         rateLimit.record("loginAddress", ip);
+        rateLimit.record("loginUser", usernameKey);
         await db.recordAudit({
           userName: String(username || "").slice(0, 80), action: "LOGIN", entityType: "Session",
           status: "Failed", ip: clientIp(req)
@@ -901,10 +964,12 @@ async function handleApi(req, res, url) {
         sendJson(res, 422, { success: false, message: "Username must be 3-80 characters and use letters, numbers, dots, underscores, or hyphens." });
         return;
       }
-      if (!normalizedName || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || plainPassword.length < 8) {
-        sendJson(res, 422, { success: false, message: "Enter a full name, valid email, and password of at least 8 characters." });
+      if (!normalizedName || normalizedName.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.length > 190) {
+        sendJson(res, 422, { success: false, message: "Enter your full name and a valid email address." });
         return;
       }
+      const weakPassword = db.passwordProblem(plainPassword, { username: normalizedUsername, email: normalizedEmail });
+      if (weakPassword) { sendJson(res, 422, { success: false, message: weakPassword }); return; }
       if (await db.findUser(normalizedUsername)) {
         sendJson(res, 409, { success: false, message: "That username is already registered." });
         return;
@@ -966,7 +1031,7 @@ async function handleApi(req, res, url) {
       const account = await db.findActiveAccount(String(identifier || "").trim());
       if (account && account.email) {
         const { token, minutes } = await db.createPasswordReset(account.id);
-        const link = `${publicBaseUrl(req)}/login.html?reset=${token}`;
+        const link = `${publicBaseUrl()}/login.html?reset=${token}`;
         await mailer.send({
           to: account.email,
           purpose: "password-reset",
@@ -996,10 +1061,8 @@ async function handleApi(req, res, url) {
         sendJson(res, 422, { success: false, message: "This reset link is not valid. Request a new one." });
         return;
       }
-      if (newPassword.length < 8) {
-        sendJson(res, 422, { success: false, message: "Choose a password of at least 8 characters." });
-        return;
-      }
+      const weakPassword = db.passwordProblem(newPassword);
+      if (weakPassword) { sendJson(res, 422, { success: false, message: weakPassword }); return; }
       const userId = await db.consumePasswordReset(String(token), db.hashPassword(newPassword));
       if (!userId) {
         sendJson(res, 410, { success: false, message: "This reset link has expired or has already been used. Request a new one." });
@@ -1106,9 +1169,13 @@ async function handleApi(req, res, url) {
       sendJson(res, 422, { success: false, message: "Your current password is not correct." });
       return;
     }
-    if (next.length < 8) { sendJson(res, 422, { success: false, message: "New password must be at least 8 characters long." }); return; }
+    const weakPassword = db.passwordProblem(next, { username: user.username, email: user.email });
+    if (weakPassword) { sendJson(res, 422, { success: false, message: weakPassword }); return; }
     if (next === String(currentPassword || "")) { sendJson(res, 422, { success: false, message: "Choose a password different from your current one." }); return; }
     await db.changePassword(user.id, db.hashPassword(next));
+    // Any other device signed in with the old password is signed out; this
+    // session carries on.
+    await db.deleteOtherSessions(user.id, session.token);
     await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "UPDATE", entityType: "password", entityId: user.id, ip: clientIp(req) });
     sendJson(res, 200, { success: true, message: "Your password has been changed." });
     return;
@@ -1152,6 +1219,9 @@ async function handleApi(req, res, url) {
     const session = await requireUser(req, res);
     if (!session) return;
     const { user } = session;
+    const uploadWait = rateLimit.retryAfter("upload", user.id);
+    if (uploadWait) { tooManyAttempts(res, uploadWait); return; }
+    rateLimit.record("upload", user.id);
     let body;
     try { body = await readBody(req, 8 * 1024 * 1024); }
     catch (error) {
@@ -1266,32 +1336,56 @@ function tlsOptions() {
 }
 
 // Browser protections on every response:
-//  - the page may only load scripts, styles, fonts and data from this server
-//    (everything, Bootstrap included, is served from assets/vendor), so an
-//    injected <script src="https://evil..."> or a leak to another site fails;
+//  - pages may only load scripts, styles, fonts and data from this server
+//    (everything, Bootstrap included, is served from assets/vendor), and
+//    only scripts carrying the page's nonce run (see sendHtml), so neither
+//    an injected <script> nor an onclick="..." attribute can execute;
 //  - no other site may show USIAMS in a frame (clickjacking);
 //  - files are never "sniffed" into a different type, and links do not
 //    carry USIAMS addresses to other sites.
-// Inline scripts are still allowed: the pages use them (and onclick
-// attributes), so 'unsafe-inline' stays until those move into .js files.
+// Anything that is not a page (API replies, files) gets a policy that
+// allows nothing at all.
+function pageCsp(nonce) {
+  return [
+    "default-src 'self'", `script-src 'self' 'nonce-${nonce}'`, "script-src-attr 'none'",
+    "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:", "font-src 'self' data:",
+    "connect-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'"
+  ].join("; ");
+}
+
 const SECURITY_HEADERS = {
-  "Content-Security-Policy": [
-    "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:", "font-src 'self' data:", "connect-src 'self'", "object-src 'none'",
-    "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'"
-  ].join("; "),
+  "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
   "X-Frame-Options": "DENY",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "same-origin",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
   "Cross-Origin-Opener-Policy": "same-origin",
-  "Cross-Origin-Resource-Policy": "same-origin"
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "X-Permitted-Cross-Domain-Policies": "none",
+  "Origin-Agent-Cluster": "?1"
 };
 
+/** True when the visitor reached the site over HTTPS (directly or via a trusted proxy). */
+function overHttps(req) {
+  if (tlsEnabled()) return true;
+  return config.trustProxy && String(req.headers["x-forwarded-proto"] || "").split(",").pop().trim() === "https";
+}
+
 async function handleRequest(req, res) {
+  try {
+    await routeRequest(req, res);
+  } catch (error) {
+    // Nothing a request does may take the server down.
+    console.error("USIAMS request failed:", error.message);
+    if (!res.headersSent) sendJson(res, error.status || 500, { success: false, message: error.status ? error.message : "An unexpected server error occurred." });
+    else res.destroy();
+  }
+}
+
+async function routeRequest(req, res) {
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value);
   // Over HTTPS, tell browsers never to fall back to plain HTTP.
-  if (tlsEnabled()) res.setHeader("Strict-Transport-Security", "max-age=31536000");
+  if (overHttps(req)) res.setHeader("Strict-Transport-Security", "max-age=31536000");
   const rawPath = String(req.url || "/").split("?")[0];
   let decodedPath;
   try {
@@ -1304,22 +1398,29 @@ async function handleRequest(req, res) {
     sendJson(res, 404, { success: false, message: "Resource not found." });
     return;
   }
-  const url = new URL(req.url, `http://${req.headers.host || `${config.host}:${config.port}`}`);
+  // Parsed against a fixed base: the Host header is the client's to write,
+  // and a malformed one must not be able to break the request.
+  let url;
+  try { url = new URL(String(req.url || "/"), "http://usiams.invalid"); }
+  catch { sendJson(res, 400, { success: false, message: "Invalid request." }); return; }
   if (url.pathname.startsWith("/api/")) {
-    try {
-      await handleApi(req, res, url);
-    } catch (error) {
-      console.error("USIAMS API request failed:", error.message);
-      if (!res.headersSent) {
-        sendJson(res, error.status || 500, { success: false, message: error.status ? error.message : "An unexpected server error occurred." });
-      }
-    }
+    await handleApi(req, res, url);
     return;
   }
   serveStatic(req, res, url.pathname);
 }
 
 const server = tlsEnabled() ? https.createServer(tlsOptions(), handleRequest) : http.createServer(handleRequest);
+
+// Slow or stalled clients cannot hold connections open indefinitely.
+server.headersTimeout = 20 * 1000;
+server.requestTimeout = 120 * 1000;
+server.keepAliveTimeout = 5 * 1000;
+server.maxHeadersCount = 100;
+
+// A last line of defence: a stray promise rejection is logged instead of
+// ending the process (Node's default), which would take the site offline.
+process.on("unhandledRejection", error => console.error("USIAMS unhandled rejection:", error && error.message));
 
 server.on("error", error => {
   if (error.code === "EADDRINUSE") {

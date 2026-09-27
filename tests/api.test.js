@@ -284,21 +284,86 @@ const { check, finish, call, login } = require("./helpers");
   const resetToken = crypto.randomBytes(32).toString("hex");
   await repo.query("INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, NOW() + INTERVAL 10 MINUTE)",
     [crypto.createHash("sha256").update(resetToken).digest("hex"), student.user.id]);
-  const reset = await call("/api/auth/reset-password", { method: "POST", body: { token: resetToken, password: "student-new-1" } });
+  const reset = await call("/api/auth/reset-password", { method: "POST", body: { token: resetToken, password: "Violet-Harbour-731" } });
   check("a valid reset token sets the password", reset.status === 200, JSON.stringify(reset.json));
-  const reused = await call("/api/auth/reset-password", { method: "POST", body: { token: resetToken, password: "student-new-2" } });
+  const reused = await call("/api/auth/reset-password", { method: "POST", body: { token: resetToken, password: "Violet-Harbour-732" } });
   check("a reset token works only once", reused.status === 410, String(reused.status));
   check("resetting signs out existing sessions", (await call("/api/auth/me", { token: student.token })).status === 401);
-  check("the new password signs in", !!(await login("student", "student-new-1")).token);
+  check("the new password signs in", !!(await login("student", "Violet-Harbour-731")).token);
   const expired = crypto.randomBytes(32).toString("hex");
   await repo.query("INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, NOW() - INTERVAL 1 MINUTE)",
     [crypto.createHash("sha256").update(expired).digest("hex"), student.user.id]);
   check("an expired reset token is refused",
-    (await call("/api/auth/reset-password", { method: "POST", body: { token: expired, password: "student-new-3" } })).status === 410);
+    (await call("/api/auth/reset-password", { method: "POST", body: { token: expired, password: "Violet-Harbour-733" } })).status === 410);
   const [stored] = await repo.query("SELECT password_hash AS h FROM users WHERE id = ?", [student.user.id]);
   check("passwords are stored with their own salt", /^scrypt\$[0-9a-f]{32}\$[0-9a-f]{128}$/.test(stored.h));
   const [sessionRow] = await repo.query("SELECT COUNT(*) AS n FROM user_sessions WHERE token_hash = ?", [admin.token]);
   check("session tokens are not stored in plain text", sessionRow.n === 0);
+
+  console.log("\n== Attack resistance ==");
+  const http = require("node:http");
+  const net = require("node:net");
+  const base = new URL(process.env.BASE || "http://127.0.0.1:3311");
+  // fetch() will not send a forged Host header, so these use raw requests.
+  const rawRequest = (options, body) => new Promise((resolve, reject) => {
+    const req = http.request({ host: base.hostname, port: base.port, ...options }, res => {
+      let text = ""; res.on("data", c => { text += c; }); res.on("end", () => resolve({ status: res.statusCode, headers: res.headers, text }));
+    });
+    req.on("error", reject);
+    if (body) req.write(body);
+    req.end();
+  });
+
+  // Host-header poisoning: the reset link must not point at the attacker.
+  await rawRequest({ method: "POST", path: "/api/auth/forgot-password", headers: { Host: "evil.example", "Content-Type": "application/json" } },
+    JSON.stringify({ identifier: "admin" }));
+  const [lastMail] = await repo.query("SELECT body FROM outbound_messages ORDER BY created_at DESC, id DESC LIMIT 1");
+  check("a forged Host header does not reach the reset link", !!lastMail && !String(lastMail.body).includes("evil.example"));
+
+  // A malformed request line or Host header must not crash the server.
+  await new Promise(resolve => {
+    const socket = net.connect(Number(base.port), base.hostname, () => socket.end("GET /%%%/ HTTP/1.1\r\nHost: a b\r\nConnection: close\r\n\r\n"));
+    socket.on("data", () => {}); socket.on("close", resolve); socket.on("error", resolve);
+  });
+  check("the server survives a malformed request", (await call("/api/health")).status === 200);
+
+  // Pages run only their own scripts.
+  const page = await rawRequest({ method: "GET", path: "/login.html" });
+  const policy = String(page.headers["content-security-policy"] || "");
+  const nonce = (policy.match(/'nonce-([^']+)'/) || [])[1];
+  check("pages send a nonce-based script policy", !!nonce && !/script-src[^;]*'unsafe-inline'/.test(policy), policy);
+  check("every script on the page carries that nonce",
+    !!nonce && (page.text.match(/<script\b/g) || []).length === (page.text.match(new RegExp(`<script nonce="${nonce.replace(/[+/=]/g, "\\$&")}"`, "g")) || []).length);
+  check("inline event handlers are blocked", policy.includes("script-src-attr 'none'"));
+  const api = await rawRequest({ method: "GET", path: "/api/health" });
+  check("API replies allow nothing to run", String(api.headers["content-security-policy"] || "").startsWith("default-src 'none'"));
+  check("static files refuse other methods", (await rawRequest({ method: "POST", path: "/index.html" })).status === 405);
+
+  // A weak new password is refused when changing it.
+  const lecturerForChange = await login("lecturer", "lecturer123");
+  const weakChange = await call("/api/auth/change-password", {
+    method: "POST", token: lecturerForChange.token, body: { currentPassword: "lecturer123", newPassword: "password2026" }
+  });
+  check("change-password refuses a common password", weakChange.status === 422, String(weakChange.status));
+
+  // Demoting an account ends its sessions at once.
+  const stamp = Date.now().toString(36).slice(-6);
+  const created = await call("/api/data/users", {
+    method: "POST", token: admin.token,
+    body: { username: `demote${stamp}`, name: "Demotion Test", email: `demote${stamp}@x.ac.tz`, role: "FINANCE_OFFICER", status: "Active", password: "Quiet-Orchard-814" }
+  });
+  check("an administrator can add an account with a strong password", created.status === 201, JSON.stringify(created.json));
+  const weakAccount = await call("/api/data/users", {
+    method: "POST", token: admin.token,
+    body: { username: `weak${stamp}`, name: "Weak Test", email: `weak${stamp}@x.ac.tz`, role: "LIBRARIAN", status: "Active", password: "welcome123" }
+  });
+  check("an administrator cannot give an account a weak password", weakAccount.status === 422, String(weakAccount.status));
+  if (created.status === 201) {
+    const demoted = await login(`demote${stamp}`, "Quiet-Orchard-814");
+    await call("/api/data/users/" + created.json.data.id, { method: "PATCH", token: admin.token, body: { role: "LIBRARIAN" } });
+    check("changing an account's role signs it out", (await call("/api/auth/me", { token: demoted.token })).status === 401);
+    await call("/api/data/users/" + created.json.data.id, { method: "DELETE", token: admin.token });
+  }
   await repo.pool.end();
 
   finish();

@@ -100,12 +100,12 @@ function keysOf(list) {
   const created = await call("/api/data/users", {
     method: "POST", token: admin.token,
     body: { name: "Shape Test", username: "shapetest", email: "shape.test@usiams.ac.tz",
-            role: "LECTURER", password: "changeme123", status: "Active", lastLogin: null }
+            role: "LECTURER", password: "Amber-Canyon-58", status: "Active", lastLogin: null }
   });
   check("admin creates an account", created.status === 201, JSON.stringify(created.json).slice(0, 200));
   check("the new account's role was saved", created.json.data && created.json.data.role === "LECTURER",
     created.json.data && created.json.data.role);
-  const canSignIn = await login("shapetest", "changeme123");
+  const canSignIn = await login("shapetest", "Amber-Canyon-58");
   check("the temporary password actually works", !!canSignIn.token, JSON.stringify(canSignIn).slice(0, 120));
   check("the password was hashed, not stored as typed", !!canSignIn.token);
 

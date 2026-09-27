@@ -102,7 +102,7 @@
           </tbody></table>
           <p class="text-muted-usi" style="font-size:.78rem;">Due Date: ${util.formatDate(invoice.dueDate)}</p>
         </div>
-        <div class="modal-footer no-print"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button><button class="btn btn-primary" style="background:var(--primary);border-color:var(--primary);" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print</button></div>
+        <div class="modal-footer no-print"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button><button class="btn btn-primary" style="background:var(--primary);border-color:var(--primary);" data-ui-action="print"><i class="bi bi-printer me-1"></i>Print</button></div>
       </div></div></div>
     `);
   }
@@ -124,7 +124,7 @@
           </tbody></table>
           <p class="text-muted-usi" style="font-size:.78rem;">Paid through GePG, the Government Electronic Payment Gateway. This is a simulated receipt for demonstration purposes only.</p>
         </div>
-        <div class="modal-footer no-print"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button><button class="btn btn-primary" style="background:var(--primary);border-color:var(--primary);" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print Receipt</button></div>
+        <div class="modal-footer no-print"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button><button class="btn btn-primary" style="background:var(--primary);border-color:var(--primary);" data-ui-action="print"><i class="bi bi-printer me-1"></i>Print Receipt</button></div>
       </div></div></div>
     `);
   }

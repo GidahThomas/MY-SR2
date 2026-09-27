@@ -254,7 +254,7 @@
 
   function temporaryPassword() {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-    const bytes = new Uint32Array(10);
+    const bytes = new Uint32Array(14);
     window.crypto.getRandomValues(bytes);
     return Array.from(bytes, b => alphabet[b % alphabet.length]).join("");
   }
@@ -285,7 +285,7 @@
                 <input class="form-control" id="nuPassword" value="${temporaryPassword()}" autocomplete="off">
                 <button class="btn btn-outline-secondary" type="button" id="nuRegenPassword" title="Generate another"><i class="bi bi-arrow-repeat"></i></button>
               </div>
-              <div class="form-text">Share this with the user; at least 8 characters.</div>
+              <div class="form-text">Share this with the user privately; they should change it after signing in. At least 10 characters.</div>
             </div>
           </div>
           <div id="nuFormError" class="alert alert-danger mt-3 d-none"></div>
@@ -342,7 +342,7 @@
       if (!role) return fail("Please select a role for this user.");
       if (!scopeWrap.classList.contains("d-none") && !scope) return fail(`Please select a ${scopeLabel.textContent.toLowerCase()} for this role.`);
       if (!name || !username || !util.validateEmail(email)) return fail("Please complete all fields with a valid email address.");
-      if (password.length < 8) return fail("The temporary password must be at least 8 characters.");
+      if (password.length < 10) return fail("The temporary password must be at least 10 characters.");
       if (existing.some(u => u.username.toLowerCase() === username.toLowerCase())) return fail("This username is already taken.");
       if (existing.some(u => (u.email || "").toLowerCase() === email.toLowerCase())) return fail("Another account already uses this email address.");
 

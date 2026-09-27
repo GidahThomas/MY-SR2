@@ -48,12 +48,12 @@ async function renderAs(file, session) {
     programmes.status === 200 && programmes.json.data.length > 0, String(programmes.status));
 
   const missingProgramme = await call("/api/auth/register", {
-    method: "POST", body: { username: username + "a", fullName: "No Programme", email: `${username}a@x.ac.tz`, password: "password123" }
+    method: "POST", body: { username: username + "a", fullName: "No Programme", email: `${username}a@x.ac.tz`, password: "Mango-River-Lamp-42" }
   });
   check("registration without a programme is refused", missingProgramme.status === 422, String(missingProgramme.status));
 
   const badProgramme = await call("/api/auth/register", {
-    method: "POST", body: { username: username + "b", fullName: "Bad Programme", email: `${username}b@x.ac.tz`, password: "password123", programmeId: "NOT-A-PROGRAMME" }
+    method: "POST", body: { username: username + "b", fullName: "Bad Programme", email: `${username}b@x.ac.tz`, password: "Mango-River-Lamp-42", programmeId: "NOT-A-PROGRAMME" }
   });
   check("an unknown programme is refused", badProgramme.status === 422, String(badProgramme.status));
 
@@ -61,20 +61,26 @@ async function renderAs(file, session) {
     method: "POST", body: { username: username + "c", fullName: "Short Pass", email: `${username}c@x.ac.tz`, password: "short", programmeId: "BSCS" }
   });
   check("a short password is refused", shortPassword.status === 422, String(shortPassword.status));
+  for (const weak of ["Tanzania2026!", "1234567890", `${username}w-2026`]) {
+    const refused = await call("/api/auth/register", {
+      method: "POST", body: { username: username + "w", fullName: "Weak Pass", email: `${username}w@x.ac.tz`, password: weak, programmeId: "BSCS" }
+    });
+    check(`a weak password (${weak.replace(username + "w", "<username>")}) is refused`, refused.status === 422, String(refused.status));
+  }
 
   const registered = await call("/api/auth/register", {
-    method: "POST", body: { username, fullName: "Neema Testerson", email, password: "password123", programmeId: "BSCS" }
+    method: "POST", body: { username, fullName: "Neema Testerson", email, password: "Mango-River-Lamp-42", programmeId: "BSCS" }
   });
   check("the account is created", registered.status === 201, JSON.stringify(registered.json));
   check("a student record was created with it", !!(registered.json && registered.json.studentId),
     JSON.stringify(registered.json));
 
   const duplicate = await call("/api/auth/register", {
-    method: "POST", body: { username, fullName: "Copy", email: `other${stamp}@x.ac.tz`, password: "password123", programmeId: "BSCS" }
+    method: "POST", body: { username, fullName: "Copy", email: `other${stamp}@x.ac.tz`, password: "Mango-River-Lamp-42", programmeId: "BSCS" }
   });
   check("the same username cannot be taken twice", duplicate.status === 409, String(duplicate.status));
   const duplicateEmail = await call("/api/auth/register", {
-    method: "POST", body: { username: username + "d", fullName: "Copy", email, password: "password123", programmeId: "BSCS" }
+    method: "POST", body: { username: username + "d", fullName: "Copy", email, password: "Mango-River-Lamp-42", programmeId: "BSCS" }
   });
   check("the same email cannot be taken twice", duplicateEmail.status === 409, String(duplicateEmail.status));
 
@@ -84,10 +90,10 @@ async function renderAs(file, session) {
   for (const role of ["LECTURER", "FINANCE_OFFICER", "UNIVERSITY_ADMIN", "SYSTEM_ADMIN"]) {
     const staffName = `staff${role.toLowerCase().replace(/_/g, "")}${stamp}`.slice(0, 40);
     const staff = await call("/api/auth/register", {
-      method: "POST", body: { role, username: staffName, fullName: "Self Made Staff", email: `${staffName}@x.ac.tz`, password: "password123", departmentId: "DCSE" }
+      method: "POST", body: { role, username: staffName, fullName: "Self Made Staff", email: `${staffName}@x.ac.tz`, password: "Mango-River-Lamp-42", departmentId: "DCSE" }
     });
     check(`a ${role} sign-up is refused`, staff.status === 403, String(staff.status));
-    const signIn = await call("/api/auth/login", { method: "POST", body: { username: staffName, password: "password123" } });
+    const signIn = await call("/api/auth/login", { method: "POST", body: { username: staffName, password: "Mango-River-Lamp-42" } });
     check(`no ${role} account was created`, signIn.status === 401, String(signIn.status));
   }
 
@@ -100,7 +106,7 @@ async function renderAs(file, session) {
     method: "POST",
     body: {
       username: `race${batch}${i}`, fullName: `Race Test ${i}`,
-      email: `race${batch}${i}@students.usiams.ac.tz`, password: "password123", programmeId: "BSCS"
+      email: `race${batch}${i}@students.usiams.ac.tz`, password: "Mango-River-Lamp-42", programmeId: "BSCS"
     }
   })));
   check("every concurrent registration succeeds", together.every(r => r.status === 201),
@@ -115,7 +121,7 @@ async function renderAs(file, session) {
   }
 
   console.log("\n== Signing in as the new student ==");
-  const session = await login(username, "password123");
+  const session = await login(username, "Mango-River-Lamp-42");
   check("the new account signs in", !!session);
   check("the session carries a studentId", !!session.user.studentId, JSON.stringify(session.user));
   check("the role is STUDENT", session.user.role === "STUDENT");

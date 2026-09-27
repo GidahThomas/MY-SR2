@@ -4,11 +4,15 @@
    cannot be guessed at speed and the forms cannot be flooded.
 
      sign-in         10 wrong passwords per username per address, and
-                     50 per address, in 15 minutes
+                     50 per address, in 15 minutes; 30 per username from
+                     any address in an hour
      forgot/reset    10 per address in 15 minutes
      sign-up         20 per address per hour
      admissions      20 per address per hour
      change password 10 wrong current passwords per account in 15 minutes
+     API             600 requests a minute per session (or per address
+                     without one); 60 bad session tokens a minute per address
+     uploads         40 files per account per hour
 
    Counts are kept in memory: a restart clears them, and each server
    process counts on its own.
@@ -19,7 +23,11 @@ const WINDOWS = {
   passwordReset: { max: 10, ms: 15 * 60 * 1000 },
   register: { max: 20, ms: 60 * 60 * 1000 },
   admissions: { max: 20, ms: 60 * 60 * 1000 },
-  changePassword: { max: 10, ms: 15 * 60 * 1000 }
+  changePassword: { max: 10, ms: 15 * 60 * 1000 },
+  loginUser: { max: 30, ms: 60 * 60 * 1000 },
+  api: { max: 600, ms: 60 * 1000 },
+  badToken: { max: 60, ms: 60 * 1000 },
+  upload: { max: 40, ms: 60 * 60 * 1000 }
 };
 
 const hits = new Map(); // "kind|key" -> [timestamps]

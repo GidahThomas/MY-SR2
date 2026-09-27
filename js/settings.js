@@ -48,7 +48,7 @@
       const confirm = document.getElementById("confirmPassword").value;
       const errorBox = document.getElementById("passwordFormError");
       if (!current || !next || !confirm) { errorBox.textContent = "Please fill in all password fields."; errorBox.classList.remove("d-none"); return; }
-      if (next.length < 8) { errorBox.textContent = "New password must be at least 8 characters long."; errorBox.classList.remove("d-none"); return; }
+      if (next.length < 10) { errorBox.textContent = "New password must be at least 10 characters long."; errorBox.classList.remove("d-none"); return; }
       if (next !== confirm) { errorBox.textContent = "New password and confirmation do not match."; errorBox.classList.remove("d-none"); return; }
       errorBox.classList.add("d-none");
       const submit = document.querySelector("#passwordForm [type=submit]");

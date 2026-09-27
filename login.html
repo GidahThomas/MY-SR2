@@ -156,8 +156,8 @@
           </div>
           <div id="resetChooseStep" class="d-none">
             <p class="text-muted-usi" style="font-size:.83rem;">Choose a new password for your account.</p>
-            <div class="mb-3"><label class="form-label" for="resetPassword">New password</label><input class="form-control" id="resetPassword" type="password" minlength="8" autocomplete="new-password"></div>
-            <div><label class="form-label" for="resetPasswordConfirm">Confirm new password</label><input class="form-control" id="resetPasswordConfirm" type="password" minlength="8" autocomplete="new-password"></div>
+            <div class="mb-3"><label class="form-label" for="resetPassword">New password</label><input class="form-control" id="resetPassword" type="password" minlength="10" autocomplete="new-password"></div>
+            <div><label class="form-label" for="resetPasswordConfirm">Confirm new password</label><input class="form-control" id="resetPasswordConfirm" type="password" minlength="10" autocomplete="new-password"></div>
           </div>
         </div>
         <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary" id="resetPasswordSubmit">Send Reset Link</button></div>
@@ -195,10 +195,10 @@
               pattern="[A-Za-z0-9._\-]{3,80}" title="3 or more letters or numbers; dots, underscores and hyphens are allowed, spaces are not.">
             <div class="form-text">You sign in with this. At least 3 letters or numbers, no spaces (e.g. neema.john).</div>
           </div>
-          <div class="mb-3"><label class="form-label" for="createPassword">Password</label><input class="form-control" id="createPassword" type="password" required minlength="8" autocomplete="new-password">
-            <div class="form-text">At least 8 characters.</div>
+          <div class="mb-3"><label class="form-label" for="createPassword">Password</label><input class="form-control" id="createPassword" type="password" required minlength="10" autocomplete="new-password">
+            <div class="form-text">At least 10 characters. Avoid common passwords and your name or username - a short phrase like <em>blue-mango-river-42</em> is strong and easy to remember.</div>
           </div>
-          <div class="mb-2"><label class="form-label" for="createPasswordConfirm">Confirm password</label><input class="form-control" id="createPasswordConfirm" type="password" required minlength="8" autocomplete="new-password"></div>
+          <div class="mb-2"><label class="form-label" for="createPasswordConfirm">Confirm password</label><input class="form-control" id="createPasswordConfirm" type="password" required minlength="10" autocomplete="new-password"></div>
           <div class="form-check"><input class="form-check-input" type="checkbox" id="createShowPassword"><label class="form-check-label" for="createShowPassword">Show passwords</label></div>
         </div>
         <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary" id="createAccountSubmit">Create Account</button></div>

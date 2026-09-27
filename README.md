@@ -75,7 +75,8 @@ All settings live in `.env`; `.env.example` lists each one with an explanation.
 |---|---|
 | `HOST`, `PORT` | Where the server listens. Use `HOST=0.0.0.0` to let other computers on the network connect. |
 | `DB_*` | Database connection. |
-| `SESSION_TTL_HOURS` | How long a sign-in lasts (default 8). |
+| `SESSION_TTL_HOURS` | How long a sign-in lasts at most (default 8). |
+| `SESSION_IDLE_MINUTES` | A sign-in also ends after this long without activity (default 60). |
 | `PUBLIC_URL` | The site's address, used in links sent by email and in the link preview WhatsApp and social media show. |
 | `UNIVERSITY_NAME`, `CONTACT_EMAIL`, `CONTACT_PHONE`, `CONTACT_ADDRESS`, `CONTACT_WEBSITE`, `OFFICE_HOURS` | The institution shown on the public home page. Anything unset is left off the page. |
 | `SITE_LOGO`, `CAMPUS_PHOTO` | Crest and campus photo for the home page, as paths under `assets/` (e.g. `assets/images/crest.png`). |
@@ -127,12 +128,14 @@ tests/               test suites; tests/helpers.js holds what they share
 
 ## Security
 
-- **Passwords:** scrypt, each with its own random salt.
-- **Sessions:** stored in the database as token hashes; suspending an account signs it out at once.
-- **Sign-in limits:** 10 wrong passwords per username (50 per address) in 15 minutes, then a short lock-out. Sign-up, password-reset and admission forms are limited too.
+- **Passwords:** scrypt, each with its own random salt. Every new password (sign-up, reset, change, or set by an administrator) must be at least 10 characters, must not be a well-known password or a common word with digits added (`password123`, `Tanzania2026`), a sequence, or contain the username or email name (`db/passwords.js`).
+- **Sessions:** stored in the database as token hashes. A session ends after 60 minutes idle (`SESSION_IDLE_MINUTES`) and 8 hours at most. Suspending an account, changing its role or scope, or setting its password signs it out at once; changing your own password signs out your other devices.
+- **Sign-in limits:** 10 wrong passwords per username per address (50 per address) in 15 minutes, and 30 per username from any address in an hour, then a lock-out. A wrong username takes as long to reject as a wrong password, so timing does not reveal which accounts exist. Sign-up, password-reset and admission forms are limited too.
+- **Request limits:** 600 API requests a minute per session or address, 60 invalid session tokens a minute per address, 40 uploads per account an hour; slow or stalled connections are cut off.
 - **Forgot password:** a one-time link valid for 30 minutes; the form never reveals whether an account exists.
 - **Authorisation on the server for every request.** Students see only their own records, and on those they may change only what their pages offer (`db/student-rules.js`): they cannot approve their own registration, verify their own documents, clear their own graduation, grade their own work, mark a library book returned, or confirm their own fee payment.
-- **Browser protections:** a Content-Security-Policy that only allows this server's own scripts, styles and fonts; pages cannot be framed by other sites; no MIME sniffing; no referrer leaks.
+- **Browser protections:** a Content-Security-Policy with a fresh random nonce per page, so only the page's own scripts run: injected `<script>` tags and `onclick="..."` attributes are refused by the browser. API replies and files carry a policy that allows nothing. Pages cannot be framed by other sites; no MIME sniffing; no referrer leaks; HSTS whenever the site is reached over HTTPS.
+- **Request handling:** reset-password links are built from `PUBLIC_URL`, never from the request's `Host` header; malformed requests are answered with an error instead of stopping the server; JSON keys such as `__proto__` are dropped; static files answer only GET and HEAD.
 - **SQL injection:** every query uses placeholders; table and column names come only from the resource registry.
 - **Audit log:** every change and every failed sign-in is recorded, with the client's real address.
 - **Tests run in their own database,** never against the live one.

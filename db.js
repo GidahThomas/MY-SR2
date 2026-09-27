@@ -11,8 +11,9 @@
    propagates so the caller can report the outage honestly.
    ========================================================= */
 const crypto = require("node:crypto");
+const { config } = require("./config");
 const { pool, query } = require("./db/repository");
-const { hashPassword, verifyPassword, needsRehash } = require("./db/passwords");
+const { hashPassword, verifyPassword, needsRehash, passwordProblem } = require("./db/passwords");
 
 
 async function health() {
@@ -486,20 +487,38 @@ async function changePassword(userId, passwordHash) {
 // ---------------------------------------------------------------------
 const sha256 = value => crypto.createHash("sha256").update(String(value)).digest("hex");
 
-async function createSession({ token, user, ip, ttlMs }) {
+// A session ends after SESSION_IDLE_MINUTES without a request (a computer
+// left signed in in a lab), and in any case SESSION_TTL_HOURS after sign-in.
+// expires_at always holds the earlier of the two.
+const seconds = ms => Math.max(1, Math.round(ms / 1000));
+
+async function createSession({ token, user, ip, ttlMs, idleMs = config.sessionIdleMs }) {
   await query(
     "INSERT INTO user_sessions (token_hash, user_id, user_json, ip_address, expires_at) VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND))",
-    [sha256(token), user.id, JSON.stringify(user), ip || null, Math.max(1, Math.round(ttlMs / 1000))]
+    [sha256(token), user.id, JSON.stringify(user), ip || null, seconds(Math.min(ttlMs, idleMs))]
   );
 }
 
-/** The session's user, or null when the token is unknown or expired. */
+/**
+ * The session's user, or null when the token is unknown or expired. Use
+ * pushes the idle deadline back - at most every five minutes, so a busy page
+ * does not write on every request - but never past the absolute limit.
+ */
 async function findSession(token) {
+  const hash = sha256(token);
   const rows = await query(
-    "SELECT user_json AS userJson FROM user_sessions WHERE token_hash = ? AND expires_at > NOW() LIMIT 1",
-    [sha256(token)]
+    "SELECT user_json AS userJson, TIMESTAMPDIFF(SECOND, NOW(), expires_at) AS secondsLeft FROM user_sessions WHERE token_hash = ? AND expires_at > NOW() LIMIT 1",
+    [hash]
   );
-  return rows[0] ? JSON.parse(rows[0].userJson) : null;
+  if (!rows[0]) return null;
+  const idle = seconds(config.sessionIdleMs);
+  if (Number(rows[0].secondsLeft) < idle - 300) {
+    await query(
+      "UPDATE user_sessions SET expires_at = LEAST(DATE_ADD(created_at, INTERVAL ? SECOND), DATE_ADD(NOW(), INTERVAL ? SECOND)) WHERE token_hash = ?",
+      [seconds(config.sessionTtlMs), idle, hash]
+    );
+  }
+  return JSON.parse(rows[0].userJson);
 }
 
 async function deleteSession(token) {
@@ -509,6 +528,11 @@ async function deleteSession(token) {
 async function deleteSessionsFor(userId) {
   const [result] = await pool.execute("DELETE FROM user_sessions WHERE user_id = ?", [userId]);
   return result.affectedRows;
+}
+
+/** Every session of an account except the one making the request. */
+async function deleteOtherSessions(userId, keepToken) {
+  await query("DELETE FROM user_sessions WHERE user_id = ? AND token_hash <> ?", [userId, sha256(keepToken)]);
 }
 
 async function purgeExpiredSessions() {
@@ -666,8 +690,8 @@ async function recordAudit({ userId, userName, userRole, action, entityType, ent
 }
 
 module.exports = {
-  query, health, hashPassword, verifyPassword, needsRehash, findUser, findUserByEmail, recordLogin, createStudentAccount,
-  createSession, findSession, deleteSession, deleteSessionsFor, purgeExpiredSessions,
+  query, health, hashPassword, verifyPassword, needsRehash, passwordProblem, findUser, findUserByEmail, recordLogin, createStudentAccount,
+  createSession, findSession, deleteSession, deleteSessionsFor, deleteOtherSessions, purgeExpiredSessions,
   findActiveAccount, createPasswordReset, consumePasswordReset,
   getPreferences, savePreferences, getSystemSettings, saveSystemSettings, passwordHashFor, changePassword,
   saveFile, getFileInfo, getFileContent,

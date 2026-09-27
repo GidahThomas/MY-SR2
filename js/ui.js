@@ -187,10 +187,28 @@
     if (eye) eye.className = `bi ${revealed ? "bi-eye-slash" : "bi-eye"} private-eye`;
   }
 
+  // Buttons say what they do with data-ui-action (print, back, reload) or
+  // data-ui-click="#id" (click another element, e.g. a hidden file input)
+  // instead of onclick="...": the Content-Security-Policy forbids inline
+  // script, so an injected onclick attribute can never run.
+  const UI_ACTIONS = {
+    print: () => global.print(),
+    back: () => global.history.back(),
+    reload: () => global.location.reload()
+  };
+
   if (global.document) {
     global.document.addEventListener("click", event => {
-      const button = event.target.closest && event.target.closest(".private-value");
+      if (!event.target.closest) return;
+      const button = event.target.closest(".private-value");
       if (button) togglePrivateValue(button);
+      const action = event.target.closest("[data-ui-action]");
+      if (action && UI_ACTIONS[action.dataset.uiAction]) UI_ACTIONS[action.dataset.uiAction]();
+      const proxy = event.target.closest("[data-ui-click]");
+      if (proxy) {
+        const target = global.document.querySelector(proxy.dataset.uiClick);
+        if (target) target.click();
+      }
     });
   }
 
