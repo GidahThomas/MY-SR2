@@ -13,6 +13,7 @@ const https = require("node:https");
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const zlib = require("node:zlib");
 const { config } = require("./config");
 const db = require("./db");
 const repo = require("./db/repository");
@@ -65,13 +66,35 @@ function publicUser(account) {
   };
 }
 
+// ---------------------------------------------------------------------
+// Compression. Over a slow connection or a tunnel, size is most of the
+// wait: text compresses to about a fifth. Bodies are gzipped when the
+// browser accepts it and they are big enough to be worth it.
+// ---------------------------------------------------------------------
+function acceptsGzip(req) {
+  return !!req && /\bgzip\b/.test(String(req.headers["accept-encoding"] || ""));
+}
+
+/** Sends a text body, gzipped when worthwhile; HEAD gets headers only. */
+function sendBody(res, status, headers, body) {
+  const req = res.req;
+  let payload = Buffer.isBuffer(body) ? body : Buffer.from(String(body));
+  const out = { ...headers, Vary: "Accept-Encoding" };
+  if (payload.length > 1024 && acceptsGzip(req)) {
+    payload = zlib.gzipSync(payload);
+    out["Content-Encoding"] = "gzip";
+  }
+  out["Content-Length"] = payload.length;
+  res.writeHead(status, out);
+  res.end(req && req.method === "HEAD" ? undefined : payload);
+}
+
 function sendJson(res, status, body) {
-  res.writeHead(status, {
+  sendBody(res, status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff"
-  });
-  res.end(JSON.stringify(body));
+  }, JSON.stringify(body));
 }
 
 function getToken(req) {
@@ -825,8 +848,31 @@ function isPublicPath(relativePath) {
 function sendHtml(res, status, html) {
   const nonce = crypto.randomBytes(16).toString("base64");
   res.setHeader("Content-Security-Policy", pageCsp(nonce));
-  res.writeHead(status, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
-  res.end(html.replace(/<script\b/gi, `<script nonce="${nonce}"`));
+  // Pages are never stored: each carries its own nonce and may reflect
+  // who is signed in.
+  sendBody(res, status, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+    html.replace(/<script\b/gi, `<script nonce="${nonce}"`));
+}
+
+// Static files: how long a browser may reuse its copy without asking.
+// Third-party libraries, fonts and images do not change between releases;
+// the app's own scripts and styles are reused for a few minutes, then
+// re-checked with the ETag below (a cheap "304 Not Modified" when unchanged).
+function cacheControlFor(relativePath) {
+  const file = relativePath.replace(/\\/g, "/");
+  if (/^assets\/(vendor|icons|images)\//.test(file)) return "public, max-age=604800";
+  return "public, max-age=300, must-revalidate";
+}
+
+const COMPRESSIBLE = /^(text\/|application\/(javascript|json)|image\/svg\+xml)/;
+const gzipCache = new Map(); // file path -> { mtimeMs, data }
+
+function gzippedFile(filePath, stat) {
+  const cached = gzipCache.get(filePath);
+  if (cached && cached.mtimeMs === stat.mtimeMs) return cached.data;
+  const data = zlib.gzipSync(fs.readFileSync(filePath), { level: 9 });
+  gzipCache.set(filePath, { mtimeMs: stat.mtimeMs, data });
+  return data;
 }
 
 function serveStatic(req, res, pathname) {
@@ -856,9 +902,31 @@ function serveStatic(req, res, pathname) {
   // Pages get their shared stylesheet and script lists filled in
   // (page-includes.js); every other file is sent as it is.
   if (path.extname(filePath).toLowerCase() === ".html") { sendHtml(res, 200, pageIncludes.pageHtml(filePath, ROOT)); return; }
-  // no-cache: the browser re-checks every file, so an edited page or script
-  // is picked up on the next reload instead of a stale copy being reused.
-  res.writeHead(200, { "Content-Type": `${contentType(filePath)}; charset=utf-8`, "Cache-Control": "no-cache" });
+
+  const stat = fs.statSync(filePath);
+  const type = contentType(filePath);
+  const etag = `W/"${stat.size.toString(36)}-${Math.floor(stat.mtimeMs).toString(36)}"`;
+  const headers = {
+    "Content-Type": type.startsWith("text/") || /javascript|json|svg/.test(type) ? `${type}; charset=utf-8` : type,
+    "Cache-Control": cacheControlFor(relativePath),
+    ETag: etag,
+    "Last-Modified": stat.mtime.toUTCString(),
+    Vary: "Accept-Encoding"
+  };
+  // The browser already has this version.
+  if (String(req.headers["if-none-match"] || "").split(",").map(s => s.trim()).includes(etag)) {
+    res.writeHead(304, headers);
+    res.end();
+    return;
+  }
+  if (COMPRESSIBLE.test(type) && stat.size > 1024 && acceptsGzip(req)) {
+    const data = gzippedFile(filePath, stat);
+    res.writeHead(200, { ...headers, "Content-Encoding": "gzip", "Content-Length": data.length });
+    res.end(req.method === "HEAD" ? undefined : data);
+    return;
+  }
+  res.writeHead(200, { ...headers, "Content-Length": stat.size });
+  if (req.method === "HEAD") { res.end(); return; }
   fs.createReadStream(filePath).pipe(res);
 }
 
