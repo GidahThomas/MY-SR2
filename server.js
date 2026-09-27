@@ -32,27 +32,10 @@ function tooManyAttempts(res, seconds) {
 
 const ROOT = __dirname;
 
-// Roles a visitor may request on the public Create Account form, and the
-// scope each needs. A student account is usable at once; every staff role
-// is created Pending and waits for an administrator. University and System
-// Admin are deliberately absent - only an existing administrator can grant
-// those, from Administration > Users.
-const SELF_REGISTER_ROLES = {
-  STUDENT: { label: "Student", scope: "programme" },
-  LECTURER: { label: "Lecturer", scope: "department" },
-  ACADEMIC_ADVISOR: { label: "Academic Advisor", scope: "department" },
-  HEAD_OF_DEPARTMENT: { label: "Head of Department", scope: "department" },
-  DEPARTMENT_ADMIN: { label: "Department Admin", scope: "department" },
-  COLLEGE_ADMIN: { label: "College Admin", scope: "unit", unitType: "College" },
-  INSTITUTE_ADMIN: { label: "Institute Admin", scope: "unit", unitType: "Institute" },
-  SCHOOL_ADMIN: { label: "School Admin", scope: "unit", unitType: "School" },
-  EXAMINATION_OFFICER: { label: "Examination Officer" },
-  FINANCE_OFFICER: { label: "Finance Officer" },
-  REGISTRATION_OFFICER: { label: "Registration Officer" },
-  QUALITY_ASSURANCE_OFFICER: { label: "Quality Assurance Officer" },
-  LIBRARIAN: { label: "Librarian" },
-  HOSTEL_OFFICER: { label: "Hostel Officer" }
-};
+// Only students create their own accounts, on the sign-in page. Every other
+// role - lecturers, officers, every kind of admin - is added by an
+// administrator from Administration > Users.
+const STAFF_ACCOUNT_MESSAGE = "Only students can create their own accounts. Staff accounts are added by a university administrator - please contact the administration office.";
 
 // ---------------------------------------------------------------------
 // Session helpers
@@ -126,7 +109,10 @@ function tlsEnabled() {
 // anyone could put any address in the audit log or dodge the sign-in limit.
 function clientIp(req) {
   if (config.trustProxy) {
-    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+    // The proxy in front (Apache/LiteSpeed on cPanel, nginx) appends the
+    // address it saw to whatever the client sent, so only the last entry is
+    // trustworthy - a client can write anything into the earlier ones.
+    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",").pop().trim();
     if (forwarded) return forwarded;
   }
   return req.socket.remoteAddress || null;
@@ -805,7 +791,10 @@ function isPublicPath(relativePath) {
 
 function serveStatic(req, res, pathname) {
   // The public home page is the front door; it links on to login and apply.
-  const requested = pathname === "/" ? "/index.html" : pathname;
+  // Pages declare the SVG icon (page-includes.js); older browsers and
+  // bookmark tools still ask for /favicon.ico, so answer with the PNG.
+  const aliases = { "/": "/index.html", "/favicon.ico": "/assets/icons/icon-180.png" };
+  const requested = aliases[pathname] || pathname;
   const filePath = path.resolve(ROOT, `.${requested}`);
   const relativePath = path.relative(ROOT, filePath);
   if (relativePath.startsWith("..") || path.isAbsolute(relativePath) || !isPublicPath(relativePath) ||
@@ -896,16 +885,16 @@ async function handleApi(req, res, url) {
     if (registerWait) { tooManyAttempts(res, registerWait); return; }
     rateLimit.record("register", clientIp(req) || "unknown");
     try {
-      const { username, fullName, email, password, programmeId, role, departmentId, unitId } = await readBody(req);
+      const { username, fullName, email, password, programmeId, role } = await readBody(req);
       const normalizedUsername = String(username || "").trim().toLowerCase();
       const normalizedEmail = String(email || "").trim().toLowerCase();
       const normalizedName = String(fullName || "").trim();
       const plainPassword = String(password || "");
       const normalizedProgramme = String(programmeId || "").trim();
-      const requestedRole = String(role || "STUDENT").trim().toUpperCase();
-      const roleRule = SELF_REGISTER_ROLES[requestedRole];
-      if (!roleRule) {
-        sendJson(res, 422, { success: false, message: "That role cannot be requested here. Ask a university administrator to create the account." });
+      // Checked on the server, not just left off the form, so a hand-made
+      // request cannot sign up as staff either.
+      if (String(role || "STUDENT").trim().toUpperCase() !== "STUDENT") {
+        sendJson(res, 403, { success: false, message: STAFF_ACCOUNT_MESSAGE });
         return;
       }
       if (!/^[a-z0-9._-]{3,80}$/.test(normalizedUsername)) {
@@ -922,41 +911,6 @@ async function handleApi(req, res, url) {
       }
       if (await db.findUserByEmail(normalizedEmail)) {
         sendJson(res, 409, { success: false, message: "That email address is already registered." });
-        return;
-      }
-
-      // Staff roles: created Pending, scoped to the department or unit the
-      // role works within.
-      if (requestedRole !== "STUDENT") {
-        const { departments, units } = await db.registrationScopes();
-        let scopedDepartment = null;
-        let scopedUnit = null;
-        if (roleRule.scope === "department") {
-          scopedDepartment = departments.find(d => d.id === String(departmentId || "").trim());
-          if (!scopedDepartment) {
-            sendJson(res, 422, { success: false, message: "Choose the department you work in." });
-            return;
-          }
-        } else if (roleRule.scope === "unit") {
-          scopedUnit = units.find(u => u.id === String(unitId || "").trim() && u.type === roleRule.unitType);
-          if (!scopedUnit) {
-            sendJson(res, 422, { success: false, message: `Choose the ${roleRule.unitType.toLowerCase()} you work in.` });
-            return;
-          }
-        }
-        const id = accountId();
-        await db.createStaffAccount({
-          id, username: normalizedUsername, passwordHash: db.hashPassword(plainPassword),
-          fullName: normalizedName, email: normalizedEmail, role: requestedRole,
-          departmentId: scopedDepartment && scopedDepartment.id,
-          unitId: scopedUnit ? scopedUnit.id : scopedDepartment && scopedDepartment.unitId
-        });
-        await db.recordAudit({ userId: id, userName: normalizedName, userRole: requestedRole, action: "REGISTER", entityType: "User", entityId: id, ip: clientIp(req) });
-        sendJson(res, 201, {
-          success: true,
-          pending: true,
-          message: `Your ${roleRule.label} account request has been sent. A university administrator must approve it before you can sign in.`
-        });
         return;
       }
 
@@ -1101,31 +1055,37 @@ async function handleApi(req, res, url) {
     return;
   }
 
-  // The public application form needs the programme list before sign-in.
-  // What the public Create Account form offers: the roles that may be
-  // requested, and the departments and units staff roles are scoped to.
-  if (req.method === "GET" && url.pathname === "/api/public/registration-options") {
-    const { departments, units } = await db.registrationScopes();
-    const roles = Object.entries(SELF_REGISTER_ROLES).map(([id, rule]) => ({
-      id, label: rule.label, scope: rule.scope || null, unitType: rule.unitType || null,
-      needsApproval: id !== "STUDENT"
-    }));
-    sendJson(res, 200, {
-      success: true,
-      data: {
-        roles,
-        departments: departments.map(({ id, name }) => ({ id, name })),
-        units
-      }
-    });
-    return;
-  }
-
+  // The public application and student sign-up forms need the programme
+  // list before sign-in.
   if (req.method === "GET" && url.pathname === "/api/public/programmes") {
     const programmes = await repo.query(
       "SELECT id, code, name, level, department_id AS departmentId FROM programmes WHERE status = 'Active' ORDER BY name"
     );
     sendJson(res, 200, { success: true, data: programmes });
+    return;
+  }
+
+  // The public home page: the latest announcements addressed to everyone,
+  // the next few academic calendar dates and how many programmes are open
+  // at each level. Nothing here is restricted to a role.
+  if (req.method === "GET" && url.pathname === "/api/public/landing") {
+    const [announcements, events, programmeLevels] = await Promise.all([
+      repo.query(
+        `SELECT id, title, body, published_at AS publishedAt FROM announcements
+         WHERE status = 'Published' AND audience_role IS NULL AND published_at <= NOW()
+           AND (expires_at IS NULL OR expires_at > NOW())
+         ORDER BY published_at DESC LIMIT 3`
+      ),
+      repo.query(
+        `SELECT id, title, description, event_date AS date, end_date AS endDate FROM calendar_events
+         WHERE COALESCE(end_date, event_date) >= CURDATE() ORDER BY event_date LIMIT 4`
+      ),
+      repo.query("SELECT level, COUNT(*) AS count FROM programmes WHERE status = 'Active' GROUP BY level ORDER BY count DESC")
+    ]);
+    sendJson(res, 200, {
+      success: true,
+      data: { announcements, events, programmeLevels: programmeLevels.map(row => ({ level: row.level, count: Number(row.count) })) }
+    });
     return;
   }
 

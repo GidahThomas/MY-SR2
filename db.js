@@ -172,43 +172,6 @@ async function createStudentAccount({ id, username, passwordHash, fullName, emai
   }
 }
 
-/**
- * A self-registered staff account. It is created Pending - sign-in only
- * accepts Active accounts - so it stays unusable until an administrator
- * approves it from Administration > Users.
- */
-async function createStaffAccount({ id, username, passwordHash, fullName, email, role, departmentId, unitId }) {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    await connection.execute(
-      `INSERT INTO users (id, username, password_hash, full_name, email, status, department_id, unit_id)
-       VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?)`,
-      [id, String(username || "").trim(), passwordHash, fullName, String(email || "").trim(),
-        departmentId || null, unitId || null]
-    );
-    await connection.execute("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", [id, role]);
-    await connection.commit();
-    return { userId: id };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
-}
-
-/** Departments and organisational units a staff applicant can choose from. */
-async function registrationScopes() {
-  const departments = await query(
-    "SELECT id, name, unit_id AS unitId FROM departments WHERE status = 'Active' ORDER BY name"
-  );
-  const units = await query(
-    "SELECT id, name, unit_type AS type FROM organisational_units WHERE status = 'Active' ORDER BY name"
-  );
-  return { departments, units };
-}
-
 // ---------------------------------------------------------------------
 // Per-user preferences and university-wide settings
 // ---------------------------------------------------------------------
@@ -704,7 +667,6 @@ async function recordAudit({ userId, userName, userRole, action, entityType, ent
 
 module.exports = {
   query, health, hashPassword, verifyPassword, needsRehash, findUser, findUserByEmail, recordLogin, createStudentAccount,
-  createStaffAccount, registrationScopes,
   createSession, findSession, deleteSession, deleteSessionsFor, purgeExpiredSessions,
   findActiveAccount, createPasswordReset, consumePasswordReset,
   getPreferences, savePreferences, getSystemSettings, saveSystemSettings, passwordHashFor, changePassword,

@@ -14,7 +14,7 @@ Browser  ──►  Node.js server (server.js)  ──►  MySQL / MariaDB
 
 | Area | What it does |
 |---|---|
-| **Accounts & roles** | 16 roles (Student, Lecturer, Finance Officer, Registration Officer, Librarian, Hostel Officer, QA Officer, admins...). Staff sign-ups wait for administrator approval. The QA Officer role is read-only. |
+| **Accounts & roles** | 16 roles (Student, Lecturer, Finance Officer, Registration Officer, Librarian, Hostel Officer, QA Officer, admins...). Students create their own accounts; every other role is added by an administrator. The QA Officer role is read-only. |
 | **Admissions** | Public application form; admissions staff accept or reject, and the applicant is emailed the decision. |
 | **Course registration** | Every student registers for **6 or 7 courses** a semester. The page and the server both enforce this, along with prerequisites, credit limits and the registration window. |
 | **Timetable** | Weekly timetable per programme and year, with room and lecturer clash detection. |
@@ -58,10 +58,14 @@ npm run create-admin -- --username jdoe --email jdoe@university.ac.tz --name "Ja
 A strong password is generated and shown once; add `--password <12+ characters>` to choose your own, and `--role UNIVERSITY_ADMIN` for a university administrator instead of a system administrator. Sign in and change the password under **Settings > Change Password**.
 
 After that:
-- **Staff:** the administrator creates staff accounts under **Administration > Users**. Staff can also request an account on the sign-in page (Create Account), which waits for an administrator's approval.
-- **Students:** create their own accounts from the sign-in page.
+- **Staff and administrators:** only an administrator can add them, under **Administration > Users**. There is no staff sign-up; the server refuses any self-registration that is not a student.
+- **Students:** create their own accounts from the sign-in page (**Create Student Account**).
 
 The demo data (students, courses, results and so on) comes without any logins; its 20 demo accounts are removed at the end of every `npm run db:seed`. Real accounts are kept when you reseed.
+
+## Hosting
+
+To put USIAMS online on cPanel hosting (Setup Node.js App), follow [DEPLOY-CPANEL.md](DEPLOY-CPANEL.md).
 
 ## Configuration
 
@@ -72,12 +76,15 @@ All settings live in `.env`; `.env.example` lists each one with an explanation.
 | `HOST`, `PORT` | Where the server listens. Use `HOST=0.0.0.0` to let other computers on the network connect. |
 | `DB_*` | Database connection. |
 | `SESSION_TTL_HOURS` | How long a sign-in lasts (default 8). |
-| `PUBLIC_URL` | The site's address, used in links sent by email. |
+| `PUBLIC_URL` | The site's address, used in links sent by email and in the link preview WhatsApp and social media show. |
+| `UNIVERSITY_NAME`, `CONTACT_EMAIL`, `CONTACT_PHONE`, `CONTACT_ADDRESS`, `CONTACT_WEBSITE`, `OFFICE_HOURS` | The institution shown on the public home page. Anything unset is left off the page. |
+| `SITE_LOGO`, `CAMPUS_PHOTO` | Crest and campus photo for the home page, as paths under `assets/` (e.g. `assets/images/crest.png`). |
+| `ADMISSION_OPENS`, `ADMISSION_CLOSES` | The application window shown on the home page (`YYYY-MM-DD`). |
 | `TLS_CERT_FILE`, `TLS_KEY_FILE` | Serve HTTPS directly. Leave unset behind a proxy that handles HTTPS. |
 | `SMTP_*` | Mail server for password-reset links and admission decisions. Without it, emails are kept in the `outbound_messages` table and printed to the server console. |
 | `REMINDERS` | `off` disables the daily timetable reminders. |
 | `GEPG_SIMULATION` | `on` lets students confirm their own payment (demos only). Off by default: finance staff confirm payments. |
-| `TRUST_PROXY` | `on` only behind a reverse proxy that sets `X-Forwarded-For`. |
+| `TRUST_PROXY` | `on` only behind a reverse proxy that sets `X-Forwarded-For` (cPanel, nginx). The last address in that header is used, since earlier ones can be written by the visitor. |
 | `TZ` | Time zone for reminders, e.g. `Africa/Dar_es_Salaam`, if the server is not on local time. |
 
 ## npm scripts

@@ -48,6 +48,23 @@ const config = {
   // The address this server is reached at, used in links sent by email.
   // Defaults to the host and port it listens on.
   publicUrl: (process.env.PUBLIC_URL || "").replace(/\/+$/, ""),
+  // The institution the public pages present: name, contacts, crest and
+  // campus photo. Empty values are left off the page rather than shown as
+  // placeholders. Image paths are relative to the project root and must
+  // sit under assets/ (for example assets/images/crest.png).
+  site: {
+    universityName: process.env.UNIVERSITY_NAME || "",
+    contactEmail: process.env.CONTACT_EMAIL || "",
+    contactPhone: process.env.CONTACT_PHONE || "",
+    address: process.env.CONTACT_ADDRESS || "",
+    website: process.env.CONTACT_WEBSITE || "",
+    officeHours: process.env.OFFICE_HOURS || "Mon - Fri, 08:00 - 16:00",
+    logo: process.env.SITE_LOGO || "",
+    campusPhoto: process.env.CAMPUS_PHOTO || "",
+    // The admission window, as YYYY-MM-DD dates.
+    admissionOpens: process.env.ADMISSION_OPENS || "",
+    admissionCloses: process.env.ADMISSION_CLOSES || ""
+  },
   // HTTPS: set both to serve TLS directly from this process.
   tls: {
     certFile: process.env.TLS_CERT_FILE || "",

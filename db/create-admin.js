@@ -2,17 +2,24 @@
    USIAMS - db/create-admin.js
    Creates an administrator account. A freshly set-up database has no
    sign-in accounts at all, so this is how the first person gets in;
-   everyone else is then added from Administration > Users or signs up
-   and is approved there.
+   staff are then added from Administration > Users, and students
+   create their own accounts on the sign-in page.
 
    Usage:
      npm run create-admin -- --username jdoe --email jdoe@university.ac.tz --name "Jane Doe"
      [--password <at least 12 characters>] [--role UNIVERSITY_ADMIN]
 
-   Without --password a strong random password is generated and shown
+   Hosts without a terminal (cPanel's "Run JS script" button cannot pass
+   arguments) can set ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_NAME and,
+   optionally, ADMIN_PASSWORD / ADMIN_ROLE in the environment or .env
+   instead; arguments win when both are given.
+
+   Without a password a strong random password is generated and shown
    once. Sign in and change it under Settings > Change Password.
    ========================================================= */
 const crypto = require("node:crypto");
+// Loads .env (for the ADMIN_* fallbacks) as well as the database settings.
+require("../config");
 const { query, pool } = require("./repository");
 const { hashPassword } = require("./passwords");
 
@@ -20,7 +27,8 @@ const ADMIN_ROLES = ["SYSTEM_ADMIN", "UNIVERSITY_ADMIN"];
 
 function argument(name) {
   const index = process.argv.indexOf(`--${name}`);
-  return index !== -1 && process.argv[index + 1] && !process.argv[index + 1].startsWith("--") ? process.argv[index + 1] : null;
+  if (index !== -1 && process.argv[index + 1] && !process.argv[index + 1].startsWith("--")) return process.argv[index + 1];
+  return process.env[`ADMIN_${name.toUpperCase()}`] || null;
 }
 
 function fail(message) {

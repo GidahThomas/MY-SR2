@@ -155,6 +155,18 @@ const { check, finish, call, login } = require("./helpers");
   console.log("\n== Public routes ==");
   const programmes = await call("/api/public/programmes");
   check("public programme list", programmes.status === 200 && programmes.json.data.length === 37);
+  const landing = await call("/api/public/landing");
+  const landingData = landing.status === 200 && landing.json.data;
+  check("home page content needs no sign-in", Boolean(landingData));
+  check("home page shows at most 3 announcements",
+    landingData && landingData.announcements.length > 0 && landingData.announcements.length <= 3);
+  // Announcements aimed at one role (students, lecturers) stay behind sign-in.
+  const roleOnly = (await call("/api/data/announcements", { token: admin.token })).json.data
+    .filter(a => a.audience && a.audience !== "ALL").map(a => a.id);
+  check("home page leaves out role-only announcements",
+    landingData && roleOnly.length > 0 && landingData.announcements.every(a => !roleOnly.includes(a.id)));
+  check("home page counts programmes per level",
+    landingData && landingData.programmeLevels.reduce((sum, row) => sum + row.count, 0) === 37);
 
   console.log("\n== Library availability stays correct ==");
   // available_copies used to be a stored number that nothing updated, so a

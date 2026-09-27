@@ -127,8 +127,9 @@
       </p>
       <div class="text-center mt-3">
         <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createAccountModal">
-          <i class="bi bi-person-plus me-1"></i>Create Account
+          <i class="bi bi-person-plus me-1"></i>Create Student Account
         </button>
+        <p class="text-muted-usi mt-2 mb-0" style="font-size:.78rem;">Staff accounts are added by the university administration.</p>
       </div>
 
       <div class="divider mt-4">
@@ -169,26 +170,19 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="createAccountTitle">Create Account</h5>
+        <h5 class="modal-title" id="createAccountTitle">Create Student Account</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="createAccountForm">
         <div class="modal-body">
           <div id="createAccountAlert" class="alert d-none" role="alert"></div>
-          <div class="mb-3"><label class="form-label" for="createRole">I am registering as</label>
-            <select class="form-select" id="createRole" required>
-              <option value="STUDENT">Student</option>
-            </select>
-            <div class="form-text" id="createRoleHint">Student accounts can sign in straight away.</div>
-          </div>
-          <div class="mb-3" id="createProgrammeWrap"><label class="form-label" for="createProgramme">Programme</label>
+          <p class="text-muted-usi" style="font-size:.83rem;">For students only - you can sign in as soon as your account is
+            created. Staff accounts are added by a university administrator.</p>
+          <div class="mb-3"><label class="form-label" for="createProgramme">Programme</label>
             <select class="form-select" id="createProgramme" required>
               <option value="">Loading programmes...</option>
             </select>
             <div class="form-text">This sets your department and registration number.</div>
-          </div>
-          <div class="mb-3 d-none" id="createScopeWrap"><label class="form-label" for="createScope" id="createScopeLabel">Department</label>
-            <select class="form-select" id="createScope"></select>
           </div>
           <div class="mb-3"><label class="form-label" for="createFullName">Full name</label><input class="form-control" id="createFullName" required></div>
           <div class="mb-3"><label class="form-label" for="createEmail">Email</label><input class="form-control" id="createEmail" type="email" required></div>
@@ -292,77 +286,23 @@
     }
   })();
 
-  // The role list, departments and units also come from the server, which
-  // decides which roles may be requested here and which need approval.
-  const roleSelect = document.getElementById("createRole");
-  const roleHint = document.getElementById("createRoleHint");
-  const programmeWrap = document.getElementById("createProgrammeWrap");
-  const programmeSelect = document.getElementById("createProgramme");
-  const scopeWrap = document.getElementById("createScopeWrap");
-  const scopeSelect = document.getElementById("createScope");
-  const scopeLabel = document.getElementById("createScopeLabel");
-  let registration = { roles: [{ id: "STUDENT", label: "Student", scope: "programme", needsApproval: false }], departments: [], units: [] };
-  const escapeHtml = (value) => String(value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-  function applyRole() {
-    const role = registration.roles.find(r => r.id === roleSelect.value) || registration.roles[0];
-    const isStudent = role.scope === "programme";
-    programmeWrap.classList.toggle("d-none", !isStudent);
-    programmeSelect.required = isStudent;
-
-    let options = null;
-    if (role.scope === "department") {
-      scopeLabel.textContent = "Department";
-      options = registration.departments;
-    } else if (role.scope === "unit") {
-      scopeLabel.textContent = role.unitType;
-      options = registration.units.filter(u => u.type === role.unitType);
-    }
-    scopeWrap.classList.toggle("d-none", !options);
-    scopeSelect.required = !!options;
-    scopeSelect.innerHTML = options
-      ? `<option value="">Select ${escapeHtml(scopeLabel.textContent.toLowerCase())}...</option>` +
-        options.map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.name)}</option>`).join("")
-      : "";
-
-    roleHint.textContent = role.needsApproval
-      ? `${role.label} accounts need approval by a university administrator before you can sign in.`
-      : "Student accounts can sign in straight away.";
-  }
-
-  (async function loadRegistrationOptions() {
-    try {
-      const response = await fetch("/api/public/registration-options");
-      const result = await response.json();
-      if (!response.ok || !result.data || !result.data.roles.length) throw new Error("No roles available.");
-      registration = result.data;
-      roleSelect.innerHTML = registration.roles
-        .map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.label)}</option>`).join("");
-    } catch (error) {
-      // Student sign-up still works from the fallback above.
-    }
-    applyRole();
-  })();
-  roleSelect.addEventListener("change", applyRole);
-
+  // Only students sign up here; staff accounts are added by an administrator
+  // (and the server refuses any other role).
   document.getElementById("createAccountForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const submit = document.getElementById("createAccountSubmit");
     const alert = document.getElementById("createAccountAlert");
-    const role = registration.roles.find(r => r.id === roleSelect.value) || registration.roles[0];
     submit.disabled = true;
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          role: role.id,
+          role: "STUDENT",
           fullName: document.getElementById("createFullName").value,
           email: document.getElementById("createEmail").value,
           username: document.getElementById("createUsername").value,
-          programmeId: role.scope === "programme" ? programmeSelect.value : undefined,
-          departmentId: role.scope === "department" ? scopeSelect.value : undefined,
-          unitId: role.scope === "unit" ? scopeSelect.value : undefined,
+          programmeId: document.getElementById("createProgramme").value,
           password: document.getElementById("createPassword").value
         })
       });
@@ -374,9 +314,8 @@
         document.getElementById("username").value = document.getElementById("createUsername").value.trim().toLowerCase();
         const loginAlert = document.getElementById("loginAlert");
         loginAlert.textContent = result.message;
-        loginAlert.className = `alert ${result.pending ? "alert-warning" : "alert-success"}`;
+        loginAlert.className = "alert alert-success";
         document.getElementById("createAccountForm").reset();
-        applyRole();
         bootstrap.Modal.getInstance(document.getElementById("createAccountModal")).hide();
       } else {
         alert.textContent = result.message;

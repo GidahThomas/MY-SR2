@@ -78,6 +78,19 @@ async function renderAs(file, session) {
   });
   check("the same email cannot be taken twice", duplicateEmail.status === 409, String(duplicateEmail.status));
 
+  console.log("\n== Staff cannot sign themselves up ==");
+  // Only students create their own accounts; every other role is added by
+  // an administrator, so a hand-made request for a staff role is refused.
+  for (const role of ["LECTURER", "FINANCE_OFFICER", "UNIVERSITY_ADMIN", "SYSTEM_ADMIN"]) {
+    const staffName = `staff${role.toLowerCase().replace(/_/g, "")}${stamp}`.slice(0, 40);
+    const staff = await call("/api/auth/register", {
+      method: "POST", body: { role, username: staffName, fullName: "Self Made Staff", email: `${staffName}@x.ac.tz`, password: "password123", departmentId: "DCSE" }
+    });
+    check(`a ${role} sign-up is refused`, staff.status === 403, String(staff.status));
+    const signIn = await call("/api/auth/login", { method: "POST", body: { username: staffName, password: "password123" } });
+    check(`no ${role} account was created`, signIn.status === 401, String(signIn.status));
+  }
+
   console.log("\n== Several people registering at once ==");
   // Concurrent sign-ups read the same highest registration serial and then
   // both claim it. Three of five used to be refused, with a message blaming
