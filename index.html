@@ -360,11 +360,22 @@
       gap: 1rem;
     }
 
+    .hero-signup {
+      margin: 1.25rem 0 0;
+      color: rgba(255, 255, 255, .9);
+    }
+
+    .hero-signup a {
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
     .hero-stats {
       display: flex;
       flex-wrap: wrap;
       gap: .75rem;
-      margin-top: 3rem;
+      margin-top: 2.25rem;
     }
 
     .hero-stat {
@@ -814,6 +825,15 @@
       margin: 0 0 .5rem;
     }
 
+    .faq-list details ol {
+      margin: 0 0 .75rem;
+      padding-left: 1.25rem;
+    }
+
+    .faq-list details li + li {
+      margin-top: .375rem;
+    }
+
     .faq-list details a {
       color: var(--primary);
       font-weight: 600;
@@ -845,6 +865,11 @@
       align-items: center;
       justify-content: space-between;
       gap: 2rem;
+    }
+
+    /* The buttons keep one row; the text beside them takes what is left. */
+    .cta-inner .hero-actions {
+      flex: 0 0 auto;
     }
 
     .cta-inner h2 {
@@ -1090,6 +1115,7 @@
         <a class="nav-item" href="#news">News</a>
         <a class="nav-item" href="#admissions">Admissions</a>
         <a class="nav-item" href="#faq">FAQ</a>
+        <a class="nav-item" href="login.html?signup=1">Create Student Account</a>
         <a class="nav-item" href="login.html?next=pages/finance.html">Pay Fees (GePG)</a>
         <a class="nav-item" href="login.html?next=pages/library.html">Library Services</a>
         <a class="nav-item" href="login.html?next=pages/documents.html">Forms &amp; Downloads</a>
@@ -1124,6 +1150,8 @@
             <a class="btn btn-hero btn-white" href="login.html">Sign in to the portal <i class="bi bi-arrow-right"></i></a>
             <a class="btn btn-hero btn-outline-white" href="apply.html">Apply for admission</a>
           </div>
+          <p class="hero-signup">Already a student? <a href="login.html?signup=1">Create your student account
+              <i class="bi bi-arrow-right"></i></a></p>
           <div class="hero-stats">
             <div class="hero-stat"><span>Admissions</span><strong>Apply online</strong></div>
             <div class="hero-stat"><span>Results</span><strong>GPA &amp; transcripts</strong></div>
@@ -1250,6 +1278,22 @@
           <p class="section-lead">Quick answers for applicants, students and staff.</p>
         </div>
         <div class="faq-list">
+          <details open>
+            <summary>How do I create my student account?</summary>
+            <div>
+              <ol>
+                <li>Open <a href="login.html?signup=1">Create Student Account</a> (also on the sign-in page).</li>
+                <li>Choose your <strong>programme</strong>, then enter your full name and an email address you check.</li>
+                <li>Pick a <strong>username</strong> (at least 3 letters or numbers, no spaces) and a
+                  <strong>password</strong> of at least 8 characters, typed twice.</li>
+                <li>Click <strong>Create Account</strong>. You can sign in straight away with that username and
+                  password.</li>
+              </ol>
+              <p>If it says the username or email is already registered, you may already have an account - use
+                <strong>Forgot Password?</strong> on the sign-in page. Staff do not create accounts here; a university
+                administrator adds them. Not a student yet? <a href="apply.html">Apply for admission</a> first.</p>
+            </div>
+          </details>
           <details>
             <summary>How do I apply for admission?</summary>
             <div>
@@ -1308,10 +1352,11 @@
         <div class="cta-inner">
           <div>
             <h2 id="cta-title">Ready to begin?</h2>
-            <p>Apply for admission online, or sign in to continue where you left off.</p>
+            <p>Apply for admission online, create your student account, or sign in to continue where you left off.</p>
           </div>
           <div class="hero-actions">
             <a class="btn btn-hero btn-white" href="apply.html">Apply Now <i class="bi bi-arrow-right"></i></a>
+            <a class="btn btn-hero btn-outline-white" href="login.html?signup=1">Create Account</a>
             <a class="btn btn-hero btn-outline-white" href="login.html">Login</a>
           </div>
         </div>

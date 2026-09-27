@@ -184,10 +184,22 @@
             </select>
             <div class="form-text">This sets your department and registration number.</div>
           </div>
-          <div class="mb-3"><label class="form-label" for="createFullName">Full name</label><input class="form-control" id="createFullName" required></div>
-          <div class="mb-3"><label class="form-label" for="createEmail">Email</label><input class="form-control" id="createEmail" type="email" required></div>
-          <div class="mb-3"><label class="form-label" for="createUsername">Username</label><input class="form-control" id="createUsername" required minlength="3"></div>
-          <div><label class="form-label" for="createPassword">Password</label><input class="form-control" id="createPassword" type="password" required minlength="8"></div>
+          <div class="mb-3"><label class="form-label" for="createFullName">Full name</label><input class="form-control" id="createFullName" required autocomplete="name">
+            <div class="form-text">As it appears on your certificates.</div>
+          </div>
+          <div class="mb-3"><label class="form-label" for="createEmail">Email</label><input class="form-control" id="createEmail" type="email" required autocomplete="email">
+            <div class="form-text">Use one you check - password reset links are sent here.</div>
+          </div>
+          <div class="mb-3"><label class="form-label" for="createUsername">Username</label>
+            <input class="form-control" id="createUsername" required minlength="3" maxlength="80" autocomplete="username"
+              pattern="[A-Za-z0-9._\-]{3,80}" title="3 or more letters or numbers; dots, underscores and hyphens are allowed, spaces are not.">
+            <div class="form-text">You sign in with this. At least 3 letters or numbers, no spaces (e.g. neema.john).</div>
+          </div>
+          <div class="mb-3"><label class="form-label" for="createPassword">Password</label><input class="form-control" id="createPassword" type="password" required minlength="8" autocomplete="new-password">
+            <div class="form-text">At least 8 characters.</div>
+          </div>
+          <div class="mb-2"><label class="form-label" for="createPasswordConfirm">Confirm password</label><input class="form-control" id="createPasswordConfirm" type="password" required minlength="8" autocomplete="new-password"></div>
+          <div class="form-check"><input class="form-check-input" type="checkbox" id="createShowPassword"><label class="form-check-label" for="createShowPassword">Show passwords</label></div>
         </div>
         <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary" id="createAccountSubmit">Create Account</button></div>
       </form>
@@ -226,6 +238,16 @@
     document.getElementById("resetPasswordSubmit").textContent = "Set New Password";
     bootstrap.Modal.getOrCreateInstance(resetModalEl).show();
   }
+
+  // login.html?signup=1 (the home page's "Create student account" links)
+  // opens the sign-up form straight away.
+  if (!resetToken && new URLSearchParams(window.location.search).has("signup")) {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("createAccountModal")).show();
+  }
+
+  document.getElementById("createShowPassword").addEventListener("change", (e) => {
+    ["createPassword", "createPasswordConfirm"].forEach(id => { document.getElementById(id).type = e.target.checked ? "text" : "password"; });
+  });
 
   document.getElementById("forgotPasswordLink").addEventListener("click", () => {
     document.getElementById("resetIdentifier").value = document.getElementById("username").value.trim();
@@ -292,6 +314,12 @@
     e.preventDefault();
     const submit = document.getElementById("createAccountSubmit");
     const alert = document.getElementById("createAccountAlert");
+    if (document.getElementById("createPassword").value !== document.getElementById("createPasswordConfirm").value) {
+      alert.textContent = "The two passwords do not match. Type the same password in both boxes.";
+      alert.className = "alert alert-danger";
+      document.getElementById("createPasswordConfirm").focus();
+      return;
+    }
     submit.disabled = true;
     try {
       const response = await fetch("/api/auth/register", {
