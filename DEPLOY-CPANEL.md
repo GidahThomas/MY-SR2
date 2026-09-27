@@ -1,8 +1,26 @@
-U# Hosting USIAMS on cPanel
+# Hosting USIAMS on cPanel
 
 This guide puts USIAMS online at **https://unicollege.ac.tz** on cPanel hosting that offers **Setup Node.js App**. It takes about an hour the first time.
 
 Throughout, `cpuser` stands for your cPanel username; replace it with yours.
+
+## Quick deploy (SSH or cPanel Terminal)
+
+If your plan has SSH or **Terminal**, one script does steps 2 to 7 for you. Upload `usiams-cpanel.zip` and `deploy/cpanel-deploy.sh` to your home folder, then run:
+
+```bash
+bash ~/cpanel-deploy.sh unicollege.ac.tz
+```
+
+It uses these names:
+
+| What | Name |
+|---|---|
+| Application folder | `~/usiams` |
+| Database and database user | `cpuser_usiams` (password generated and saved in `~/usiams/.env`) |
+| First administrator | username `admin`, email `info@unicollege.ac.tz` (password generated and printed once) |
+
+The domain must already be added to your cPanel account. Until `unicollege.ac.tz` is registered and pointing at the hosting, give the account's temporary domain instead and re-run the script with the real one later. It is safe to run again: it keeps the existing database and settings, and never rebuilds tables that hold data. Afterwards, do step 8 (HTTPS and email).
 
 ## What the hosting plan must have
 
