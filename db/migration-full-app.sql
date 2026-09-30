@@ -498,3 +498,18 @@ CREATE TABLE IF NOT EXISTS class_reminders_sent (
 -- a publisher (see db/accounts.js).
 ALTER TABLE announcements
   MODIFY COLUMN published_by VARCHAR(40) NULL;
+
+-- Access an administrator has set for a role on a module (Administration >
+-- Roles & Permissions; modules are listed in data/permissions.js). A row
+-- exists only where the access differs from the built-in default, so an
+-- empty table means every role has exactly the access the code gives it.
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role_id VARCHAR(40) NOT NULL,
+  module_key VARCHAR(40) NOT NULL,
+  access_level ENUM('none', 'view', 'manage') NOT NULL,
+  updated_by VARCHAR(40) NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (role_id, module_key),
+  CONSTRAINT fk_role_permissions_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+  CONSTRAINT fk_role_permissions_user FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;

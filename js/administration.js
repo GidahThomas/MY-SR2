@@ -161,19 +161,157 @@
     toast.show("success", "User status updated", `${user.name} is now ${newStatus}.`);
   }
 
-  function renderRolesTab() {
+  // ---------------------------------------------------------------------
+  // ROLES & PERMISSIONS
+  // A rule is stored only where a role's access differs from the default
+  // the code gives it (see data/permissions.js and server.js). The default
+  // shown here is worked out the same way the app applies it: the page is
+  // in the role's standard menu ("View"), and the role may change the
+  // module's records ("Manage").
+  // ---------------------------------------------------------------------
+  const perms = { loaded: false, rules: [], writers: {}, role: null, error: null };
+
+  function defaultLevel(role, module) {
+    const P = window.USIAMS.permissions;
+    const fixed = P.FIXED[role] && P.FIXED[role][module.key];
+    if (fixed) return fixed;
+    const inMenu = window.USIAMS.navigation.defaultMenuForRole(role).some(item => item.href === `pages/${module.page}`);
+    if (!inMenu) return "none";
+    const canManage = (perms.writers[module.key] || []).includes(role) && P.allowedLevels(role, module.key).includes("manage");
+    return canManage ? "manage" : "view";
+  }
+
+  function ruleOf(role, moduleKey) {
+    const rule = perms.rules.find(r => r.role === role && r.module === moduleKey);
+    return rule ? rule.level : null;
+  }
+
+  async function loadPermissions() {
+    try {
+      const result = await window.USIAMS.api.request("/api/admin/permissions");
+      perms.rules = result.data.rules;
+      perms.writers = result.data.defaultWriters;
+      perms.loaded = true;
+      perms.error = null;
+    } catch (error) {
+      perms.error = error.message || "Permissions could not be loaded.";
+    }
+  }
+
+  async function renderRolesTab() {
+    const roleList = document.getElementById("permRoleList");
+    if (!roleList) return; // not shown to scoped admins
+    if (!perms.loaded && !perms.error) await loadPermissions();
+    const moduleList = document.getElementById("permModuleList");
+    if (perms.error) {
+      roleList.innerHTML = "";
+      moduleList.innerHTML = `<div class="empty-state"><i class="bi bi-shield-lock"></i>${util.escapeHtml(perms.error)}</div>`;
+      document.getElementById("resetAllPermissionsBtn").classList.add("d-none");
+      return;
+    }
     const roles = window.USIAMS.data.roles;
-    const container = document.getElementById("rolesList");
-    if (!container) return; // not shown to scoped admins
-    container.innerHTML = Object.entries(roles).map(([key, label]) => {
-      const isReadOnly = key === "QUALITY_ASSURANCE_OFFICER";
-      const count = window.USIAMS.data.users.filter(u => u.role === key).length;
+    if (!perms.role || !roles[perms.role]) perms.role = Object.keys(roles)[0];
+
+    roleList.innerHTML = Object.entries(roles).map(([key, label]) => {
+      const accounts = window.USIAMS.data.users.filter(u => u.role === key).length;
+      const changed = perms.rules.filter(r => r.role === key).length;
       return `
-      <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-        <div><strong style="font-size:.85rem;">${util.escapeHtml(label)}</strong><div class="text-muted-usi" style="font-size:.75rem;">${count} account(s)</div></div>
-        <span class="status-badge ${isReadOnly ? "status-info" : "status-active"}">${isReadOnly ? "Read-Only" : "Full Access"}</span>
-      </div>`;
+        <button type="button" class="perm-role ${key === perms.role ? "active" : ""}" role="tab" aria-selected="${key === perms.role}" data-role="${key}">
+          <span><strong>${util.escapeHtml(label)}</strong><small>${accounts} account${accounts === 1 ? "" : "s"}</small></span>
+          ${changed ? `<span class="perm-changed-count" title="Modules changed from the default">${changed}</span>` : ""}
+        </button>`;
     }).join("");
+    roleList.querySelectorAll("[data-role]").forEach(btn => btn.addEventListener("click", () => {
+      perms.role = btn.dataset.role;
+      renderRolesTab();
+    }));
+    renderRoleModules();
+  }
+
+  function renderRoleModules() {
+    const P = window.USIAMS.permissions;
+    const role = perms.role;
+    const roleLabel = window.USIAMS.data.roles[role];
+    const groups = [...new Set(P.MODULES.map(m => m.group))];
+    const me = window.USIAMS.auth.getCurrentUser() || {};
+
+    const note = role === "STUDENT"
+      ? "Students only ever act on their own records, so their choices are No access or View."
+      : role === "QUALITY_ASSURANCE_OFFICER" ? "The Quality Assurance Officer is read-only by policy: No access or View." : "";
+
+    document.getElementById("permModuleList").innerHTML = `
+      <div class="perm-role-head">
+        <h4>${util.escapeHtml(roleLabel)}</h4>
+        ${note ? `<p class="text-muted-usi">${note}</p>` : ""}
+        ${role === me.role ? `<p class="perm-own-role"><i class="bi bi-info-circle me-1"></i>This is your own role. Your menu updates the next time a page loads.</p>` : ""}
+      </div>
+      ${groups.map(group => `
+        <div class="perm-group">
+          <div class="perm-group-title">${util.escapeHtml(group)}</div>
+          ${P.MODULES.filter(m => m.group === group).map(module => {
+            const def = defaultLevel(role, module);
+            const rule = ruleOf(role, module.key);
+            const level = rule || def;
+            const allowed = P.allowedLevels(role, module.key);
+            const fixed = P.FIXED[role] && P.FIXED[role][module.key];
+            const name = `perm-${module.key}`;
+            return `
+              <div class="perm-row ${rule ? "is-changed" : ""}">
+                <div class="perm-row-label">
+                  <strong>${util.escapeHtml(module.label)}</strong>
+                  <small>${fixed ? "Fixed, so administrators are never locked out"
+                    : rule ? `Changed &middot; default is ${P.LEVEL_LABELS[def]}` : "Default"}</small>
+                </div>
+                <div class="perm-levels" role="radiogroup" aria-label="${util.escapeHtml(module.label)} access for ${util.escapeHtml(roleLabel)}">
+                  ${P.LEVELS.map(l => `
+                    <label class="perm-level lvl-${l} ${allowed.includes(l) ? "" : "is-disabled"}">
+                      <input type="radio" name="${name}" value="${l}" data-module="${module.key}" ${l === level ? "checked" : ""} ${allowed.includes(l) && !fixed ? "" : "disabled"}>
+                      <span>${P.LEVEL_LABELS[l]}</span>
+                    </label>`).join("")}
+                  ${rule ? `<button type="button" class="btn btn-link btn-sm perm-reset" data-module="${module.key}" title="Back to the default">Reset</button>` : ""}
+                </div>
+              </div>`;
+          }).join("")}
+        </div>`).join("")}`;
+
+    document.querySelectorAll("#permModuleList input[type=radio]").forEach(input => input.addEventListener("change", () => {
+      const module = P.byKey[input.dataset.module];
+      saveLevel(role, module, input.value === defaultLevel(role, module) ? null : input.value);
+    }));
+    document.querySelectorAll("#permModuleList .perm-reset").forEach(btn => btn.addEventListener("click", () => {
+      saveLevel(role, P.byKey[btn.dataset.module], null);
+    }));
+  }
+
+  async function saveLevel(role, module, level) {
+    try {
+      const result = await window.USIAMS.api.request("/api/admin/permissions", { method: "PUT", body: { role, module: module.key, level } });
+      perms.rules = result.data.rules;
+      const shown = level || defaultLevel(role, module);
+      toast.show("success", "Permission saved", `${window.USIAMS.data.roles[role]}: ${module.label} is now ${window.USIAMS.permissions.LEVEL_LABELS[shown]}${level ? "" : " (default)"}.`);
+    } catch (error) {
+      toast.show("error", "Not saved", error.message);
+    }
+    renderRolesTab();
+  }
+
+  function resetAllPermissions() {
+    modal.confirm({
+      title: "Reset all permissions",
+      message: "Every role goes back to the access the system gives it by default. Continue?",
+      confirmText: "Reset all",
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          await window.USIAMS.api.request("/api/admin/permissions", { method: "DELETE" });
+          perms.rules = [];
+          toast.show("success", "Permissions reset", "Every role now has its default access.");
+        } catch (error) {
+          toast.show("error", "Not reset", error.message);
+        }
+        renderRolesTab();
+      }
+    });
   }
 
   function renderSettingsTab() {
@@ -227,6 +365,7 @@
         `Add and manage ${rule.roles.map(r => window.USIAMS.data.roles[r]).join(", ")} accounts in ${place}.`;
     } else {
       renderRolesTab();
+      document.getElementById("resetAllPermissionsBtn").addEventListener("click", resetAllPermissions);
       renderSettingsTab();
       renderOrgSummaryTab();
       window.USIAMS.auditLogsModule.renderInto("auditLogsTableContainer", "auditFilterWrap");

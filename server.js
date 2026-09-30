@@ -18,6 +18,8 @@ const { config } = require("./config");
 const db = require("./db");
 const repo = require("./db/repository");
 const { RESOURCES, READ_ONLY_ROLES } = require("./db/resources");
+const PERMISSIONS = require("./data/permissions");
+const rolePermissions = require("./db/role-permissions");
 const studentRules = require("./db/student-rules");
 const mailer = require("./mailer");
 const reminders = require("./reminders");
@@ -194,7 +196,24 @@ function scopeFor(user) {
   return { studentId: user.studentId, userId: user.id, role: user.role };
 }
 
+// Resource definition -> its name, for looking up the module that owns it.
+const RESOURCE_NAMES = new Map(Object.entries(RESOURCES).map(([name, resource]) => [resource, name]));
+
+/**
+ * The rule an administrator has set for this role on the module that owns
+ * (or keeps private) this resource, or null when the built-in access applies.
+ */
+function moduleRule(role, resource, { privateOnly = false } = {}) {
+  const name = RESOURCE_NAMES.get(resource);
+  const module = privateOnly ? PERMISSIONS.privateModuleForResource(name) : PERMISSIONS.moduleForResource(name);
+  return module ? rolePermissions.ruleFor(role, module.key) : null;
+}
+
 function canRead(resource, role) {
+  // A private register (finance, admissions, alumni...) follows the module's
+  // rule when one is set; shared reference data keeps its built-in access.
+  const rule = moduleRule(role, resource, { privateOnly: true });
+  if (rule) return rule !== "none";
   return (resource.read || []).includes(role);
 }
 
@@ -205,8 +224,12 @@ function canRead(resource, role) {
  */
 function canWrite(resource, user, { owner, operation = "create" } = {}) {
   if (READ_ONLY_ROLES.includes(user.role)) return false;
+  // Administration > Roles & Permissions: "Manage" is needed to change a
+  // module's records once a rule is set for the role.
+  const rule = moduleRule(user.role, resource);
 
   if (user.role === "STUDENT") {
+    if (rule === "none") return false;
     if (!resource.selfService) return false;
     // Resources are owned either by a student record or by a user account.
     const expected = resource.ownerUserField ? user.id : user.studentId;
@@ -214,7 +237,7 @@ function canWrite(resource, user, { owner, operation = "create" } = {}) {
     return owner === undefined || owner === null || owner === expected;
   }
 
-  if (!(resource.write || []).includes(user.role)) return false;
+  if (rule ? rule !== "manage" : !(resource.write || []).includes(user.role)) return false;
 
   // Personal correspondence stays personal: a staff account may send a
   // notification to anyone, but may only mark read or delete its own.
@@ -663,8 +686,12 @@ const FINANCE_STAFF = ["FINANCE_OFFICER", "UNIVERSITY_ADMIN", "SYSTEM_ADMIN"];
 
 async function handleFinanceRoute(req, res, url, session) {
   const { user } = session;
-  const isStaff = FINANCE_STAFF.includes(user.role);
+  // Staff who act for any student: finance staff by default, or whoever
+  // Roles & Permissions gives "Manage" on Finance.
+  const financeRule = rolePermissions.ruleFor(user.role, "finance");
+  const isStaff = financeRule ? financeRule === "manage" && user.role !== "STUDENT" : FINANCE_STAFF.includes(user.role);
   const parts = url.pathname.split("/").filter(Boolean); // ["api", "finance", ...]
+  if (financeRule === "none") { sendJson(res, 403, { success: false, message: "Your role does not have access to Finance." }); return; }
 
   // The student a request is about: students always act for themselves.
   function studentFor(requested) {
@@ -688,7 +715,8 @@ async function handleFinanceRoute(req, res, url, session) {
 
     if (parts[2] === "control-numbers" && parts.length === 3) {
       if (req.method === "GET") {
-        if (user.role !== "STUDENT" && !isStaff) { fail(403, "Your role cannot view control numbers."); return; }
+        const canView = financeRule ? financeRule !== "none" : isStaff;
+        if (user.role !== "STUDENT" && !canView) { fail(403, "Your role cannot view control numbers."); return; }
         const studentId = user.role === "STUDENT" ? user.studentId : url.searchParams.get("studentId");
         sendJson(res, 200, { success: true, data: await db.controlNumbersFor(studentId || null) });
         return;
@@ -750,7 +778,10 @@ async function handleBootstrap(res, session) {
   const [preferences, systemSettings] = await Promise.all([db.getPreferences(user.id), db.getSystemSettings()]);
   sendJson(res, 200, {
     // The browser (js/api.js) maps reloaded resources to the same names.
+    // permissions: the Roles & Permissions rules for this role, which the
+    // menus and page guards apply (js/navigation.js, js/api.js boot()).
     success: true, user, data, aliases: BOOTSTRAP_ALIASES, preferences, systemSettings,
+    permissions: rolePermissions.rulesForRole(user.role),
     withheld: skipped, generatedAt: new Date().toISOString()
   });
 }
@@ -760,6 +791,65 @@ async function handleBootstrap(res, session) {
 // /api/settings/system (university-wide; admins change them).
 // ---------------------------------------------------------------------
 const SYSTEM_SETTINGS_EDITORS = ["UNIVERSITY_ADMIN", "SYSTEM_ADMIN"];
+
+/**
+ * University-wide administration - system settings and Roles & Permissions:
+ * the university and system administrators, unless Roles & Permissions has
+ * set one of them below "Manage" on Administration.
+ */
+function canAdministerUniversity(user) {
+  if (!SYSTEM_SETTINGS_EDITORS.includes(user.role)) return false;
+  const rule = rolePermissions.ruleFor(user.role, "administration");
+  return !rule || rule === "manage";
+}
+
+// ---------------------------------------------------------------------
+// Roles & Permissions: /api/admin/permissions
+//   GET     every rule, plus who may change each module by default (the
+//           page combines this with the menus to show the default levels)
+//   PUT     { role, module, level } - level null returns it to the default
+//   DELETE  every rule, so all roles return to the default
+// ---------------------------------------------------------------------
+async function handlePermissionsRoute(req, res, session) {
+  const { user } = session;
+  if (!canAdministerUniversity(user)) { sendJson(res, 403, { success: false, message: "Only university and system administrators manage roles and permissions." }); return; }
+
+  if (req.method === "GET") {
+    const defaultWriters = Object.fromEntries(PERMISSIONS.MODULES.map(m => [m.key,
+      [...new Set(m.resources.flatMap(name => RESOURCES[name].write || []))].filter(role => !READ_ONLY_ROLES.includes(role))]));
+    sendJson(res, 200, { success: true, data: { rules: rolePermissions.allRules(), defaultWriters } });
+    return;
+  }
+
+  if (req.method === "PUT") {
+    const { role, module: moduleKey, level } = await readBody(req);
+    const roles = await repo.query("SELECT id FROM roles WHERE id = ? LIMIT 1", [String(role || "")]);
+    if (!roles.length) { sendJson(res, 422, { success: false, message: "Unknown role." }); return; }
+    if (!PERMISSIONS.byKey[moduleKey]) { sendJson(res, 422, { success: false, message: "Unknown module." }); return; }
+    if (level !== null && !PERMISSIONS.allowedLevels(role, moduleKey).includes(level)) {
+      sendJson(res, 422, { success: false, message: `That access level cannot be given to this role on ${PERMISSIONS.byKey[moduleKey].label}.` });
+      return;
+    }
+    if (PERMISSIONS.FIXED[role] && PERMISSIONS.FIXED[role][moduleKey]) {
+      sendJson(res, 422, { success: false, message: "This access is fixed so that administrators cannot be locked out." });
+      return;
+    }
+    await rolePermissions.save(role, moduleKey, level, user.id);
+    await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "UPDATE", entityType: "role_permissions", entityId: `${role}:${moduleKey}=${level || "default"}`, ip: clientIp(req) });
+    sendJson(res, 200, { success: true, data: { rules: rolePermissions.allRules() } });
+    return;
+  }
+
+  if (req.method === "DELETE") {
+    await rolePermissions.reset();
+    await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "DELETE", entityType: "role_permissions", entityId: "all", ip: clientIp(req) });
+    sendJson(res, 200, { success: true, data: { rules: [] } });
+    return;
+  }
+
+  res.setHeader("Allow", "GET, PUT, DELETE");
+  sendJson(res, 405, { success: false, message: "Method not allowed." });
+}
 
 // What an upload is for, and the per-file limit.
 const FILE_PURPOSES = ["document", "request", "complaint", "submission", "profile", "material"];
@@ -779,7 +869,7 @@ async function handleSettingsRoute(req, res, url, session) {
   if (url.pathname === "/api/settings/system") {
     if (req.method === "GET") { sendJson(res, 200, { success: true, data: await db.getSystemSettings() }); return; }
     if (req.method === "PUT" || req.method === "PATCH") {
-      if (!SYSTEM_SETTINGS_EDITORS.includes(user.role)) { denyWrite(res, user); return; }
+      if (!canAdministerUniversity(user)) { denyWrite(res, user); return; }
       const body = await readBody(req);
       const saved = await db.saveSystemSettings(body, user.id);
       await db.recordAudit({ userId: user.id, userName: user.name, userRole: user.role, action: "UPDATE", entityType: "system_settings", entityId: Object.keys(body || {}).join(",").slice(0, 60), ip: clientIp(req) });
@@ -936,6 +1026,8 @@ function serveStatic(req, res, pathname) {
 // ---------------------------------------------------------------------
 async function handleApi(req, res, url) {
   if (req.method === "OPTIONS") { sendJson(res, 204, {}); return; }
+  // Roles & Permissions rules, reloaded when older than a few seconds.
+  await rolePermissions.refresh();
 
   // Overall request limit: per session when the request carries a
   // well-formed token, per address otherwise, and a separate limit on
@@ -1357,6 +1449,12 @@ async function handleApi(req, res, url) {
       "X-Content-Type-Options": "nosniff"
     });
     res.end(content);
+    return;
+  }
+
+  if (url.pathname === "/api/admin/permissions") {
+    const session = await requireUser(req, res);
+    if (session) await handlePermissionsRoute(req, res, session);
     return;
   }
 

@@ -14,7 +14,7 @@ Browser  ──►  Node.js server (server.js)  ──►  MySQL / MariaDB
 
 | Area | What it does |
 |---|---|
-| **Accounts & roles** | 16 roles (Student, Lecturer, Finance Officer, Registration Officer, Librarian, Hostel Officer, QA Officer, admins...). Students create their own accounts; every other role is added by an administrator. The QA Officer role is read-only. |
+| **Accounts & roles** | 16 roles (Student, Lecturer, Finance Officer, Registration Officer, Librarian, Hostel Officer, QA Officer, admins...). Students create their own accounts; every other role is added by an administrator. The QA Officer role is read-only. Under **Administration > Roles & Permissions**, university and system administrators set each role's access to each module (No access / View / Manage); the server enforces it and menus follow. |
 | **Admissions** | Public application form; admissions staff accept or reject, and the applicant is emailed the decision. |
 | **Course registration** | Every student registers for **6 or 7 courses** a semester. The page and the server both enforce this, along with prerequisites, credit limits and the registration window. |
 | **Timetable** | Weekly timetable per programme and year, with room and lecturer clash detection. |

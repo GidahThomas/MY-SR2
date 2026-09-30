@@ -32,7 +32,10 @@
       if (target) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        global.USIAMS.toast.show("error", "Access denied", "Quality Assurance Officer has read-only access to this module.");
+        const qa = (global.USIAMS.auth.getCurrentUser() || {}).role === "QUALITY_ASSURANCE_OFFICER";
+        global.USIAMS.toast.show("error", "Access denied", qa
+          ? "Quality Assurance Officer has read-only access to this module."
+          : "Your role has view-only access to this page.");
       }
     }, true);
   }

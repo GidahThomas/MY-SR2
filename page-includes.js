@@ -37,7 +37,7 @@ const APP_STYLES = [
 const APP_SCRIPTS = [
   "assets/vendor/bootstrap/bootstrap.bundle.min.js",
   "js/storage.js", "js/api.js", "js/ui.js", "components/toast.js", "components/modal.js",
-  "data/shared.js", "data/grading-system.js", "data/academic-structure.js", "data/courses.js", "data/users.js",
+  "data/shared.js", "data/permissions.js", "data/grading-system.js", "data/academic-structure.js", "data/courses.js", "data/users.js",
   "data/students.js", "data/results.js", "data/registrations.js", "data/finance.js", "data/attendance.js",
   "data/timetable.js", "data/requests.js", "data/complaints.js", "data/notifications.js", "data/calendar.js",
   "data/announcements.js", "data/documents.js", "data/internship.js", "data/graduation.js", "data/alumni.js",
@@ -52,7 +52,7 @@ const CHART_LIBRARY = "assets/vendor/chart.js/chart.umd.min.js";
 
 // The 403, 404 and 500 pages: just enough to find the user's dashboard.
 const ERROR_SCRIPTS = [
-  "js/storage.js", "js/api.js", "js/ui.js", "data/users.js", "js/auth.js", "js/navigation.js", "js/error-page.js"
+  "js/storage.js", "js/api.js", "js/ui.js", "data/users.js", "data/permissions.js", "js/auth.js", "js/navigation.js", "js/error-page.js"
 ];
 
 // The application frame: js/app.js fills the sidebar and navbar.

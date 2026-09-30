@@ -190,6 +190,7 @@
     for (const resource of result.withheld || []) setList(resource, []);
     preferences = result.preferences || {};
     systemSettings = result.systemSettings || {};
+    permissionRules = result.permissions || {};
     hydrated = true;
     return result;
   }
@@ -257,6 +258,8 @@
   // the bootstrap and read synchronously from these copies.
   let preferences = {};
   let systemSettings = {};
+  // Administration > Roles & Permissions rules for this role: module -> level.
+  let permissionRules = {};
 
   function getPreference(key, fallback = null) {
     return Object.prototype.hasOwnProperty.call(preferences, key) ? preferences[key] : fallback;
@@ -441,7 +444,11 @@
    * role is allowed to see, mounts the shell, and only then runs the page.
    */
   async function boot(allowedRoles, init) {
-    const user = USIAMS.auth.requireAuth(allowedRoles);
+    // A page that belongs to a Roles & Permissions module is checked after
+    // the rules have loaded: an administrator may have granted it to a role
+    // the page does not list, or withheld it from one it does.
+    const pageModule = USIAMS.permissions ? USIAMS.permissions.moduleForPage(USIAMS.navigation.currentPageFile()) : null;
+    const user = USIAMS.auth.requireAuth(allowedRoles, { signInOnly: !!pageModule });
     if (!user) return null;
 
     let current = user;
@@ -463,6 +470,19 @@
         "Check that MySQL is running and that USIAMS was started with <code>npm start</code>."
       );
       return null;
+    }
+
+    if (pageModule) {
+      const rule = permissionRules[pageModule.key];
+      if (rule === "none") {
+        global.location.href = USIAMS.auth.getBasePath() + "pages/403.html";
+        return null;
+      }
+      // No rule: the page's own role list decides, as it always has.
+      if (!rule && !USIAMS.auth.requireAuth(allowedRoles)) return null;
+      // "View": the page opens with its change controls hidden; the server
+      // refuses changes as well.
+      if (rule === "view") USIAMS.auth.setPageReadOnly(pageModule.label);
     }
 
     // A page that throws while rendering is a fault in that page, not an
@@ -491,6 +511,7 @@
 
   USIAMS.api = {
     request, hydrate, reload, flush, boot, apiStore,
+    permissionRules: () => ({ ...permissionRules }),
     getPreference, savePreference, getSystemSettings: () => ({ ...systemSettings }), saveSystemSettings,
     files: { upload: uploadFile, download: downloadFile, isStored: isStoredFile, MAX_BYTES: MAX_UPLOAD_BYTES },
     get: path => request(path),

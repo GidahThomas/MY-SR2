@@ -29,7 +29,7 @@ const TEST_ENV = { ...process.env, DB_NAME: TEST_DB };
 
 const SUITES = [
   "api.test.js", "shapes.test.js", "frontend.test.js",
-  "notifications.test.js", "registration.test.js", "pages.test.js", "interactions.test.js"
+  "notifications.test.js", "permissions.test.js", "registration.test.js", "pages.test.js", "interactions.test.js"
 ];
 
 function runNode(args, what) {

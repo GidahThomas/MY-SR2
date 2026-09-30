@@ -42,7 +42,26 @@
         </div>
 
         <div class="tab-pane fade" id="tabRoles">
-          <div class="usi-card"><div class="usi-card-header"><h3>System Roles</h3></div><div class="usi-card-body" id="rolesList"></div></div>
+          <div class="usi-card">
+            <div class="usi-card-header">
+              <div>
+                <h3>Roles &amp; Permissions</h3>
+                <div class="text-muted-usi" style="font-size:.78rem;">Choose a role, then set what it can do in each module. Changes apply straight away.</div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-secondary write-action" data-write-action id="resetAllPermissionsBtn"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset all to defaults</button>
+            </div>
+            <div class="usi-card-body">
+              <div class="perm-legend">
+                <span><strong>No access</strong> - hidden from the menu; the page and its private records are refused.</span>
+                <span><strong>View</strong> - can open the page and read it, but not change anything.</span>
+                <span><strong>Manage</strong> - can add, change and delete the module's records.</span>
+              </div>
+              <div class="perm-layout" id="rolesList">
+                <div class="perm-roles" id="permRoleList" role="tablist" aria-label="Roles"></div>
+                <div class="perm-modules" id="permModuleList"><div class="text-muted-usi">Loading permissions...</div></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="tab-pane fade" id="tabOrg">

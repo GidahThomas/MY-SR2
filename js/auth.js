@@ -121,7 +121,7 @@
    * Call at the top of every authenticated page. Redirects to login if
    * no session exists, and optionally restricts the page to a set of roles.
    */
-  function requireAuth(allowedRoles) {
+  function requireAuth(allowedRoles, { signInOnly = false } = {}) {
     const user = getCurrentUser();
     if (!user) {
       // Come back to this page after signing in.
@@ -130,6 +130,9 @@
       window.location.href = getBasePath() + "login.html" + next;
       return null;
     }
+    // USIAMS.boot() checks the role itself, once the Roles & Permissions
+    // rules have loaded, on pages those rules cover.
+    if (signInOnly) return user;
     if (allowedRoles && allowedRoles.length && !allowedRoles.includes(user.role)) {
       window.location.href = getBasePath() + "pages/403.html";
       return null;
@@ -147,20 +150,37 @@
   // Hides and disables controls the user could not use anyway. The refusal
   // itself comes from the server: see canWrite() in server.js, which returns
   // HTTP 403 for every read-only role regardless of what the browser sends.
+  // Set by USIAMS.boot() when Roles & Permissions gives the signed-in role
+  // "View" on the current page's module: the module's label, else null.
+  let viewOnlyModule = null;
+
+  function setPageReadOnly(moduleLabel) {
+    viewOnlyModule = moduleLabel || "this page";
+  }
+
+  /**
+   * True for the QA officer (read-only everywhere) and, on a page whose
+   * module the signed-in role may only view, for that role - so every
+   * page that hides its change controls from read-only users does so here.
+   */
   function isReadOnlyRole(role) {
-    const r = role || (getCurrentUser() || {}).role;
-    return r === "QUALITY_ASSURANCE_OFFICER";
+    const current = (getCurrentUser() || {}).role;
+    const r = role || current;
+    return r === "QUALITY_ASSURANCE_OFFICER" || (viewOnlyModule !== null && r === current);
   }
 
   function guardWrite(actionLabel = "modify this record") {
     if (isReadOnlyRole()) {
-      toast.show("error", "Access denied", `Quality Assurance Officer has read-only access and cannot ${actionLabel}.`);
+      const who = viewOnlyModule !== null && (getCurrentUser() || {}).role !== "QUALITY_ASSURANCE_OFFICER"
+        ? `Your role has view-only access to ${viewOnlyModule}`
+        : "Quality Assurance Officer has read-only access";
+      toast.show("error", "Access denied", `${who} and cannot ${actionLabel}.`);
       return false;
     }
     return true;
   }
 
   global.USIAMS = global.USIAMS || {};
-  global.USIAMS.auth = { login, logout, confirmLogout, getCurrentUser, isAuthenticated, requireAuth, isReadOnlyRole, guardWrite, getBasePath, unavailableMessage, safeNext };
+  global.USIAMS.auth = { login, logout, confirmLogout, getCurrentUser, isAuthenticated, requireAuth, isReadOnlyRole, setPageReadOnly, guardWrite, getBasePath, unavailableMessage, safeNext };
 
 })(window);

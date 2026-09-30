@@ -77,11 +77,8 @@
     ];
   }
 
-  function menuForRole(role) {
-    const allowed = DUTY_MENU[role];
-    const menu = buildMenu(role);
-    if (!allowed) return menu.filter(item => item.section || (item.roles || []).includes(role));
-
+  /** Keeps the items that pass, and each section heading that still has one. */
+  function withSections(menu, keep) {
     const result = [];
     let pendingSection = null;
     menu.forEach(item => {
@@ -89,7 +86,7 @@
         pendingSection = item;
         return;
       }
-      if (!(item.roles || []).includes(role) || !allowed.includes(item.label)) return;
+      if (!keep(item)) return;
       if (pendingSection) {
         result.push(pendingSection);
         pendingSection = null;
@@ -97,6 +94,35 @@
       result.push(item);
     });
     return result;
+  }
+
+  /** The menu the code gives a role, before any Roles & Permissions rule. */
+  function defaultMenuForRole(role) {
+    const allowed = DUTY_MENU[role];
+    return withSections(buildMenu(role), item => (item.roles || []).includes(role) && (!allowed || allowed.includes(item.label)));
+  }
+
+  /** The Roles & Permissions rules for the signed-in role (from the bootstrap). */
+  function currentRules() {
+    return global.USIAMS.api && global.USIAMS.api.permissionRules ? global.USIAMS.api.permissionRules() : {};
+  }
+
+  /**
+   * The role's menu: the default, with pages an administrator has granted
+   * added and pages set to "No access" removed (Administration > Roles &
+   * Permissions). Rules are known once a page has loaded its data; before
+   * that (the sign-in page) the default menu is used.
+   */
+  function menuForRole(role, rules = currentRules()) {
+    const P = global.USIAMS.permissions;
+    const defaults = new Set(defaultMenuForRole(role).filter(i => i.href).map(i => i.href));
+    if (!P || !rules || !Object.keys(rules).length) return defaultMenuForRole(role);
+    return withSections(buildMenu(role), item => {
+      const module = P.moduleForPage(String(item.href || "").replace(/^pages\//, ""));
+      const rule = module && rules[module.key];
+      if (rule) return rule !== "none";
+      return defaults.has(item.href);
+    });
   }
 
   const PAGE_TITLES = {
@@ -153,6 +179,6 @@
   }
 
   global.USIAMS = global.USIAMS || {};
-  global.USIAMS.navigation = { menuForRole, currentPageFile, pageTitle, dashboardHrefFor };
+  global.USIAMS.navigation = { menuForRole, defaultMenuForRole, currentPageFile, pageTitle, dashboardHrefFor };
 
 })(window);
